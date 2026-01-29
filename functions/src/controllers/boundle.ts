@@ -1,6 +1,11 @@
-import * as functions from 'firebase-functions';
+import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';
 import { WORD_LIST } from '../data/wordList';
+
+// Ensure admin is initialized if not already (safeguard)
+if (admin.apps.length === 0) {
+  admin.initializeApp();
+}
 
 const db = admin.firestore();
 const START_DATE = new Date('2024-01-01').getTime();
@@ -12,30 +17,35 @@ const getDailyWordIndex = () => {
   return Math.floor(diff / (1000 * 60 * 60 * 24));
 };
 
-export const checkDailyWord = functions.region('europe-west1').https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'Oynamak için giriş yapmalısınız.');
+export const checkDailyWord = onCall({ region: 'europe-west1' }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'Oynamak için giriş yapmalısınız.');
   }
 
-  const { guess } = data;
-  const uid = context.auth.uid;
+  const { guess, attemptIndex, history } = request.data;
+  const uid = request.auth.uid;
   const todayIndex = getDailyWordIndex();
   
   // 1. Validation
   if (!guess || typeof guess !== 'string' || guess.length !== 5) {
-    throw new functions.https.HttpsError('invalid-argument', 'Geçersiz kelime uzunluğu.');
+    throw new HttpsError('invalid-argument', 'Geçersiz kelime uzunluğu.');
   }
 
+  // Normalize inputs to Turkish Uppercase immediately
   const upperGuess = guess.toLocaleUpperCase('tr-TR');
   
-  // In a real scenario, we check if word exists in WORD_LIST
-  // For now, we assume WORD_LIST is populated or we skip check if empty for testing
-  if (WORD_LIST.length > 0 && !WORD_LIST.includes(upperGuess)) {
-    throw new functions.https.HttpsError('invalid-argument', 'Kelime listesinde yok.');
+  // Check existence in word list
+  if (WORD_LIST.length > 0) {
+     const exists = WORD_LIST.some(w => w.toLocaleUpperCase('tr-TR') === upperGuess);
+     if (!exists) {
+        throw new HttpsError('invalid-argument', 'Kelime listesinde yok.');
+     }
   }
 
   // 2. Logic
-  const targetWord = WORD_LIST.length > 0 ? WORD_LIST[todayIndex % WORD_LIST.length] : "KALEM"; // Fallback for testing
+  let rawTarget = WORD_LIST.length > 0 ? WORD_LIST[todayIndex % WORD_LIST.length] : "KALEM";
+  const targetWord = rawTarget.toLocaleUpperCase('tr-TR'); 
+
   const result: string[] = Array(5).fill('absent');
   const targetLetters = targetWord.split('');
   const guessLetters = upperGuess.split('');
@@ -75,21 +85,12 @@ export const checkDailyWord = functions.region('europe-west1').https.onCall(asyn
       const gameDoc = await t.get(gameRef);
 
       if (gameDoc.exists) {
-        throw new functions.https.HttpsError('already-exists', 'Bu günlük oyunu zaten oynadınız.');
+        throw new HttpsError('already-exists', 'Bu günlük oyunu zaten oynadınız.');
       }
 
-      // Calculate Score based on attempt count (frontend should allow max 6 guesses)
-      // Since backend is stateless per guess, we rely on checking history size or passing attempt index?
-      // Better: Backend assumes this is the winning call. We need to know which attempt it was.
-      // For security, we usually store game state in DB.
-      // SIMPLIFICATION for this prompt: We assume valid call.
-      
-      // We need to know attempt count.
-      // Let's assume the frontend sends the attempt number, or we query current day's guesses.
-      // For this architecture, let's just calculate score based on data passed or a standard value for now.
-      // Let's assume data.attemptIndex is passed (0 to 5)
-      const attemptIndex = data.attemptIndex || 5; 
-      score = Math.max(100, 600 - (attemptIndex * 100));
+      // Calculate Score
+      const attemptIdx = attemptIndex || 5; 
+      score = Math.max(100, 600 - (attemptIdx * 100));
 
       const userData = userDoc.data() || {};
       const lastDate = userData.lastBoundleDate;
@@ -115,7 +116,7 @@ export const checkDailyWord = functions.region('europe-west1').https.onCall(asyn
 
       t.set(gameRef, {
         word: targetWord,
-        guesses: data.history || [], // Frontend sends full history for record
+        guesses: history || [], 
         score: score,
         result: 'win',
         timestamp: admin.firestore.FieldValue.serverTimestamp()
@@ -123,7 +124,5 @@ export const checkDailyWord = functions.region('europe-west1').https.onCall(asyn
     });
   }
 
-  // Determine if loss (max attempts reached handled by frontend mostly, but backend can enforce)
-  
   return { result, status, score };
 });
