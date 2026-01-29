@@ -2,26 +2,27 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Gamepad2, Lock, Flame, Trophy, Map, Calendar, 
-  Smile, Hash, HelpCircle, PenTool, User, Medal
+  Smile, HelpCircle, PenTool, User, Medal
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import GameCard from '../components/Boundle/GameCard';
-import { getLeaderboard, LeaderboardUser } from '../lib/boundle_service';
+import GameModal from '../components/Boundle/GameModal';
+import { subscribeToLeaderboard, LeaderboardUser } from '../lib/boundle_service';
 import { cn } from '../lib/utils';
 
 const Boundle: React.FC = () => {
   const { userProfile, currentUser } = useAuth();
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
   const [loadingLB, setLoadingLB] = useState(true);
+  const [isGameOpen, setIsGameOpen] = useState(false);
 
-  // Fetch Leaderboard
+  // Real-time Leaderboard Subscription
   useEffect(() => {
-    const initLeaderboard = async () => {
-      const data = await getLeaderboard();
+    const unsubscribe = subscribeToLeaderboard((data) => {
       setLeaderboard(data);
       setLoadingLB(false);
-    };
-    initLeaderboard();
+    });
+    return () => unsubscribe();
   }, []);
 
   const container = {
@@ -39,10 +40,6 @@ const Boundle: React.FC = () => {
     show: { opacity: 1, y: 0 }
   };
 
-  const handlePlayWord = () => {
-      alert("Kelime oyunu motoru yükleniyor... (Hazırlık Aşamasında)");
-  };
-
   // Helper for Rank Icons
   const getRankIcon = (index: number) => {
       if (index === 0) return <Medal size={20} className="text-yellow-500 fill-yellow-500" />;
@@ -54,6 +51,9 @@ const Boundle: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#f5f5f4] pb-20">
       
+      {/* GAME MODAL */}
+      <GameModal isOpen={isGameOpen} onClose={() => setIsGameOpen(false)} />
+
       {/* HERO / HEADER */}
       <div className="bg-stone-900 text-stone-100 pt-16 pb-24 px-4 relative overflow-hidden">
           {/* Abstract Background Decoration */}
@@ -107,7 +107,7 @@ const Boundle: React.FC = () => {
                               description="5 Harfli, Boğaziçi temalı günlük kelime avı. Her gün yeni bir kelime."
                               status="active"
                               icon={<PenTool size={32} />}
-                              onClick={handlePlayWord}
+                              onClick={() => setIsGameOpen(true)}
                               span={true}
                               imageUrl="https://cdn.1863postasi.org/boundle/wordle-bg.jpg"
                           />

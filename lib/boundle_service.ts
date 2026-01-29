@@ -1,5 +1,6 @@
-import { collection, query, orderBy, limit, getDocs } from "firebase/firestore";
-import { db } from "./firebase";
+import { collection, query, orderBy, limit, onSnapshot } from "firebase/firestore";
+import { httpsCallable } from "firebase/functions";
+import { db, functions } from "./firebase";
 
 export interface LeaderboardUser {
   uid: string;
@@ -11,18 +12,19 @@ export interface LeaderboardUser {
 }
 
 /**
- * Fetches top 20 users based on total boundle points.
+ * Subscribes to the top 20 users leaderboard.
+ * @param callback Function to call with the updated leaderboard data.
+ * @returns Unsubscribe function.
  */
-export const getLeaderboard = async (): Promise<LeaderboardUser[]> => {
-  try {
-    const q = query(
-      collection(db, "users"),
-      orderBy("boundleTotalPoints", "desc"),
-      limit(20)
-    );
+export const subscribeToLeaderboard = (callback: (data: LeaderboardUser[]) => void) => {
+  const q = query(
+    collection(db, "users"),
+    orderBy("boundleTotalPoints", "desc"),
+    limit(20)
+  );
 
-    const querySnapshot = await getDocs(q);
-    const users = querySnapshot.docs.map((doc) => {
+  return onSnapshot(q, (snapshot) => {
+    const users = snapshot.docs.map((doc) => {
       const data = doc.data();
       return {
         uid: doc.id,
@@ -33,10 +35,25 @@ export const getLeaderboard = async (): Promise<LeaderboardUser[]> => {
         department: data.department
       };
     }) as LeaderboardUser[];
+    callback(users);
+  }, (error) => {
+    console.error("Leaderboard subscription error:", error);
+  });
+};
 
-    return users;
-  } catch (error) {
-    console.error("Error fetching leaderboard:", error);
-    return [];
+/**
+ * Calls the Cloud Function to validate the word.
+ * @param guess The 5-letter word guess.
+ * @param attemptIndex Current attempt index (0-5).
+ * @param history Array of previous guesses.
+ */
+export const checkDailyWord = async (guess: string, attemptIndex: number, history: string[]) => {
+  const checkFn = httpsCallable(functions, 'checkDailyWord');
+  try {
+    const result = await checkFn({ guess, attemptIndex, history });
+    return result.data as { result: string[], status: 'win' | 'loss' | 'continue', score: number };
+  } catch (error: any) {
+    console.error("Game Engine Error:", error);
+    throw new Error(error.message || "Oyun sunucusuna ulaşılamadı.");
   }
 };
