@@ -10,11 +10,23 @@ if (admin.apps.length === 0) {
 const db = admin.firestore();
 const START_DATE = new Date('2024-01-01').getTime();
 
-// Helper to get today's word index
+// Game Logic Constants
+// PRIME_STEP should be coprime with WORD_LIST.length for full cycle traversal.
+// Using a large prime ensures the pattern is not obvious to humans.
+const PRIME_STEP = 997; 
+const OFFSET = 31;
+
+// Helper to get today's pseudo-random non-repeating word index
 const getDailyWordIndex = () => {
   const now = Date.now();
   const diff = now - START_DATE;
-  return Math.floor(diff / (1000 * 60 * 60 * 24));
+  const dayIndex = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+  if (WORD_LIST.length === 0) return 0;
+
+  // Prime Modulo Cycle Formula:
+  // (OFFSET + (dayIndex * PRIME_STEP)) % Length
+  return (OFFSET + (dayIndex * PRIME_STEP)) % WORD_LIST.length;
 };
 
 export const checkDailyWord = onCall({ region: 'europe-west1' }, async (request) => {
@@ -43,7 +55,8 @@ export const checkDailyWord = onCall({ region: 'europe-west1' }, async (request)
   }
 
   // 2. Logic
-  let rawTarget = WORD_LIST.length > 0 ? WORD_LIST[todayIndex % WORD_LIST.length] : "KALEM";
+  // Select word using the calculated Prime Modulo index directly
+  let rawTarget = WORD_LIST.length > 0 ? WORD_LIST[todayIndex] : "KALEM";
   const targetWord = rawTarget.toLocaleUpperCase('tr-TR'); 
 
   const result: string[] = Array(5).fill('absent');
