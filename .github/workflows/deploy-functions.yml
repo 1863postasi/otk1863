@@ -38,4 +38,4 @@ jobs:
           
           # KRİTİK DÜZELTME: Buradan 'cd functions' kaldırıldı.
           # Deploy komutu kök dizinden çalışmalı ki firebase.json'ı bulsun.
-          firebase deploy --only functions --project otk1863 --json --force
+          firebase deploy --only functions --project postasi-b5327 --json --force
