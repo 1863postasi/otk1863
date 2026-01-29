@@ -167,26 +167,35 @@ const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-stone-900/90 backdrop-blur-sm">
-      {/* MAIN CONTAINER: Full Width/Height on Mobile, Centered Card on Desktop */}
-      <div className="w-full h-full md:w-full md:max-w-md md:h-[85vh] md:rounded-2xl bg-[#f5f5f4] flex flex-col shadow-2xl overflow-hidden relative">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-stone-900/80 backdrop-blur-md p-0 md:p-4">
+      {/* MAIN CONTAINER */}
+      <div className="w-full h-full md:w-[500px] md:h-[800px] md:max-h-[90vh] bg-[#f5f5f4] flex flex-col md:rounded-xl shadow-2xl overflow-hidden border border-stone-300 relative">
         
-        {/* 1. HEADER (Fixed Height) */}
-        <div className="flex justify-between items-center px-4 py-3 border-b border-stone-200 bg-white shrink-0 z-20">
-          <div className="w-8"></div> {/* Spacer for centering */}
-          <h2 className="font-serif text-2xl font-bold text-stone-900 tracking-tight">Boundle</h2>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center hover:bg-stone-100 rounded-full transition-colors">
-            <X size={24} className="text-stone-600" />
+        {/* 1. HEADER */}
+        <div className="flex justify-between items-center px-6 py-4 border-b border-stone-300 bg-[#e7e5e4] shrink-0 z-20 shadow-sm">
+          <div className="w-8"></div> {/* Spacer */}
+          <h2 className="font-serif text-3xl font-bold text-stone-800 tracking-tight">Boundle</h2>
+          <button 
+            onClick={onClose} 
+            className="w-8 h-8 flex items-center justify-center hover:bg-stone-300 rounded-full transition-colors text-stone-600"
+          >
+            <X size={24} />
           </button>
         </div>
 
-        {/* 2. GAME GRID (Flexible Space - Grow/Shrink) */}
-        <div className="flex-1 min-h-0 flex flex-col items-center justify-center p-2 md:p-4 bg-[#f5f5f4]">
+        {/* 2. GAME GRID AREA */}
+        {/* Flex-1 ensures it takes available vertical space but not more */}
+        <div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center p-4 bg-[#f5f5f4]">
             
-            {/* Grid Container: Constrained by Max Width & Aspect Ratio */}
-            <div className="w-full max-w-[350px] aspect-[5/6] grid grid-rows-6 gap-1.5 md:gap-2">
+            {/* 
+                Grid Wrapper: 
+                - Scales to fit width (max 380px)
+                - Scales to fit height (max 500px)
+                - Maintains aspect ratio
+            */}
+            <div className="w-full max-w-[380px] h-full max-h-[500px] aspect-[5/6] grid grid-rows-6 gap-2">
               {grid.map((row, rIdx) => (
-                <div key={rIdx} className="grid grid-cols-5 gap-1.5 md:gap-2">
+                <div key={rIdx} className="grid grid-cols-5 gap-2">
                   {row.map((cell, cIdx) => {
                     const status = colors[rIdx][cIdx];
                     const isActive = rIdx === currentRow && cIdx === currentCol;
@@ -198,13 +207,14 @@ const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose }) => {
                         initial={false}
                         animate={{ 
                           scale: isActive ? 1.05 : 1,
-                          backgroundColor: status === 'correct' ? '#2d4f1e' : status === 'present' ? '#b48e43' : status === 'absent' ? '#78716c' : '#ffffff',
-                          borderColor: status !== 'empty' ? 'transparent' : isFilled ? '#44403c' : '#d6d3d1',
+                          backgroundColor: status === 'correct' ? '#2d4f1e' : status === 'present' ? '#b48e43' : status === 'absent' ? '#78716c' : 'transparent',
+                          borderColor: status !== 'empty' ? 'transparent' : isFilled ? '#57534e' : '#d6d3d1',
                           color: status !== 'empty' ? '#ffffff' : '#1c1917'
                         }}
                         className={cn(
-                          "w-full h-full border-2 rounded-md flex items-center justify-center",
-                          "text-2xl md:text-3xl font-serif font-bold uppercase select-none transition-colors duration-200"
+                          "w-full h-full border-2 flex items-center justify-center",
+                          "text-3xl font-serif font-bold uppercase select-none transition-colors duration-200",
+                          "rounded-[4px] shadow-sm"
                         )}
                       >
                         {cell}
@@ -218,24 +228,24 @@ const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose }) => {
         </div>
 
         {/* 3. KEYBOARD (Fixed Bottom) */}
-        <div className="shrink-0 bg-stone-200 pb-safe pt-2 px-1 md:px-2 md:pb-4 mt-auto">
-          {/* Error Toast Positioned Absolute relative to content */}
+        <div className="shrink-0 bg-[#e7e5e4] border-t border-stone-300 pb-safe pt-4 px-2 md:px-4 md:pb-6 mt-auto shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+          {/* Error Toast Positioned absolutely relative to the container, floating above keyboard */}
           <AnimatePresence>
             {errorMessage && (
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="absolute top-16 left-1/2 -translate-x-1/2 bg-stone-800 text-white px-4 py-2 rounded-md text-sm font-bold shadow-lg z-50 whitespace-nowrap"
+                className="absolute bottom-48 left-1/2 -translate-x-1/2 bg-stone-800 text-stone-100 px-6 py-3 rounded-lg text-sm font-bold shadow-xl z-50 whitespace-nowrap border border-stone-600"
               >
                 {errorMessage}
               </motion.div>
             )}
           </AnimatePresence>
 
-          <div className="flex flex-col gap-1.5 mb-2">
+          <div className="flex flex-col gap-2 max-w-[500px] mx-auto">
             {KEYBOARD_ROWS.map((row, i) => (
-              <div key={i} className="flex justify-center gap-1">
+              <div key={i} className="flex justify-center gap-1.5">
                 {row.map(key => {
                   const status = keyStatus[key];
                   return (
@@ -244,11 +254,11 @@ const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose }) => {
                       onClick={() => handleInput(key)}
                       disabled={gameState !== 'playing' || loading}
                       className={cn(
-                        "h-12 flex-1 max-w-[40px] md:max-w-[44px] rounded-md font-serif font-bold text-sm md:text-lg transition-all active:scale-95 shadow-sm",
-                        status === 'correct' ? "bg-boun-green text-white border-b-4 border-green-800" :
-                        status === 'present' ? "bg-boun-gold text-white border-b-4 border-yellow-700" :
-                        status === 'absent' ? "bg-stone-500 text-white border-b-4 border-stone-600" :
-                        "bg-white text-stone-900 border-b-4 border-stone-300 hover:bg-stone-50"
+                        "h-14 flex-1 rounded-[4px] font-serif font-bold text-lg transition-all active:scale-95 shadow-sm border-b-4",
+                        status === 'correct' ? "bg-boun-green text-white border-green-900" :
+                        status === 'present' ? "bg-boun-gold text-white border-yellow-800" :
+                        status === 'absent' ? "bg-stone-500 text-white border-stone-700" :
+                        "bg-white text-stone-800 border-stone-300 hover:bg-stone-50"
                       )}
                     >
                       {key}
@@ -257,12 +267,12 @@ const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose }) => {
                 })}
               </div>
             ))}
-            <div className="flex justify-center gap-2 px-1 mt-1">
-               <button onClick={handleDelete} disabled={gameState !== 'playing'} className="flex-[1] h-12 bg-white rounded-md font-bold text-stone-700 border-b-4 border-stone-300 flex items-center justify-center active:scale-95 transition-transform"><Delete size={20} /></button>
+            <div className="flex justify-center gap-2 mt-2">
+               <button onClick={handleDelete} disabled={gameState !== 'playing'} className="flex-[1] h-14 bg-white rounded-[4px] font-bold text-stone-700 border-b-4 border-stone-300 flex items-center justify-center active:scale-95 transition-transform hover:bg-stone-50"><Delete size={24} /></button>
                <button 
                   onClick={handleSubmit} 
                   disabled={gameState !== 'playing' || loading}
-                  className="flex-[1.5] h-12 bg-stone-900 text-white rounded-md font-serif font-bold text-sm border-b-4 border-stone-950 flex items-center justify-center gap-2 active:scale-95 transition-transform disabled:opacity-80"
+                  className="flex-[1.5] h-14 bg-stone-800 text-white rounded-[4px] font-serif font-bold text-lg border-b-4 border-black flex items-center justify-center gap-2 active:scale-95 transition-transform disabled:opacity-80 hover:bg-stone-700"
                >
                   {loading ? <Loader2 className="animate-spin"/> : "ENTER"}
                </button>
@@ -276,7 +286,7 @@ const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose }) => {
             <motion.div 
               initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
               animate={{ opacity: 1, backdropFilter: "blur(8px)" }}
-              className="absolute inset-0 z-50 bg-stone-900/85 flex flex-col items-center justify-center text-white p-8 text-center"
+              className="absolute inset-0 z-50 bg-stone-900/90 flex flex-col items-center justify-center text-white p-8 text-center"
             >
               <motion.div 
                 initial={{ scale: 0.8, opacity: 0 }}
@@ -284,36 +294,36 @@ const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose }) => {
                 transition={{ type: "spring", bounce: 0.5 }}
                 className="w-full max-w-sm"
               >
-                  <h2 className="font-serif text-5xl font-bold mb-4 text-boun-gold">
+                  <h2 className="font-serif text-6xl font-bold mb-4 text-boun-gold tracking-tight">
                     {gameState === 'won' ? 'Harika!' : 'Oyun Bitti'}
                   </h2>
-                  <p className="text-stone-300 mb-8 text-lg font-serif">
+                  <p className="text-stone-300 mb-8 text-xl font-serif">
                     {gameState === 'won' ? 'Boğaziçi ruhu seninle.' : 'Yarın yeni bir kelimeyle gel.'}
                   </p>
 
-                  <div className="grid grid-cols-2 gap-4 mb-8 bg-white/10 p-4 rounded-xl border border-white/10">
+                  <div className="grid grid-cols-2 gap-4 mb-8 bg-white/10 p-6 rounded-xl border border-white/10">
                     <div className="text-center">
-                      <div className="text-3xl font-bold text-white font-mono">{score}</div>
-                      <div className="text-[10px] uppercase tracking-widest text-stone-400 font-bold">Puan</div>
+                      <div className="text-4xl font-bold text-white font-mono">{score}</div>
+                      <div className="text-xs uppercase tracking-widest text-stone-400 font-bold mt-1">Puan</div>
                     </div>
                     <div className="text-center border-l border-white/10">
-                      <div className="text-3xl font-bold text-white font-mono">{userProfile?.boundleStreak || 0}</div>
-                      <div className="text-[10px] uppercase tracking-widest text-stone-400 font-bold">Seri</div>
+                      <div className="text-4xl font-bold text-white font-mono">{userProfile?.boundleStreak || 0}</div>
+                      <div className="text-xs uppercase tracking-widest text-stone-400 font-bold mt-1">Seri</div>
                     </div>
                   </div>
 
                   <div className="flex flex-col gap-3 w-full">
                     <button 
                       onClick={handleShare}
-                      className="w-full py-4 bg-boun-green text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-green-700 transition-colors shadow-lg active:scale-95"
+                      className="w-full py-4 bg-boun-green text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-green-700 transition-colors shadow-lg active:scale-95 text-lg"
                     >
-                      <Share2 size={20} /> SONUCU PAYLAŞ
+                      <Share2 size={24} /> SONUCU PAYLAŞ
                     </button>
                     <button 
                       onClick={onClose}
-                      className="w-full py-4 bg-stone-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-stone-600 transition-colors shadow-lg active:scale-95"
+                      className="w-full py-4 bg-stone-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-stone-600 transition-colors shadow-lg active:scale-95 text-lg"
                     >
-                      <RotateCcw size={20} /> KAPAT
+                      <RotateCcw size={24} /> KAPAT
                     </button>
                   </div>
               </motion.div>
