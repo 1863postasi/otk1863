@@ -1,3 +1,4 @@
+// Tetikleme denemesi 1
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';
 import { WORD_LIST } from '../data/wordList';
