@@ -78,7 +78,7 @@ const Boundle: React.FC = () => {
             />
 
             {/* HERO / HEADER */}
-            <div className="bg-stone-900 text-game-paper pt-14 md:pt-12 pb-20 px-4 relative overflow-hidden border-b-4 border-game-gold">
+            <div className="bg-stone-900 text-game-paper pt-0 md:pt-12 pb-20 px-4 relative overflow-hidden border-b-4 border-game-gold">
                 {/* Abstract Background Decoration */}
                 <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none transform rotate-12">
                     <Gamepad2 size={300} />

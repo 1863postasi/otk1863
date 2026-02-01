@@ -33,7 +33,7 @@ const HeroTimeline: React.FC = () => {
   return (
     // FIX: Fixed height (h-[75vh]) instead of min-h-screen. 
     // Added pt-28 to clear header.
-    <div className="relative w-full h-[85vh] md:h-[75vh] min-h-[600px] flex flex-col bg-stone-900 overflow-hidden pt-16 md:pt-28">
+    <div className="relative w-full h-[85vh] md:h-[75vh] min-h-[600px] flex flex-col bg-stone-900 overflow-hidden pt-0 md:pt-28">
 
       {/* 1. SYNCHRONIZED BACKGROUND */}
       <AnimatePresence mode="popLayout">

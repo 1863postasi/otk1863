@@ -25,7 +25,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const hideHeader = location.pathname.startsWith('/admin') || location.pathname.startsWith('/auth') || location.pathname.startsWith('/yonetim');
 
   return (
-    <div className="flex flex-col min-h-screen text-stone-900 font-sans selection:bg-boun-blue/20 relative">
+    <div className="flex flex-col min-h-screen text-stone-900 font-sans selection:bg-boun-blue/20 relative overflow-x-hidden overscroll-none">
       {/* GLOBAL OVERLAY FOR ONBOARDING */}
       <RequireProfileSetup />
 

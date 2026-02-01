@@ -61,28 +61,26 @@ const Home: React.FC = () => {
       <motion.div
         className="flex w-[300vw] h-full absolute left-[-100vw] touch-pan-y"
 
-        // Animate based on index: x = -1 * index * width
-        // Index -1 (Calendar) -> x = 100vw (Shift Right)
-        // Index 0 (Hero) -> x = 0
-        // Index 1 (Announcements) -> x = -100vw (Shift Left)
+        // Critical: Force animation to current index state
         animate={{ x: -currentIndex * windowWidth }}
 
-        // Using standardized spring physics
         transition={SPRINGS.snappy}
         style={{ willChange: 'transform' }}
 
-        // Enable Direct Manipulation
         drag="x"
-        dragElastic={0.1} // Resistance at edges
-        dragMomentum={false} // Disable momentum so it snaps immediately on release
+        dragDirectionLock={true} // Lock vertical scroll while swiping horizontally
+        dragElastic={0.05} // Stiff resistance
+        dragMomentum={false} // No sliding after release
+
+        // Ensure it always snaps to a 100vw interval
+        onDragEnd={handleDragEnd}
+
 
         // Constraints: 
         // When at Hero (0): Can go Left (-WW) or Right (WW) -> limits are correct.
         // When at Calendar (-1): animate x is WW. We want to stop dragging Right (>WW). constraint Right: WW.
         // When at Announcements (1): animate x is -WW. We want to stop dragging Left (<-WW). constraint Left: -WW.
         dragConstraints={{ left: -windowWidth, right: windowWidth }}
-
-        onDragEnd={handleDragEnd}
       >
 
         {/* Left Section: Calendar */}
