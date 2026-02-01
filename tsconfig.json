@@ -24,10 +24,15 @@
       ]
     },
     "allowImportingTsExtensions": true,
-    "noEmit": true
+    "noEmit": true,
+    "baseUrl": "./src"
   },
+  "include": [
+    "src"
+  ],
   "exclude": [
     "functions",
+    "public",
     "node_modules"
   ]
 }

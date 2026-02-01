@@ -1,0 +1,86 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- YARDIMCI FONKSİYONLAR ---
+    
+    // Kullanıcı giriş yapmış mı?
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    // İşlemi yapan kişi, değiştirmek istediği kişiyle aynı mı?
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    // Kullanıcının verisini çek
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Admin kontrolü
+    function isAdmin() {
+      return isSignedIn() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             getUserData().role == "admin";
+    }
+
+    // Kulüp Yetkilisi Kontrolü
+    function isClubOfficial(clubId) {
+      return isSignedIn() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             ("clubRoles" in getUserData()) &&
+             (clubId in getUserData().clubRoles) && 
+             (getUserData().clubRoles[clubId] == "official");
+    }
+
+    // --- KOLEKSİYON KURALLARI ---
+
+    // 0. BOUNDLE OYUN GÜVENLİĞİ (YENİ)
+    
+    // Günün kelimeleri: Client ASLA okuyamaz. Sadece Cloud Functions erişebilir.
+    match /boundle_games/{dateId} {
+      allow read, write: if false;
+    }
+
+    // 1. KULLANICILAR (users)
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isOwner(userId);
+      
+      // Kullanıcı boundle puanlarını elle değiştiremez!
+      allow update: if isSignedIn() && isOwner(userId) 
+                    && (
+                      !request.resource.data.diff(resource.data).affectedKeys()
+                        .hasAny(['boundleTotalPoints', 'boundleStreak', 'boundleWeeklyPoints', 'lastBoundleDate'])
+                    );
+      allow delete: if isAdmin();
+
+      // Oyun Geçmişi: Sadece kendi geçmişini okuyabilir. YAZAMAZ (Function yazar).
+      match /game_history/{gameId} {
+        allow read: if isSignedIn() && isOwner(userId);
+        allow write: if false; 
+      }
+    }
+
+    // 2. KULÜPLER (clubs)
+    match /clubs/{clubId} {
+      allow read: if true;
+      allow write: if isAdmin() || isClubOfficial(clubId);
+    }
+
+    // 3. ETKİNLİKLER (events)
+    match /events/{eventId} {
+      allow read: if true;
+      allow create: if isAdmin() || isClubOfficial(request.resource.data.clubId);
+      allow update, delete: if isAdmin() || isClubOfficial(resource.data.clubId);
+    }
+
+    // 4. DİĞER HER ŞEY (Genel Korumalar)
+    match /{collectionName}/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin(); 
+    }
+  }
+}

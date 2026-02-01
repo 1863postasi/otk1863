@@ -1,141 +1,133 @@
-import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
-import { WORD_LIST } from '../data/wordList';
+import * as wordListData from '../data/wordList';
 
-// Ensure admin is initialized if not already (safeguard)
-if (admin.apps.length === 0) {
-  admin.initializeApp();
-}
+// Word list from external file
+const WORD_LIST = wordListData.WORD_LIST;
 
-const db = admin.firestore();
-const START_DATE = new Date('2024-01-01').getTime();
-
-// Game Logic Constants
-// PRIME_STEP should be coprime with WORD_LIST.length for full cycle traversal.
-// Using a large prime ensures the pattern is not obvious to humans.
-const PRIME_STEP = 997; 
-const OFFSET = 31;
-
-// Helper to get today's pseudo-random non-repeating word index
-const getDailyWordIndex = () => {
-  const now = Date.now();
-  const diff = now - START_DATE;
-  const dayIndex = Math.floor(diff / (1000 * 60 * 60 * 24));
-
-  if (WORD_LIST.length === 0) return 0;
-
-  // Prime Modulo Cycle Formula:
-  // (OFFSET + (dayIndex * PRIME_STEP)) % Length
-  return (OFFSET + (dayIndex * PRIME_STEP)) % WORD_LIST.length;
+// Tarihe göre kelime seç (Deterministic)
+const getDailyWord = (): string => {
+  const epoch = new Date("2024-01-01").getTime();
+  const today = new Date().getTime();
+  const daysSince = Math.floor((today - epoch) / (1000 * 60 * 60 * 24));
+  return WORD_LIST[daysSince % WORD_LIST.length];
 };
 
-export const checkDailyWord = onCall({ region: 'europe-west1' }, async (request) => {
-  if (!request.auth) {
-    throw new HttpsError('unauthenticated', 'Oynamak için giriş yapmalısınız.');
+interface CheckRequest {
+  guess: string;
+  attemptIndex: number;
+  history: string[];
+}
+
+export const checkDailyWord = functions.https.onCall(async (data: CheckRequest, context: functions.https.CallableContext) => {
+  // 1. Auth Check
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Giriş yapmalısınız.');
   }
 
-  const { guess, attemptIndex, history } = request.data;
-  const uid = request.auth.uid;
-  const todayIndex = getDailyWordIndex();
-  
-  // 1. Validation
-  if (!guess || typeof guess !== 'string' || guess.length !== 5) {
-    throw new HttpsError('invalid-argument', 'Geçersiz kelime uzunluğu.');
+  const { guess, attemptIndex } = data;
+  const userId = context.auth.uid;
+
+  // Validate Input
+  if (!guess || guess.length !== 5) {
+    throw new functions.https.HttpsError('invalid-argument', 'Kelime 5 harfli olmalı.');
   }
 
-  // Normalize inputs to Turkish Uppercase immediately
-  const upperGuess = guess.toLocaleUpperCase('tr-TR');
-  
-  // Check existence in word list
-  if (WORD_LIST.length > 0) {
-     const exists = WORD_LIST.some(w => w.toLocaleUpperCase('tr-TR') === upperGuess);
-     if (!exists) {
-        throw new HttpsError('invalid-argument', 'Kelime listesinde yok.');
-     }
+  const rawTargetWord = getDailyWord();
+  const TARGET_WORD = rawTargetWord.toLocaleUpperCase('tr-TR');
+  const normalizedGuess = guess.toLocaleUpperCase('tr-TR');
+  const today = new Date().toISOString().split('T')[0];
+
+  // 1.5 Dictionary Check (Kelime sözlükte var mı?)
+  // Not: Performans için Set kullanılabilir ama liste boyutu (50kb) için find yeterli.
+  const isValidWord = WORD_LIST.some(w => w.toLocaleUpperCase('tr-TR') === normalizedGuess);
+
+  if (!isValidWord) {
+    throw new functions.https.HttpsError('invalid-argument', 'Böyle bir kelime sözlüğümüzde yok.');
   }
 
-  // 2. Logic
-  // Select word using the calculated Prime Modulo index directly
-  let rawTarget = WORD_LIST.length > 0 ? WORD_LIST[todayIndex] : "KALEM";
-  const targetWord = rawTarget.toLocaleUpperCase('tr-TR'); 
+  // 2. Cooldown & Attempt Check (Firestore)
+  const gameRef = admin.firestore()
+    .collection('users').doc(userId)
+    .collection('game_history').doc(today);
 
-  const result: string[] = Array(5).fill('absent');
-  const targetLetters = targetWord.split('');
-  const guessLetters = upperGuess.split('');
+  const gameDoc = await gameRef.get();
+
+  if (gameDoc.exists) {
+    const gameData = gameDoc.data();
+    if (gameData?.status === 'won' || gameData?.status === 'lost') {
+      throw new functions.https.HttpsError('failed-precondition', 'Bugünkü oyunu zaten tamamladınız.');
+    }
+    if (gameData?.guesses && gameData.guesses.length >= 6) {
+      throw new functions.https.HttpsError('resource-exhausted', 'Tahmin hakkınız doldu.');
+    }
+  }
+
+  // 3. Logic: Check Word
+  const result: ('correct' | 'present' | 'absent')[] = Array(5).fill('absent');
+  const targetChars = Array.from(TARGET_WORD);
+  const guessChars = Array.from(normalizedGuess);
 
   // First pass: Correct (Green)
-  guessLetters.forEach((letter, i) => {
-    if (letter === targetLetters[i]) {
+  guessChars.forEach((char, i) => {
+    if (char === targetChars[i]) {
       result[i] = 'correct';
-      targetLetters[i] = '#'; // Mark as used
+      targetChars[i] = null as any;
     }
   });
 
   // Second pass: Present (Yellow)
-  guessLetters.forEach((letter, i) => {
+  guessChars.forEach((char, i) => {
     if (result[i] !== 'correct') {
-      const targetIndex = targetLetters.indexOf(letter);
+      const targetIndex = targetChars.indexOf(char);
       if (targetIndex !== -1) {
         result[i] = 'present';
-        targetLetters[targetIndex] = '#'; // Mark as used
+        targetChars[targetIndex] = null as any;
       }
     }
   });
 
+  // 4. Determine Status
   const isWin = result.every(r => r === 'correct');
+  const isLoss = !isWin && attemptIndex >= 5;
+
+  let status: 'win' | 'loss' | 'continue' = 'continue';
+  if (isWin) status = 'win';
+  else if (isLoss) status = 'loss';
+
+  // 5. Calculate Score
   let score = 0;
-  let status = 'continue';
-
-  // 3. Database Update (Transaction)
   if (isWin) {
-    status = 'win';
-    const userRef = db.collection('users').doc(uid);
-    const todayStr = new Date().toISOString().split('T')[0];
-    const gameRef = userRef.collection('game_history').doc(todayStr);
-
-    await db.runTransaction(async (t) => {
-      const userDoc = await t.get(userRef);
-      const gameDoc = await t.get(gameRef);
-
-      if (gameDoc.exists) {
-        throw new HttpsError('already-exists', 'Bu günlük oyunu zaten oynadınız.');
-      }
-
-      // Calculate Score
-      const attemptIdx = attemptIndex || 5; 
-      score = Math.max(100, 600 - (attemptIdx * 100));
-
-      const userData = userDoc.data() || {};
-      const lastDate = userData.lastBoundleDate;
-      
-      let streak = userData.boundleStreak || 0;
-      
-      // Check streak (is last date yesterday?)
-      const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-      if (lastDate === yesterday) {
-        streak += 1;
-      } else if (lastDate !== todayStr) {
-        streak = 1; // Reset if missed a day, unless it's same day replay (blocked above)
-      }
-
-      const newMaxStreak = Math.max(userData.boundleMaxStreak || 0, streak);
-
-      t.update(userRef, {
-        boundleTotalPoints: admin.firestore.FieldValue.increment(score),
-        boundleStreak: streak,
-        boundleMaxStreak: newMaxStreak,
-        lastBoundleDate: todayStr
-      });
-
-      t.set(gameRef, {
-        word: targetWord,
-        guesses: history || [], 
-        score: score,
-        result: 'win',
-        timestamp: admin.firestore.FieldValue.serverTimestamp()
-      });
-    });
+    const baseScore = 100;
+    const penalty = attemptIndex * 15;
+    score = Math.max(10, baseScore - penalty);
   }
 
-  return { result, status, score };
+  // 6. Save to Firestore
+  await gameRef.set({
+    guesses: admin.firestore.FieldValue.arrayUnion(normalizedGuess),
+    status: status,
+    lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+    ...(isWin ? { score } : {})
+  }, { merge: true });
+
+  // Update User Profile Stats
+  if (isWin) {
+    await admin.firestore().collection('users').doc(userId).set({
+      boundleTotalPoints: admin.firestore.FieldValue.increment(score),
+      boundleStreak: admin.firestore.FieldValue.increment(1),
+      lastBoundleDate: today
+    }, { merge: true });
+  } else if (isLoss) {
+    await admin.firestore().collection('users').doc(userId).set({
+      boundleStreak: 0,
+      lastBoundleDate: today
+    }, { merge: true });
+  }
+
+  return {
+    result,
+    status,
+    score
+  };
 });
