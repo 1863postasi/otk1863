@@ -1,5 +1,6 @@
 import React from 'react';
 import * as router from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
 import Header from './components/Layout/Header';
 import Home from './pages/Home';
 import Archive from './pages/Archive';
@@ -43,64 +44,66 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 const App: React.FC = () => {
   return (
     <Layout>
-      <Routes>
-        {/* --- GRUP A: HERKESE AÇIK (Public) --- */}
-        <Route path="/" element={<Home />} />
-        <Route path="/otk" element={<OTK />} />
-        
-        {/* Auth Pages */}
-        <Route path="/auth/login" element={<StudentLogin />} />
-        <Route path="/auth/register" element={<Register />} />
-        
-        {/* Admin Login (Must be public to allow entry) */}
-        <Route path="/admin/login" element={<AdminLogin />} />
+      <AnimatePresence mode="wait">
+        <Routes location={location} key={location.pathname}>
+          {/* --- GRUP A: HERKESE AÇIK (Public) --- */}
+          <Route path="/" element={<Home />} />
+          <Route path="/otk" element={<OTK />} />
+
+          {/* Auth Pages */}
+          <Route path="/auth/login" element={<StudentLogin />} />
+          <Route path="/auth/register" element={<Register />} />
+
+          {/* Admin Login (Must be public to allow entry) */}
+          <Route path="/admin/login" element={<AdminLogin />} />
 
 
-        {/* --- GRUP B: SADECE ÜYELERE (Logged In) --- */}
-        <Route 
-          path="/arsiv" 
-          element={
-            <ProtectedRoute requireAdmin={false}>
-              <Archive />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/profile" 
-          element={
-            <ProtectedRoute requireAdmin={false}>
-              <Profile />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/boundle" 
-          element={
-            <ProtectedRoute requireAdmin={false}>
-              <Boundle />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/yonetim" 
-          element={
-            <ProtectedRoute requireAdmin={false}>
-              <ManagerPanel />
-            </ProtectedRoute>
-          } 
-        />
+          {/* --- GRUP B: SADECE ÜYELERE (Logged In) --- */}
+          <Route
+            path="/arsiv"
+            element={
+              <ProtectedRoute requireAdmin={false}>
+                <Archive />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute requireAdmin={false}>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/boundle"
+            element={
+              <ProtectedRoute requireAdmin={false}>
+                <Boundle />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/yonetim"
+            element={
+              <ProtectedRoute requireAdmin={false}>
+                <ManagerPanel />
+              </ProtectedRoute>
+            }
+          />
 
 
-        {/* --- GRUP C: SADECE ADMIN (Admin Only) --- */}
-        <Route 
-          path="/admin" 
-          element={
-            <ProtectedRoute requireAdmin={true}>
-              <Dashboard />
-            </ProtectedRoute>
-          } 
-        />
-      </Routes>
+          {/* --- GRUP C: SADECE ADMIN (Admin Only) --- */}
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute requireAdmin={true}>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </AnimatePresence>
     </Layout>
   );
 };

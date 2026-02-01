@@ -9,6 +9,7 @@ import GameCard from '../components/Boundle/GameCard';
 import GameModal from '../components/Boundle/GameModal';
 import { subscribeToLeaderboard, LeaderboardUser, checkIfPlayedToday } from '../lib/boundle_service';
 import { cn } from '../lib/utils';
+import { SPRINGS } from '../lib/animations';
 
 const Boundle: React.FC = () => {
     const { userProfile, currentUser } = useAuth();
@@ -17,13 +18,15 @@ const Boundle: React.FC = () => {
     const [isGameOpen, setIsGameOpen] = useState(false);
     const [playedToday, setPlayedToday] = useState(false);
 
-    // Real-time Leaderboard Subscription
+    // Cached Leaderboard Fetch
     useEffect(() => {
-        const unsubscribe = subscribeToLeaderboard((data) => {
+        const fetchLB = async () => {
+            const { getLeaderboard } = await import('../lib/boundle_service');
+            const data = await getLeaderboard();
             setLeaderboard(data);
             setLoadingLB(false);
-        });
-        return () => unsubscribe();
+        };
+        fetchLB();
     }, []);
 
     // Check if user played today
@@ -188,7 +191,7 @@ const Boundle: React.FC = () => {
                             initial={{ opacity: 0, x: 20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: 0.2 }}
-                            className="bg-white rounded-xl p-6 border border-stone-200 shadow-sm sticky top-20"
+                            className="bg-white rounded-xl p-6 border border-stone-200 shadow-sm lg:sticky lg:top-24"
                         >
                             {/* User Info */}
                             <div className="flex items-center gap-4 mb-6 pb-6 border-b border-stone-100">

@@ -20,6 +20,6 @@ const app = firebase.apps.length ? firebase.app() : firebase.initializeApp(fireb
 
 export const auth = firebase.auth();
 export const db = getFirestore(app);
-export const functions = getFunctions(app, 'europe-west1'); // Region can be adjusted
+export const functions = getFunctions(app); // Default region is us-central1
 
 export default app;

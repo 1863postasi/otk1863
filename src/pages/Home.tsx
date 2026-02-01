@@ -67,7 +67,8 @@ const Home: React.FC = () => {
         // Index 1 (Announcements) -> x = -100vw (Shift Left)
         animate={{ x: -currentIndex * windowWidth }}
 
-        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        // Using standardized spring physics
+        transition={SPRINGS.snappy}
         style={{ willChange: 'transform' }}
 
         // Enable Direct Manipulation
