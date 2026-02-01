@@ -212,15 +212,13 @@ const CalendarSection: React.FC<CalendarSectionProps> = ({ onBack }) => {
             <div className="md:hidden flex items-center justify-between p-4 bg-[#efede6] shadow-sm border-b border-stone-300 z-30 shrink-0 h-16">
                 <button
                     onClick={() => setIsMobileCalendarOpen(!isMobileCalendarOpen)}
-                    className="flex items-center gap-2 font-serif font-bold text-stone-900 text-lg px-2 py-1 rounded-md active:bg-stone-200 transition-colors"
+                    className="flex-1 flex items-center justify-center gap-2 font-serif font-bold text-stone-900 text-lg px-2 py-1 rounded-md active:bg-stone-200 transition-colors"
                 >
+                    <Calendar size={20} className="text-stone-500" />
                     {formatDate(selectedDate.toISOString())}
                     <motion.div animate={{ rotate: isMobileCalendarOpen ? 180 : 0 }}>
                         <ChevronDown size={16} />
                     </motion.div>
-                </button>
-                <button onClick={onBack} className="text-stone-600 flex items-center gap-1 font-serif text-sm font-bold">
-                    Ana Sayfa <ArrowRight size={18} />
                 </button>
             </div>
 
@@ -284,10 +282,10 @@ const CalendarSection: React.FC<CalendarSectionProps> = ({ onBack }) => {
                                     whileTap={{ scale: 0.9 }}
                                     onClick={() => setSelectedDate(date)}
                                     className={`
-                                aspect-square flex items-center justify-center rounded-full text-xs font-medium transition-all relative
-                                ${isSelected ? 'bg-stone-800 text-white shadow-md font-bold' : 'text-stone-600 hover:bg-stone-200'}
-                                ${!isSelected && isToday ? 'border border-boun-gold text-boun-gold font-bold' : ''}
-                            `}
+                                        aspect-square flex items-center justify-center rounded-full text-xs font-medium transition-all relative
+                                        ${isSelected ? 'bg-stone-800 text-white shadow-md font-bold' : 'text-stone-600 hover:bg-stone-200'}
+                                        ${!isSelected && isToday ? 'border border-boun-gold text-boun-gold font-bold' : ''}
+                                    `}
                                 >
                                     {date.getDate()}
                                 </motion.button>
@@ -305,17 +303,62 @@ const CalendarSection: React.FC<CalendarSectionProps> = ({ onBack }) => {
                         animate={{ y: 0 }}
                         exit={{ y: "100%" }}
                         transition={SPRINGS.snappy}
-                        className="absolute inset-0 z-40 bg-[#efede6] md:hidden flex flex-col p-6 overflow-y-auto"
+                        className="absolute inset-0 z-50 bg-[#efede6] md:hidden flex flex-col pt-safe-top pb-safe-bottom"
                     >
-                        <div className="w-full flex justify-end mb-4">
-                            <button onClick={() => setIsMobileCalendarOpen(false)} className="p-2 text-stone-500 bg-white rounded-full shadow-sm">
-                                <X size={24} />
+                        {/* Drawer Header */}
+                        <div className="px-4 py-4 border-b border-stone-200 flex justify-between items-center bg-[#fdfbf7] shadow-sm">
+                            <h3 className="font-serif text-xl font-bold text-stone-800">Tarih Seçin</h3>
+                            <button onClick={() => setIsMobileCalendarOpen(false)} className="p-2 bg-stone-100 rounded-full text-stone-500 hover:bg-stone-200 transition-colors">
+                                <X size={20} />
                             </button>
                         </div>
-                        {/* Re-use similar calendar logic here or simplified list */}
-                        <div className="text-center">
-                            <h3 className="font-serif text-2xl font-bold mb-4">Tarih Seçin</h3>
-                            <p className="text-stone-500">Takvim mobil görünümü...</p>
+
+                        <div className="flex-1 overflow-y-auto p-6">
+
+                            {/* Mobile Month Nav */}
+                            <div className="flex items-center justify-between mb-8 bg-white p-2 rounded-lg shadow-sm border border-stone-100">
+                                <button onClick={() => changeMonth(-1)} className="p-3 hover:bg-stone-100 rounded-full transition-colors text-stone-600"><ChevronLeft size={24} /></button>
+                                <span className="font-serif font-bold text-stone-900 text-lg uppercase tracking-wider">{viewDate.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' })}</span>
+                                <button onClick={() => changeMonth(1)} className="p-3 hover:bg-stone-100 rounded-full transition-colors text-stone-600"><ArrowRight size={24} /></button>
+                            </div>
+
+                            {/* Mobile Calendar Grid */}
+                            <div className="grid grid-cols-7 gap-y-4 gap-x-2 w-full text-center font-sans mb-8">
+                                {['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'].map(day => (
+                                    <div key={day} className="text-stone-400 font-bold text-xs uppercase tracking-wider mb-2">{day}</div>
+                                ))}
+
+                                {calendarDays.map((date, i) => {
+                                    if (!date) return <div key={`empty-m-${i}`} />;
+
+                                    const isSelected = date.getDate() === selectedDate.getDate() &&
+                                        date.getMonth() === selectedDate.getMonth() &&
+                                        date.getFullYear() === selectedDate.getFullYear();
+
+                                    const isToday = date.getDate() === new Date().getDate() &&
+                                        date.getMonth() === new Date().getMonth() &&
+                                        date.getFullYear() === new Date().getFullYear();
+
+                                    return (
+                                        <motion.button
+                                            key={i}
+                                            whileTap={{ scale: 0.9 }}
+                                            onClick={() => {
+                                                setSelectedDate(date);
+                                                setIsMobileCalendarOpen(false);
+                                            }}
+                                            className={`
+                                                aspect-square flex items-center justify-center rounded-2xl text-lg font-medium transition-all relative shadow-sm
+                                                ${isSelected ? 'bg-stone-900 text-boun-gold shadow-lg font-bold scale-105 ring-2 ring-stone-900 ring-offset-2 ring-offset-[#efede6]' : 'bg-white text-stone-600 border border-stone-100'}
+                                                ${!isSelected && isToday ? 'border-2 border-boun-gold text-boun-gold font-bold bg-amber-50' : ''}
+                                            `}
+                                        >
+                                            {date.getDate()}
+                                        </motion.button>
+                                    );
+                                })}
+                            </div>
+
                         </div>
                     </motion.div>
                 )}

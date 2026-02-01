@@ -51,7 +51,7 @@ const Representatives: React.FC = () => {
 
                 // 3. Set & Cache
                 setAllReps(data);
-                cache.set('otk_reps_cache', data, CACHE_TTL.MEDIUM); // 5 min cache
+                cache.set('otk_reps_cache', data, CACHE_TTL.VERY_LONG); // 24h cache
             } catch (error) {
                 console.error("Error fetching reps:", error);
             } finally {

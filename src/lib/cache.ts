@@ -13,8 +13,38 @@ interface CacheEntry {
     ttl: number; // Time to live in milliseconds
 }
 
+const STORAGE_KEY = 'otk1863_cache_v1';
+
 class SimpleCache {
     private cache: Map<string, CacheEntry> = new Map();
+
+    constructor() {
+        this.loadFromStorage();
+    }
+
+    private loadFromStorage() {
+        try {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                // Convert object to Map
+                Object.keys(parsed).forEach(key => {
+                    this.cache.set(key, parsed[key]);
+                });
+            }
+        } catch (e) {
+            console.error("Cache load failed", e);
+        }
+    }
+
+    private saveToStorage() {
+        try {
+            const obj = Object.fromEntries(this.cache);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
+        } catch (e) {
+            console.warn("Cache save failed (quota?)", e);
+        }
+    }
 
     /**
      * Get cached data if it exists and hasn't expired
@@ -26,6 +56,7 @@ class SimpleCache {
         const now = Date.now();
         if (now - entry.timestamp > entry.ttl) {
             this.cache.delete(key);
+            this.saveToStorage(); // Update storage
             return null;
         }
 
@@ -41,6 +72,7 @@ class SimpleCache {
             timestamp: Date.now(),
             ttl
         });
+        this.saveToStorage();
     }
 
     /**
@@ -52,6 +84,7 @@ class SimpleCache {
         } else {
             this.cache.clear();
         }
+        this.saveToStorage();
     }
 
     /**
@@ -81,6 +114,8 @@ export const CACHE_KEYS = {
 export const CACHE_TTL = {
     SHORT: 2 * 60 * 1000,      // 2 minutes - for frequently changing data
     MEDIUM: 5 * 60 * 1000,     // 5 minutes - default
-    LONG: 15 * 60 * 1000,      // 15 minutes - for rarely changing data
-    VERY_LONG: 60 * 60 * 1000, // 1 hour - for static data
+    LONG: 10 * 60 * 1000,      // 10 minutes - for announcements
+    LONG_15: 15 * 60 * 1000,   // 15 minutes - legacy
+    VERY_LONG: 24 * 60 * 60 * 1000, // 24 hours - for static OTK data
+    EPIC: 365 * 24 * 60 * 60 * 1000, // 1 Year - for Archive
 } as const;

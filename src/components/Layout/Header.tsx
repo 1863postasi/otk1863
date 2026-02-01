@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Menu, X, Search, Lock, User, LogOut, Settings, LogIn, UserPlus, Mail, Briefcase, Gamepad2 } from 'lucide-react';
+import { Menu, X, Search, Lock, User, LogOut, Settings, LogIn, UserPlus, Mail, Briefcase, Gamepad2, Info } from 'lucide-react';
 import * as router from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { motion as m, AnimatePresence } from 'framer-motion';
@@ -147,7 +147,12 @@ const Header: React.FC = () => {
                           <button onClick={handleContactClick} className="w-full text-left px-4 py-2 text-sm text-stone-700 hover:bg-stone-100 flex items-center gap-2">
                             <Mail size={16} /> Bize Ulaşın
                           </button>
-                          <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
+                          {/* About Link (Logged In) */}
+                          <Link to="/hakkinda" onClick={() => setIsDropdownOpen(false)} className="block px-4 py-2 text-sm text-stone-700 hover:bg-stone-100 flex items-center gap-2">
+                            <Info size={16} /> Hakkında
+                          </Link>
+
+                          <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 border-t border-stone-100 mt-1">
                             <LogOut size={16} /> Oturumu Kapat
                           </button>
                         </>
@@ -163,6 +168,10 @@ const Header: React.FC = () => {
                           <button onClick={handleContactClick} className="w-full text-left px-4 py-2 text-sm text-stone-700 hover:bg-stone-100 flex items-center gap-2">
                             <Mail size={16} /> Bize Ulaşın
                           </button>
+                          {/* About Link (Logged Out) */}
+                          <Link to="/hakkinda" onClick={() => setIsDropdownOpen(false)} className="block px-4 py-2 text-sm text-stone-700 hover:bg-stone-100 flex items-center gap-2">
+                            <Info size={16} /> Hakkında
+                          </Link>
                         </>
                       )}
                     </motion.div>
@@ -175,12 +184,15 @@ const Header: React.FC = () => {
             <div className="md:hidden flex w-full justify-between mt-2 px-2 absolute top-0 left-0 z-50 pointer-events-none">
 
               {/* HOME BUTTON (Top Left - New) */}
-              <Link
-                to="/"
-                className="pointer-events-auto bg-white/90 backdrop-blur text-stone-800 p-2.5 rounded-full shadow-lg border border-stone-200 hover:bg-stone-100 focus:outline-none active:scale-95 transition-all"
-              >
-                <img src="https://cdn.1863postasi.org/bg/otk-logo.png" alt="Home" className="w-5 h-5 object-contain opacity-80" />
-              </Link>
+              {/* Hide on Archive pages to prevent overlap with 'Back to Lobby' */}
+              {!location.pathname.startsWith('/arsiv') && (
+                <Link
+                  to="/"
+                  className="pointer-events-auto bg-white/90 backdrop-blur text-stone-800 p-2.5 rounded-full shadow-lg border border-stone-200 hover:bg-stone-100 focus:outline-none active:scale-95 transition-all"
+                >
+                  <img src="https://cdn.1863postasi.org/bg/otk-logo.png" alt="Home" className="w-5 h-5 object-contain opacity-80" />
+                </Link>
+              )}
 
               {/* SETTINGS BUTTON (Top Right - Existing) */}
               <button
@@ -238,7 +250,13 @@ const Header: React.FC = () => {
                       <Lock size={18} /> Admin Paneli
                     </Link>
                   )}
-                  <button onClick={() => { handleLogout(); setIsMenuOpen(false); }} className="w-full text-left px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg flex items-center gap-3 text-sm font-medium">
+
+                  {/* About Link (Mobile Logged In) */}
+                  <Link to="/hakkinda" onClick={() => setIsMenuOpen(false)} className="block px-3 py-2 text-stone-700 hover:bg-stone-100 rounded-lg flex items-center gap-3 text-sm font-medium">
+                    <Info size={18} className="text-stone-400" /> Hakkında
+                  </Link>
+
+                  <button onClick={() => { handleLogout(); setIsMenuOpen(false); }} className="w-full text-left px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg flex items-center gap-3 text-sm font-medium border-t border-stone-100 mt-1">
                     <LogOut size={18} /> Çıkış Yap
                   </button>
                 </>
@@ -257,6 +275,14 @@ const Header: React.FC = () => {
               <button onClick={handleContactClick} className="w-full text-left px-3 py-2 text-stone-500 hover:bg-stone-100 rounded-lg flex items-center gap-3 text-sm">
                 <Mail size={18} /> İletişim
               </button>
+
+              {/* About Link (Mobile Logged Out) */}
+              {!currentUser && (
+                <Link to="/hakkinda" onClick={() => setIsMenuOpen(false)} className="block px-3 py-2 text-stone-500 hover:bg-stone-100 rounded-lg flex items-center gap-3 text-sm">
+                  <Info size={18} /> Hakkında
+                </Link>
+              )}
+
             </div>
           </motion.div>
         )}

@@ -12,10 +12,11 @@ import StudentLogin from './pages/Auth/Login';
 import Register from './pages/Auth/Register';
 import Profile from './pages/Profile'; // Import the new Profile page
 import Boundle from './pages/Boundle'; // Import Boundle Lobby
+import About from './pages/About'; // Import About Page
 import ProtectedRoute from './components/Auth/ProtectedRoute';
 import RequireProfileSetup from './components/Auth/RequireProfileSetup'; // Onboarding Modal
 
-const { Routes, Route, useLocation } = router;
+const { Routes, Route, useLocation, Link } = router;
 
 import MobileBottomNav from './components/PWA/MobileBottomNav';
 
@@ -38,8 +39,10 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       {!hideHeader && (
         <>
           <footer className="bg-stone-900 text-stone-400 py-8 text-center text-sm font-serif border-t border-stone-800 mb-0 md:mb-0 pb-24 md:pb-8">
-            <p>© {new Date().getFullYear()} Boğaziçi Üniversitesi Öğrenci Temsilciliği Kurulu. Tüm hakları saklıdır.</p>
-            <p className="mt-2 opacity-50 text-xs">Bağımsız Öğrenci Platformu</p>
+            <p>© {new Date().getFullYear()} Boğaziçi Üniversitesi Öğrenci Temsilciliği Kurulu | Kolektif Hamlin. Tüm hakları saklıdır.</p>
+            <p className="mt-2 opacity-50 text-xs">
+              Bağımsız Öğrenci Platformu | <Link to="/hakkinda" className="hover:text-stone-200 transition-colors">Hakkında & Lisans</Link>
+            </p>
           </footer>
           <MobileBottomNav />
         </>
@@ -56,6 +59,7 @@ const App: React.FC = () => {
           {/* --- GRUP A: HERKESE AÇIK (Public) --- */}
           <Route path="/" element={<Home />} />
           <Route path="/otk" element={<OTK />} />
+          <Route path="/hakkinda" element={<About />} />
 
           {/* Auth Pages */}
           <Route path="/auth/login" element={<StudentLogin />} />

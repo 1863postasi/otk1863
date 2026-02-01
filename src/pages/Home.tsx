@@ -58,6 +58,7 @@ const Home: React.FC = () => {
         dragConstraints={{ left: -windowWidth, right: windowWidth }}
         dragElastic={0.2}
         dragMomentum={false} // Keep false for strict snapping control, but rely on updated logic
+        dragSnapToOrigin={true}
 
         onDragEnd={(e, { offset, velocity }) => {
           const swipe = Math.abs(offset.x) * velocity.x;

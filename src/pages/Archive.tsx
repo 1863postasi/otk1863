@@ -113,26 +113,11 @@ const Archive: React.FC = () => {
                 </p>
               </motion.div>
 
-              {/* Search Bar */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.4 }}
-                className="w-full max-w-lg px-4 relative group"
-              >
-                <div className="absolute inset-y-0 left-4 pl-3 flex items-center pointer-events-none">
-                  <Search className="text-stone-400 group-focus-within:text-stone-600 transition-colors" size={16} />
-                </div>
-                <input
-                  type="text"
-                  placeholder="Akıllı Arşivde Ara... (Belge, Fotoğraf, Olay)"
-                  className="w-full pl-10 pr-3 py-2.5 bg-white border border-stone-200 rounded-full shadow-sm hover:shadow-md focus:shadow-lg focus:ring-0 outline-none font-serif text-stone-700 placeholder:text-stone-400 transition-all text-sm"
-                />
-              </motion.div>
+
             </div>
 
             {/* 2. GRID SECTION (Compact & Centered) */}
-            <div className="w-full max-w-5xl mx-auto px-4 md:px-8">
+            <div className="w-full max-w-5xl mx-auto px-4 md:px-8 flex-1 flex flex-col justify-center">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 w-full">
                 {categories.map((cat, idx) => (
                   <motion.button

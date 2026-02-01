@@ -111,24 +111,46 @@ const AnnouncementsSection: React.FC<AnnouncementsSectionProps> = ({ onBack }) =
     const [formContactType, setFormContactType] = useState('Instagram');
     const [contactHidden, setContactHidden] = useState(false);
 
-    // Fetch Announcements
+    // Fetch Data with Cache (10 Minutes)
     useEffect(() => {
-        const q = query(collection(db, "announcements"));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Announcement[];
-            setAnnouncements(data);
-        });
-        return () => unsubscribe();
-    }, []);
+        const fetchData = async () => {
+            // 1. ANNOUNCEMENTS
+            const cachedAnnouncements = cache.get(CACHE_KEYS.ANNOUNCEMENTS);
+            if (cachedAnnouncements) {
+                setAnnouncements(cachedAnnouncements);
+            } else {
+                try {
+                    const q = query(collection(db, "announcements"));
+                    const snapshot = await getDocs(q);
+                    const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Announcement[];
+                    setAnnouncements(data);
+                    cache.set(CACHE_KEYS.ANNOUNCEMENTS, data, CACHE_TTL.LONG);
+                } catch (error) {
+                    console.error("Error fetching announcements:", error);
+                }
+            }
 
-    // Fetch Lost Items (Only Approved and Resolved)
-    useEffect(() => {
-        const q = query(collection(db, "lost-items"), where("status", "in", ["approved", "resolved"]));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as LostItem[];
-            setLostItems(data);
-        });
-        return () => unsubscribe();
+            // 2. LOST ITEMS
+            // We use a separate cache key or just local state if not globally defined, 
+            // but user asked for 10 min cache here too.
+            const CACHE_KEY_LOST = 'lost_items_cache';
+            const cachedLost = cache.get(CACHE_KEY_LOST);
+            if (cachedLost) {
+                setLostItems(cachedLost);
+            } else {
+                try {
+                    const q = query(collection(db, "lost-items"), where("status", "in", ["approved", "resolved"]));
+                    const snapshot = await getDocs(q);
+                    const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as LostItem[];
+                    setLostItems(data);
+                    cache.set(CACHE_KEY_LOST, data, CACHE_TTL.LONG);
+                } catch (error) {
+                    console.error("Error fetching lost items:", error);
+                }
+            }
+        };
+
+        fetchData();
     }, []);
 
     // Lock body scroll

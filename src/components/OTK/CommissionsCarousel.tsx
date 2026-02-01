@@ -3,8 +3,9 @@ import { motion as m, AnimatePresence } from 'framer-motion';
 import { BookOpen, Camera, MapPin, Scale, AlertTriangle, ExternalLink, ChevronDown, ChevronRight, Clock, FolderOpen, Users } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import * as router from 'react-router-dom';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, getDocs } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
+import { cache, CACHE_KEYS, CACHE_TTL } from '../../lib/cache';
 
 const motion = m as any;
 const { Link } = router;
@@ -35,15 +36,34 @@ const CommissionsCarousel: React.FC = () => {
     const [commissions, setCommissions] = useState<Commission[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Fetch from Firestore
+    // Fetch from Firestore (Cached - 24 Hours)
     useEffect(() => {
-        const q = query(collection(db, "otk_commissions"), orderBy("createdAt", "asc"));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Commission[];
-            setCommissions(data);
-            setLoading(false);
-        });
-        return () => unsubscribe();
+        const fetchCommissions = async () => {
+            // 1. Try Cache
+            const cachedData = cache.get(CACHE_KEYS.OTK_COMMISSIONS);
+            if (cachedData) {
+                setCommissions(cachedData);
+                setLoading(false);
+                return;
+            }
+
+            // 2. Fetch
+            try {
+                const q = query(collection(db, "otk_commissions"), orderBy("createdAt", "asc"));
+                const snapshot = await getDocs(q); // Changed to getDocs
+                const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Commission[];
+
+                // 3. Set & Cache
+                setCommissions(data);
+                cache.set(CACHE_KEYS.OTK_COMMISSIONS, data, CACHE_TTL.VERY_LONG);
+            } catch (error) {
+                console.error("Error fetching commissions:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchCommissions();
     }, []);
 
     const getIcon = (iconName: string, size = 24) => {
