@@ -205,7 +205,7 @@ const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose, isHighContrast }
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-stone-900/80 backdrop-blur-md p-0 md:p-4">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-stone-900/90 md:bg-stone-900/80 md:backdrop-blur-md p-0 md:p-4">
       {/* MAIN CONTAINER */}
       <div className="w-full h-full md:w-[500px] md:h-[800px] md:max-h-[90vh] bg-[#f5f5f4] flex flex-col md:rounded-xl shadow-2xl overflow-hidden border border-stone-300 relative">
 

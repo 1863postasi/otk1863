@@ -35,23 +35,8 @@ const Home: React.FC = () => {
     return Math.abs(offset) * velocity;
   };
 
-  const handleDragEnd = (e: any, { offset, velocity }: any) => {
-    const swipe = swipePower(offset.x, velocity.x);
-    const distanceThreshold = windowWidth / 3; // Must drag at least 1/3rd of screen if moving slowly
-
-    // Swipe LEFT (Dragging content to the left, moving to Right Index)
-    if (swipe < -swipeConfidenceThreshold || offset.x < -distanceThreshold) {
-      if (activeSection === 'calendar') setActiveSection('hero');
-      else if (activeSection === 'hero') setActiveSection('announcements');
-    }
-    // Swipe RIGHT (Dragging content to the right, moving to Left Index)
-    else if (swipe > swipeConfidenceThreshold || offset.x > distanceThreshold) {
-      if (activeSection === 'announcements') setActiveSection('hero');
-      else if (activeSection === 'hero') setActiveSection('calendar');
-    }
-    // If threshold not met, the component state doesn't change, 
-    // and the `animate` prop will automatically snap it back to original position.
-  };
+  // Swipe helper
+  // const handleDragEnd ... inlined below
 
   return (
     // UPDATED: Used 100dvh (dynamic viewport height) minus 56px (header h-14)
@@ -69,18 +54,30 @@ const Home: React.FC = () => {
 
         drag="x"
         dragDirectionLock={true} // Lock vertical scroll while swiping horizontally
-        dragElastic={0.05} // Stiff resistance
-        dragMomentum={false} // No sliding after release
-
-        // Ensure it always snaps to a 100vw interval
-        onDragEnd={handleDragEnd}
-
-
-        // Constraints: 
-        // When at Hero (0): Can go Left (-WW) or Right (WW) -> limits are correct.
-        // When at Calendar (-1): animate x is WW. We want to stop dragging Right (>WW). constraint Right: WW.
-        // When at Announcements (1): animate x is -WW. We want to stop dragging Left (<-WW). constraint Left: -WW.
+        dragPropagations={false}
         dragConstraints={{ left: -windowWidth, right: windowWidth }}
+        dragElastic={0.2}
+        dragMomentum={false} // Keep false for strict snapping control, but rely on updated logic
+
+        onDragEnd={(e, { offset, velocity }) => {
+          const swipe = Math.abs(offset.x) * velocity.x;
+          const swipeThreshold = 10000;
+          const distanceThreshold = windowWidth / 4;
+
+          let newSection = activeSection;
+
+          if (offset.x < -distanceThreshold || swipe < -swipeThreshold) {
+            // Swipe Left (Go Right)
+            if (activeSection === 'calendar') newSection = 'hero';
+            else if (activeSection === 'hero') newSection = 'announcements';
+          } else if (offset.x > distanceThreshold || swipe > swipeThreshold) {
+            // Swipe Right (Go Left)
+            if (activeSection === 'announcements') newSection = 'hero';
+            else if (activeSection === 'hero') newSection = 'calendar';
+          }
+
+          setActiveSection(newSection);
+        }}
       >
 
         {/* Left Section: Calendar */}

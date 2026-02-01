@@ -31,10 +31,10 @@ const RequireProfileSetup: React.FC = () => {
         department: department,
         lastDisplayNameChange: serverTimestamp() // Mark change immediately
       });
-      
+
       // Refresh context so modal disappears
       await refreshProfile();
-      
+
     } catch (error) {
       console.error("Profile setup error:", error);
       alert("Bir hata oluştu.");
@@ -47,13 +47,13 @@ const RequireProfileSetup: React.FC = () => {
     <AnimatePresence>
       <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
         {/* Backdrop with heavy blur and block */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="absolute inset-0 bg-stone-900/80 backdrop-blur-md"
+          className="absolute inset-0 bg-stone-900/90 md:bg-stone-900/80 md:backdrop-blur-md"
         />
 
-        <motion.div 
+        <motion.div
           initial={{ scale: 0.9, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           className="relative w-full max-w-md bg-[#efede6] rounded-xl shadow-2xl overflow-hidden border border-stone-300"
@@ -67,12 +67,12 @@ const RequireProfileSetup: React.FC = () => {
           </div>
 
           <form onSubmit={handleSave} className="p-8 space-y-6">
-            
+
             {/* Display Name Input */}
             <div>
               <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">Ad Soyad (Görünen İsim)</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Örn: Ali Veli"
@@ -86,7 +86,7 @@ const RequireProfileSetup: React.FC = () => {
             <div>
               <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">Bölüm</label>
               <div className="relative">
-                <select 
+                <select
                   value={department}
                   onChange={(e) => setDepartment(e.target.value)}
                   className="w-full px-4 py-3 bg-white border border-stone-300 rounded-lg text-stone-900 focus:ring-2 focus:ring-stone-800 outline-none appearance-none"
@@ -103,8 +103,8 @@ const RequireProfileSetup: React.FC = () => {
               </div>
             </div>
 
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               disabled={loading || !name || !department}
               className="w-full bg-stone-900 text-white font-bold py-4 rounded-lg hover:bg-stone-800 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >

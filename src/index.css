@@ -5,7 +5,6 @@
 @layer base {
   body {
     @apply bg-stone-100 text-stone-900;
-    overscroll-behavior-y: none;
   }
 }
 
@@ -13,13 +12,16 @@
 ::-webkit-scrollbar {
   width: 8px;
 }
+
 ::-webkit-scrollbar-track {
   background: #e7e5e4;
 }
+
 ::-webkit-scrollbar-thumb {
   background: #78716c;
   border-radius: 4px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: #57534e;
 }

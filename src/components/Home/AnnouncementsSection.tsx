@@ -618,7 +618,7 @@ const AnnouncementsSection: React.FC<AnnouncementsSectionProps> = ({ onBack }) =
                 <AnimatePresence>
                     {selectedAnnouncement && (
                         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedAnnouncement(null)} className="absolute inset-0 bg-stone-900/60 backdrop-blur-sm" />
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedAnnouncement(null)} className="absolute inset-0 bg-stone-900/60 md:backdrop-blur-sm" />
                             <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="relative w-full max-w-3xl bg-white rounded-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
                                 <div className="bg-stone-50 px-6 py-4 border-b border-stone-200 flex justify-between items-center shrink-0">
                                     <div className="flex items-center gap-3">
@@ -648,7 +648,7 @@ const AnnouncementsSection: React.FC<AnnouncementsSectionProps> = ({ onBack }) =
                 <AnimatePresence>
                     {isModalOpen && (
                         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsModalOpen(false)} className="absolute inset-0 bg-stone-900/40 backdrop-blur-sm" />
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsModalOpen(false)} className="absolute inset-0 bg-stone-900/40 md:backdrop-blur-sm" />
                             <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="relative bg-white rounded-lg shadow-2xl w-full max-w-lg overflow-hidden my-auto z-10 max-h-[90vh] flex flex-col">
                                 <div className="bg-stone-50 px-6 py-4 border-b border-stone-200 flex justify-between items-center sticky top-0 z-10 shrink-0">
                                     <h3 className="font-serif font-bold text-xl text-stone-800">Yeni İlan Oluştur</h3>
@@ -739,7 +739,7 @@ const AnnouncementsSection: React.FC<AnnouncementsSectionProps> = ({ onBack }) =
                 <AnimatePresence>
                     {noteModalItem && (
                         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setNoteModalItem(null)} className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm" />
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setNoteModalItem(null)} className="fixed inset-0 bg-stone-900/60 md:backdrop-blur-sm" />
                             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-white rounded-lg shadow-xl p-6 w-full max-w-sm z-10">
                                 <h3 className="font-serif font-bold text-lg text-stone-900 mb-2">İlan Sahibine Not Bırak</h3>
                                 <p className="text-sm text-stone-500 mb-4">
