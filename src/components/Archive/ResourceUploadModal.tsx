@@ -27,7 +27,7 @@ const ResourceUploadModal: React.FC<ResourceUploadModalProps> = ({ isOpen, onClo
     const [uploadType, setUploadType] = useState<'file' | 'link'>('file');
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
-    
+
     // Split States
     const [codeDept, setCodeDept] = useState('');
     const [codeNum, setCodeNum] = useState('');
@@ -55,7 +55,7 @@ const ResourceUploadModal: React.FC<ResourceUploadModalProps> = ({ isOpen, onClo
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         // Basic Validation
         if (!codeDept || !codeNum || !formData.title || !termYear || !formData.instructor) {
             alert("Lütfen zorunlu alanları (*) doldurunuz.");
@@ -115,7 +115,7 @@ const ResourceUploadModal: React.FC<ResourceUploadModalProps> = ({ isOpen, onClo
                 setSuccess(false);
                 // Reset form
                 setFormData({
-                    instructor: '', resourceType: 'Ders Notu', 
+                    instructor: '', resourceType: 'Ders Notu',
                     title: '', linkUrl: '', uploaderName: ''
                 });
                 setCodeDept('');
@@ -136,18 +136,18 @@ const ResourceUploadModal: React.FC<ResourceUploadModalProps> = ({ isOpen, onClo
     return createPortal(
         <AnimatePresence>
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                <motion.div 
-                    initial={{ opacity: 0 }} 
-                    animate={{ opacity: 1 }} 
-                    exit={{ opacity: 0 }} 
-                    onClick={onClose} 
-                    className="absolute inset-0 bg-stone-900/60 backdrop-blur-sm" 
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={onClose}
+                    className="absolute inset-0 bg-stone-900/60 md:backdrop-blur-sm"
                 />
-                
-                <motion.div 
-                    initial={{ opacity: 0, scale: 0.95, y: 20 }} 
-                    animate={{ opacity: 1, scale: 1, y: 0 }} 
-                    exit={{ opacity: 0, scale: 0.95, y: 20 }} 
+
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
                     className="relative w-full max-w-lg bg-white rounded-xl shadow-2xl overflow-hidden"
                 >
                     {/* Header */}
@@ -171,7 +171,7 @@ const ResourceUploadModal: React.FC<ResourceUploadModalProps> = ({ isOpen, onClo
                         </div>
                     ) : (
                         <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto custom-scrollbar">
-                            
+
                             {/* Upload Type Toggle */}
                             <div className="flex gap-2 bg-stone-100 p-1 rounded-lg">
                                 <button
@@ -179,14 +179,14 @@ const ResourceUploadModal: React.FC<ResourceUploadModalProps> = ({ isOpen, onClo
                                     onClick={() => setUploadType('file')}
                                     className={cn("flex-1 py-2 text-sm font-bold rounded-md flex items-center justify-center gap-2 transition-all", uploadType === 'file' ? "bg-white shadow text-stone-900" : "text-stone-500")}
                                 >
-                                    <FileText size={16}/> Dosya Yükle
+                                    <FileText size={16} /> Dosya Yükle
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setUploadType('link')}
                                     className={cn("flex-1 py-2 text-sm font-bold rounded-md flex items-center justify-center gap-2 transition-all", uploadType === 'link' ? "bg-white shadow text-stone-900" : "text-stone-500")}
                                 >
-                                    <LinkIcon size={16}/> Link / Video
+                                    <LinkIcon size={16} /> Link / Video
                                 </button>
                             </div>
 
@@ -194,14 +194,14 @@ const ResourceUploadModal: React.FC<ResourceUploadModalProps> = ({ isOpen, onClo
                             <div>
                                 <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Ders Kodu *</label>
                                 <div className="flex items-center gap-2">
-                                    <input 
+                                    <input
                                         type="text" placeholder="CMPE" maxLength={8}
                                         className="flex-1 px-3 py-2 border border-stone-300 rounded text-sm focus:ring-1 focus:ring-stone-500 outline-none uppercase font-mono"
                                         value={codeDept}
                                         onChange={(e) => handleCodeInput(setCodeDept, e.target.value)}
                                     />
                                     <span className="text-stone-400 font-bold">-</span>
-                                    <input 
+                                    <input
                                         type="text" placeholder="150" maxLength={5}
                                         className="w-24 px-3 py-2 border border-stone-300 rounded text-sm focus:ring-1 focus:ring-stone-500 outline-none font-mono"
                                         value={codeNum}
@@ -214,13 +214,13 @@ const ResourceUploadModal: React.FC<ResourceUploadModalProps> = ({ isOpen, onClo
                             <div>
                                 <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Dönem *</label>
                                 <div className="flex gap-2">
-                                    <input 
+                                    <input
                                         type="number" placeholder="2023" min="1950" max="2030"
                                         className="flex-1 px-3 py-2 border border-stone-300 rounded text-sm focus:ring-1 focus:ring-stone-500 outline-none"
                                         value={termYear}
                                         onChange={(e) => setTermYear(e.target.value)}
                                     />
-                                    <select 
+                                    <select
                                         className="flex-1 px-3 py-2 border border-stone-300 rounded text-sm bg-white focus:ring-1 focus:ring-stone-500 outline-none"
                                         value={termSem}
                                         onChange={(e) => setTermSem(e.target.value)}
@@ -232,8 +232,8 @@ const ResourceUploadModal: React.FC<ResourceUploadModalProps> = ({ isOpen, onClo
 
                             <div>
                                 <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Dersi Veren Hoca *</label>
-                                <input 
-                                    type="text" placeholder="Örn: Tuna Tuğcu" 
+                                <input
+                                    type="text" placeholder="Örn: Tuna Tuğcu"
                                     className="w-full px-3 py-2 border border-stone-300 rounded text-sm focus:ring-1 focus:ring-stone-500 outline-none"
                                     value={formData.instructor}
                                     onChange={(e) => handleInputChange('instructor', e.target.value)}
@@ -243,7 +243,7 @@ const ResourceUploadModal: React.FC<ResourceUploadModalProps> = ({ isOpen, onClo
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Kaynak Türü *</label>
-                                    <select 
+                                    <select
                                         className="w-full px-3 py-2 border border-stone-300 rounded text-sm bg-white focus:ring-1 focus:ring-stone-500 outline-none"
                                         value={formData.resourceType}
                                         onChange={(e) => handleInputChange('resourceType', e.target.value)}
@@ -253,17 +253,17 @@ const ResourceUploadModal: React.FC<ResourceUploadModalProps> = ({ isOpen, onClo
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Başlık *</label>
-                                    <input 
-                                        type="text" placeholder="Örn: 1. Midterm Çözümleri" 
+                                    <input
+                                        type="text" placeholder="Örn: 1. Midterm Çözümleri"
                                         className="w-full px-3 py-2 border border-stone-300 rounded text-sm focus:ring-1 focus:ring-stone-500 outline-none"
                                         value={formData.title}
                                         onChange={(e) => handleInputChange('title', e.target.value)}
                                     />
                                 </div>
                             </div>
-                            
+
                             <div className="flex items-center gap-2 bg-blue-50 p-2 rounded border border-blue-100 text-blue-800 text-[10px]">
-                                <Info size={14} className="shrink-0"/>
+                                <Info size={14} className="shrink-0" />
                                 <span>Listede dosya adı değil, buraya girdiğiniz <b>Başlık</b> görünecektir.</span>
                             </div>
 
@@ -271,9 +271,9 @@ const ResourceUploadModal: React.FC<ResourceUploadModalProps> = ({ isOpen, onClo
                             <div className="pt-1">
                                 {uploadType === 'file' ? (
                                     <div className="border-2 border-dashed border-stone-300 rounded-lg p-6 flex flex-col items-center justify-center text-stone-400 hover:bg-stone-50 hover:border-stone-400 transition-colors cursor-pointer relative group">
-                                        <input 
-                                            type="file" 
-                                            className="absolute inset-0 opacity-0 cursor-pointer" 
+                                        <input
+                                            type="file"
+                                            className="absolute inset-0 opacity-0 cursor-pointer"
                                             onChange={(e) => e.target.files && setSelectedFile(e.target.files[0])}
                                         />
                                         {selectedFile ? (
@@ -290,8 +290,8 @@ const ResourceUploadModal: React.FC<ResourceUploadModalProps> = ({ isOpen, onClo
                                 ) : (
                                     <div>
                                         <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Bağlantı URL *</label>
-                                        <input 
-                                            type="text" placeholder="https://youtube.com/... veya Drive Linki" 
+                                        <input
+                                            type="text" placeholder="https://youtube.com/... veya Drive Linki"
                                             className="w-full px-3 py-2 border border-stone-300 rounded text-sm focus:ring-1 focus:ring-stone-500 outline-none"
                                             value={formData.linkUrl}
                                             onChange={(e) => handleInputChange('linkUrl', e.target.value)}
@@ -303,15 +303,15 @@ const ResourceUploadModal: React.FC<ResourceUploadModalProps> = ({ isOpen, onClo
 
                             <div>
                                 <label className="block text-xs font-bold text-stone-500 uppercase mb-1">Yükleyen Adı (Opsiyonel)</label>
-                                <input 
-                                    type="text" placeholder="Adınız veya Rumuzunuz" 
+                                <input
+                                    type="text" placeholder="Adınız veya Rumuzunuz"
                                     className="w-full px-3 py-2 border border-stone-300 rounded text-sm focus:ring-1 focus:ring-stone-500 outline-none"
                                     value={formData.uploaderName}
                                     onChange={(e) => handleInputChange('uploaderName', e.target.value)}
                                 />
                             </div>
 
-                            <button 
+                            <button
                                 type="submit"
                                 disabled={loading}
                                 className="w-full py-3 bg-stone-900 text-white font-bold rounded shadow-lg hover:bg-stone-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-70 mt-4"

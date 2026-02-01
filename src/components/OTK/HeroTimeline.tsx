@@ -111,7 +111,7 @@ const HeroTimeline: React.FC = () => {
             onClick={handlePrev}
             disabled={activeIndex === 0}
             className={cn(
-              "p-1.5 bg-[#d7ccc8]/60 text-[#3e2723] backdrop-blur-sm rounded-full pointer-events-auto active:scale-95 transition-all",
+              "p-1.5 bg-[#d7ccc8]/90 text-[#3e2723] rounded-full pointer-events-auto active:scale-95 transition-all shadow-sm",
               activeIndex === 0 && "opacity-0"
             )}
           >
@@ -121,7 +121,7 @@ const HeroTimeline: React.FC = () => {
             onClick={handleNext}
             disabled={activeIndex === MOCK_TIMELINE.length - 1}
             className={cn(
-              "p-1.5 bg-[#d7ccc8]/60 text-[#3e2723] backdrop-blur-sm rounded-full pointer-events-auto active:scale-95 transition-all",
+              "p-1.5 bg-[#d7ccc8]/90 text-[#3e2723] rounded-full pointer-events-auto active:scale-95 transition-all shadow-sm",
               activeIndex === MOCK_TIMELINE.length - 1 && "opacity-0"
             )}
           >
