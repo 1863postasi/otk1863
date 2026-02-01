@@ -4,7 +4,7 @@ import { Pin, ArrowLeft, Search, MapPin, Calendar, CheckCircle, HelpCircle, Arch
 import { formatDate, cn } from '../../lib/utils';
 import { motion as m, AnimatePresence } from 'framer-motion';
 import { db } from '../../lib/firebase';
-import { collection, query, where, addDoc, serverTimestamp, updateDoc, doc, arrayUnion, getDocs } from 'firebase/firestore';
+import { collection, query, where, addDoc, serverTimestamp, updateDoc, doc, arrayUnion, getDocs, onSnapshot } from 'firebase/firestore';
 import { uploadFile } from '../../lib/storage';
 import { cache, CACHE_KEYS, CACHE_TTL } from '../../lib/cache';
 import { useAuth } from '../../context/AuthContext';
