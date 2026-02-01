@@ -6,15 +6,23 @@ import Representatives from '../components/OTK/Representatives';
 const OTK: React.FC = () => {
   return (
     <div className="min-h-screen bg-stone-50 flex flex-col">
-      
+
       {/* 1. HERO & TIMELINE (Synced Cinematic Section) */}
       <HeroTimeline />
 
       {/* 2. COMMISSIONS (LoL Universe Focus Carousel) */}
       <CommissionsCarousel />
 
-      {/* 3. REPRESENTATIVES (Dual Hierarchy: Exec Cards & General Lists) */}
+      {/* 
+        ========================================================================================
+        !!! DİKKAT !!! BURASI GEÇİCİ OLARAK GİZLENDİ. 
+        GERİ AÇMAK İÇİN AŞAĞIDAKİ YORUM SATIRLARINI SİLİN (UNCOMMENT).
+        VERİTABANI VE PANEL ÇALIŞMAYA DEVAM EDİYOR, SADECE FRONTEND GİZLENDİ.
+        ========================================================================================
+      
       <Representatives />
+      
+      */}
 
     </div>
   );
