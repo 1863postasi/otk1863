@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     Gamepad2, Lock, Flame, Trophy, Map, Calendar,
     Smile, HelpCircle, PenTool, User, Medal
@@ -10,6 +10,7 @@ import GameModal from '../components/Boundle/GameModal';
 import { subscribeToLeaderboard, LeaderboardUser, checkIfPlayedToday } from '../lib/boundle_service';
 import { cn } from '../lib/utils';
 import { SPRINGS } from '../lib/animations';
+import BoundleBadge from '../components/Boundle/BoundleBadge';
 
 const Boundle: React.FC = () => {
     const { userProfile, currentUser } = useAuth();
@@ -17,6 +18,8 @@ const Boundle: React.FC = () => {
     const [loadingLB, setLoadingLB] = useState(true);
     const [isGameOpen, setIsGameOpen] = useState(false);
     const [playedToday, setPlayedToday] = useState(false);
+    const [leaderboardLimit, setLeaderboardLimit] = useState(20);
+    const [isHighContrast, setIsHighContrast] = useState(false);
 
     // Cached Leaderboard Fetch
     useEffect(() => {
@@ -61,27 +64,21 @@ const Boundle: React.FC = () => {
         return <span className="font-mono font-bold text-stone-400 w-5 text-center">{index + 1}</span>;
     };
 
-    // Münadi's Rank Badge System
-    const getRankBadge = (rank: number) => {
-        if (rank === 1) return { icon: "👑", title: "Güney'in Efendisi", color: "text-yellow-600" };
-        if (rank >= 2 && rank <= 3) return { icon: "🏛️", title: "Hamlin Varisi", color: "text-stone-600" };
-        if (rank >= 4 && rank <= 10) return { icon: "☕", title: "Manzara Müdavimi", color: "text-amber-700" };
-        if (rank >= 11 && rank <= 50) return { icon: "🌳", title: "Meydan Sakini", color: "text-green-700" };
-        return { icon: "🧭", title: "Kampüs Çaylağı", color: "text-stone-500" };
-    };
-
     // Find user's rank in leaderboard
-    const userRank = leaderboard.findIndex(u => u.uid === currentUser?.uid) + 1;
-    const userBadge = getRankBadge(userRank || 999);
+    const userRank = leaderboard.findIndex(u => u.uid === currentUser?.uid) + 1 || 999;
 
     return (
-        <div className="min-h-screen bg-[#f5f5f4] pb-20">
+        <div className="min-h-screen bg-[#f5f5f4] bg-noise pb-20">
 
             {/* GAME MODAL */}
-            <GameModal isOpen={isGameOpen} onClose={() => setIsGameOpen(false)} />
+            <GameModal
+                isOpen={isGameOpen}
+                onClose={() => setIsGameOpen(false)}
+                isHighContrast={isHighContrast}
+            />
 
             {/* HERO / HEADER */}
-            <div className="bg-stone-900 text-stone-100 pt-16 pb-24 px-4 relative overflow-hidden">
+            <div className="bg-stone-900 text-game-paper pt-14 md:pt-12 pb-20 px-4 relative overflow-hidden border-b-4 border-game-gold">
                 {/* Abstract Background Decoration */}
                 <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none transform rotate-12">
                     <Gamepad2 size={300} />
@@ -90,26 +87,49 @@ const Boundle: React.FC = () => {
 
                 <div className="max-w-7xl mx-auto relative z-10 flex flex-col md:flex-row justify-between items-end gap-6">
                     <div>
-                        <h4 className="text-boun-gold font-bold uppercase tracking-widest text-xs mb-2">Günlük Zeka Oyunları</h4>
-                        <h1 className="font-serif text-4xl md:text-6xl font-bold mb-2 flex items-center gap-3">
+                        <h4 className="text-game-present font-bold uppercase tracking-widest text-xs mb-2">Günlük Zeka Oyunları</h4>
+                        <h1 className="font-serif text-5xl md:text-7xl font-bold mb-4 flex items-center gap-3 text-white tracking-tight">
                             Boundle
                         </h1>
-                        <p className="text-stone-400 max-w-lg text-sm md:text-base font-light">
-                            Boğaziçi kültürünü ne kadar tanıyorsun? Her gün yeni bir bulmaca çöz, puanları topla, ismini efsaneler arasına yazdır.
+                        <p className="text-stone-400 max-w-lg text-sm md:text-base font-mono">
+                            // Her gün yeni bir bulmaca.<br />
+                            // Puanları topla, efsane ol.
                         </p>
                     </div>
 
-                    {/* Mobile Stats Summary (Visible only on small screens) */}
-                    <div className="md:hidden w-full bg-stone-800/50 rounded-lg p-4 border border-stone-700 flex justify-around">
-                        <div className="text-center">
-                            <div className="text-2xl font-bold text-white">{userProfile?.boundleTotalPoints || 0}</div>
-                            <div className="text-[10px] text-stone-400 uppercase">Puan</div>
+                    {/* Controls & Mobile Stats */}
+                    <div className="flex flex-col items-end gap-4 w-full md:w-auto">
+
+                        {/* Settings Toggle */}
+                        <div className="flex items-center gap-3 bg-stone-800/50 p-2 rounded-full border border-stone-700 backdrop-blur-sm">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 pl-2">Renk Körlüğü</span>
+                            <button
+                                onClick={() => setIsHighContrast(!isHighContrast)}
+                                className={cn(
+                                    "w-10 h-6 rounded-full p-1 transition-colors relative",
+                                    isHighContrast ? "bg-game-hcWin" : "bg-stone-600"
+                                )}
+                            >
+                                <motion.div
+                                    layout
+                                    className="w-4 h-4 bg-white rounded-full shadow-sm"
+                                    animate={{ x: isHighContrast ? 16 : 0 }}
+                                />
+                            </button>
                         </div>
-                        <div className="text-center">
-                            <div className="text-2xl font-bold text-boun-gold flex items-center justify-center gap-1">
-                                {userProfile?.boundleStreak || 0} <Flame size={16} fill="currentColor" />
+
+                        {/* Mobile Stats Summary */}
+                        <div className="md:hidden w-full bg-stone-800/50 rounded-lg p-4 border border-stone-700 flex justify-around">
+                            <div className="text-center">
+                                <div className="text-2xl font-bold text-white">{userProfile?.boundleTotalPoints || 0}</div>
+                                <div className="text-[10px] text-stone-400 uppercase">Puan</div>
                             </div>
-                            <div className="text-[10px] text-stone-400 uppercase">Seri</div>
+                            <div className="text-center">
+                                <div className="text-2xl font-bold text-game-present flex items-center justify-center gap-1">
+                                    {userProfile?.boundleStreak || 0} <Flame size={16} fill="currentColor" />
+                                </div>
+                                <div className="text-[10px] text-stone-400 uppercase">Seri</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -184,15 +204,17 @@ const Boundle: React.FC = () => {
                     </div>
 
                     {/* RIGHT COLUMN: STATS & LEADERBOARD */}
-                    <div className="lg:col-span-4 space-y-6">
+                    <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-8rem)] lg:flex lg:flex-col">
 
-                        {/* USER STATS CARD (Sticky Desktop) */}
+                        {/* USER STATS CARD */}
                         <motion.div
                             initial={{ opacity: 0, x: 20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: 0.2 }}
-                            className="bg-white rounded-xl p-6 border border-stone-200 shadow-sm lg:sticky lg:top-24"
+                            className="bg-white rounded-xl p-6 border border-stone-200 shadow-sm shrink-0"
                         >
+                            {/* User Info */}
+
                             {/* User Info */}
                             <div className="flex items-center gap-4 mb-6 pb-6 border-b border-stone-100">
                                 <div className="w-14 h-14 rounded-full bg-stone-100 border-2 border-stone-200 overflow-hidden flex items-center justify-center text-stone-400 shrink-0">
@@ -204,9 +226,8 @@ const Boundle: React.FC = () => {
                                 </div>
                                 <div className="flex-1">
                                     <h3 className="font-serif font-bold text-lg text-stone-900">{userProfile?.displayName || userProfile?.username}</h3>
-                                    <div className="flex items-center gap-2 mt-1">
-                                        <span className="text-lg">{userBadge.icon}</span>
-                                        <p className={cn("text-xs font-bold tracking-wide", userBadge.color)}>{userBadge.title}</p>
+                                    <div className="mt-2">
+                                        <BoundleBadge rank={userRank} size="md" />
                                     </div>
                                 </div>
                             </div>
@@ -234,16 +255,30 @@ const Boundle: React.FC = () => {
                             initial={{ opacity: 0, x: 20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: 0.3 }}
-                            className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden flex flex-col max-h-[500px]"
+                            className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden flex flex-col flex-1 min-h-0"
                         >
-                            <div className="p-4 border-b border-stone-100 bg-stone-50/50 flex justify-between items-center sticky top-0 backdrop-blur-sm z-10">
+                            <div className="p-4 border-b border-stone-100 bg-stone-50/50 flex justify-between items-center sticky top-0 backdrop-blur-sm z-10 shrink-0">
                                 <h3 className="font-serif font-bold text-stone-800 flex items-center gap-2">
                                     <Trophy size={16} className="text-boun-gold" /> Zirvedekiler
                                 </h3>
-                                <span className="text-[10px] bg-stone-200 text-stone-600 px-2 py-0.5 rounded font-bold">TOP 20</span>
+                                {/* Limit Toggle */}
+                                <div className="flex bg-stone-200 rounded p-0.5">
+                                    {[10, 20, 50].map(val => (
+                                        <button
+                                            key={val}
+                                            onClick={() => setLeaderboardLimit(val)}
+                                            className={cn(
+                                                "text-[10px] font-bold px-2 py-0.5 rounded transition-colors",
+                                                leaderboardLimit === val ? "bg-white text-stone-800 shadow-sm" : "text-stone-500 hover:text-stone-700"
+                                            )}
+                                        >
+                                            {val}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
 
-                            <div className="overflow-y-auto custom-scrollbar">
+                            <div className="overflow-y-auto custom-scrollbar flex-1">
                                 {loadingLB ? (
                                     <div className="p-4 space-y-3">
                                         {[...Array(5)].map((_, i) => (
@@ -258,7 +293,7 @@ const Boundle: React.FC = () => {
                                     <div className="p-8 text-center text-stone-400 text-sm">Henüz veri yok.</div>
                                 ) : (
                                     <div className="divide-y divide-stone-50">
-                                        {leaderboard.map((user, idx) => {
+                                        {leaderboard.slice(0, leaderboardLimit).map((user, idx) => {
                                             const isMe = currentUser?.uid === user.uid;
                                             return (
                                                 <div
@@ -282,10 +317,9 @@ const Boundle: React.FC = () => {
                                                     <div className="flex-1 min-w-0">
                                                         <div className={cn("font-bold truncate flex items-center gap-1.5", isMe ? "text-stone-900" : "text-stone-700")}>
                                                             {user.displayName} {isMe && "(Sen)"}
-                                                            <span className="text-xs">{getRankBadge(idx + 1).icon}</span>
                                                         </div>
-                                                        <div className={cn("text-[10px] font-bold truncate", getRankBadge(idx + 1).color)}>
-                                                            {getRankBadge(idx + 1).title}
+                                                        <div className="mt-1">
+                                                            <BoundleBadge rank={idx + 1} size="sm" />
                                                         </div>
                                                     </div>
 

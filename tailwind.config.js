@@ -24,6 +24,17 @@ export default {
                     red: '#8a1b1b',   // Brick Red
                     green: '#2d4f1e', // Campus Green
                     gold: '#b48e43'   // Autumn/Stone Gold
+                },
+                game: {
+                    paper: '#f4e4bc',    // Vintage Newspaper
+                    ink: '#1c1917',      // Deep Ink Black
+                    win: '#4ade80',      // Success Green
+                    present: '#facc15',  // Warning Yellow
+                    absent: '#78716c',   // Neutral Stone
+                    stamp: '#b91c1c',    // Red Stamp
+                    // High Contrast Mode
+                    hcWin: '#f5793a',    // Orange
+                    hcPresent: '#85c0f9' // Blue
                 }
             },
             fontFamily: {

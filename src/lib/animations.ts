@@ -15,11 +15,25 @@ export const SPRINGS = {
         damping: 35
     },
 
-    /** Snappy animations for modals and drawers */
+    /** Kart Hover: Soft and Heavy */
+    soft: {
+        type: "spring" as const,
+        stiffness: 100,
+        damping: 15
+    },
+
+    /** Modal Open: Snappy and Responsive */
     snappy: {
         type: "spring" as const,
         stiffness: 300,
         damping: 25
+    },
+
+    /** Win Effect: Bouncy and Cheerful */
+    bouncy: {
+        type: "spring" as const,
+        stiffness: 400,
+        damping: 10
     },
 
     /** Heavy, weighty animations for large layout shifts */

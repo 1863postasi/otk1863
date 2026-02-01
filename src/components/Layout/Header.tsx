@@ -50,31 +50,31 @@ const Header: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-stone-100/90 backdrop-blur-md border-b border-stone-300 shadow-sm font-serif h-14">
+    <header className="sticky top-0 z-50 w-full md:bg-stone-100/90 md:backdrop-blur-md md:border-b md:border-stone-300 md:shadow-sm font-serif h-14 transition-all pointer-events-none md:pointer-events-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full">
 
         {/* MAIN HEADER CONTAINER */}
-        <div className="grid grid-cols-5 md:flex md:justify-between items-center h-full w-full">
+        <div className="flex justify-between items-center h-full w-full">
 
-          {/* 1. LOGO AREA */}
-          <div className="col-span-3 flex items-center justify-start min-w-0">
-            <Link to="/" className="flex items-center gap-2 md:gap-4">
+          {/* 1. LOGO AREA (Hidden on Mobile) */}
+          <div className="hidden md:flex items-center justify-start min-w-0">
+            <Link to="/" className="flex items-center gap-2 md:gap-4 pointer-events-auto">
               <img
                 src="https://cdn.1863postasi.org/bg/otk-logo.png"
                 alt="ÖTK Logo"
-                className="h-6 md:h-9 w-auto object-contain flex-shrink-0"
+                className="md:h-9 w-auto object-contain flex-shrink-0"
               />
               <div className="h-4 md:h-6 w-px bg-stone-300"></div>
               <img
                 src="https://cdn.1863postasi.org/bg/otk-arsiv.png"
                 alt="ÖTK Arşiv Logo"
-                className="h-6 md:h-9 w-auto object-contain flex-shrink-0"
+                className="md:h-9 w-auto object-contain flex-shrink-0"
               />
             </Link>
           </div>
 
           {/* 2. DESKTOP NAVIGATION */}
-          <nav className="hidden md:flex space-x-6 lg:space-x-8">
+          <nav className="hidden md:flex space-x-6 lg:space-x-8 pointer-events-auto">
             {navLinks.map((link) => (
               <div key={link.name} className="relative group flex items-center">
                 {link.status === 'active' ? (
@@ -100,21 +100,11 @@ const Header: React.FC = () => {
             ))}
           </nav>
 
-          {/* 3. SPACER */}
-          <div className="col-span-1 md:hidden"></div>
-
           {/* 4. ACTIONS / MENU */}
-          <div className="col-span-1 flex items-center justify-end gap-2">
+          <div className="flex flex-1 md:flex-none items-center justify-end gap-2 pointer-events-auto">
 
-            {/* Desktop Actions */}
+            {/* Desktop Actions (Search Removed) */}
             <div className="hidden md:flex items-center space-x-3">
-              <button
-                aria-label="Arama yap"
-                className="text-stone-600 hover:text-boun-blue transition-colors p-1 focus:outline-none focus:ring-2 focus:ring-boun-blue rounded"
-              >
-                <Search size={18} aria-hidden="true" />
-              </button>
-
               {/* DROPDOWN MENU */}
               <div className="relative" ref={dropdownRef}>
                 <button
@@ -181,21 +171,21 @@ const Header: React.FC = () => {
               </div>
             </div>
 
-            {/* Mobile Menu Button */}
-            <div className="md:hidden flex justify-end">
+            {/* Mobile Menu Button (Top Right Floating) */}
+            <div className="md:hidden flex w-full justify-end mt-2 mr-2">
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 aria-label={isMenuOpen ? "Menüyü kapat" : "Menüyü aç"}
-                className="text-stone-800 p-2 focus:outline-none focus:ring-2 focus:ring-boun-blue rounded"
+                className="bg-white/90 backdrop-blur text-stone-800 p-2.5 rounded-full shadow-lg border border-stone-200 hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-boun-blue active:scale-95 transition-all"
               >
                 <AnimatePresence mode="wait">
                   {isMenuOpen ? (
                     <motion.div key="close" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }}>
-                      <X size={24} />
+                      <X size={20} />
                     </motion.div>
                   ) : (
                     <motion.div key="menu" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }}>
-                      <Menu size={24} />
+                      <Settings size={20} />
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -206,67 +196,57 @@ const Header: React.FC = () => {
         </div>
       </div>
 
-      {/* Mobile Menu Dropdown */}
+      {/* Mobile Menu Dropdown (Top Right Styled) */}
       <AnimatePresence>
         {isMenuOpen && (
           <motion.div
             layout
-            initial={{ scaleY: 0, opacity: 0 }}
-            animate={{ scaleY: 1, opacity: 1 }}
-            exit={{ scaleY: 0, opacity: 0 }}
+            initial={{ opacity: 0, scale: 0.9, y: -10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: -10 }}
             transition={SPRINGS.snappy}
-            style={{ transformOrigin: 'top', willChange: 'transform, opacity' }}
-            className="md:hidden bg-stone-100 border-t border-stone-200 overflow-hidden absolute w-full shadow-xl"
+            className="md:hidden absolute top-16 right-4 w-64 bg-white rounded-xl shadow-2xl border border-stone-200 overflow-hidden z-50 origin-top-right pointer-events-auto"
           >
-            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-              {navLinks.map((link) => (
-                link.status === 'active' ? (
-                  <Link
-                    key={link.name}
-                    to={link.path}
-                    onClick={() => setIsMenuOpen(false)}
-                    className="block px-3 py-2 rounded-md text-base font-medium text-stone-700 hover:text-boun-blue hover:bg-stone-200"
-                  >
-                    {link.name}
-                  </Link>
-                ) : (
-                  <div key={link.name} className="flex items-center justify-between px-3 py-2 text-stone-400">
-                    <span>{link.name}</span>
-                    <Lock size={14} />
-                  </div>
-                )
-              ))}
+            <div className="p-4 bg-stone-50 border-b border-stone-100">
+              <div className="text-sm font-bold text-stone-900">{userProfile?.username || "Misafir"}</div>
+              <div className="text-xs text-stone-500">{userProfile?.role === 'admin' ? 'Yönetici' : 'Üye'}</div>
+            </div>
 
-              <div className="border-t border-stone-200 my-2 pt-2">
-                {currentUser ? (
-                  <>
-                    <div className="px-3 py-2 text-sm font-bold text-stone-500 uppercase tracking-wider">{userProfile?.username || "Kullanıcı"}</div>
-                    <Link to="/profile" onClick={() => setIsMenuOpen(false)} className="block px-3 py-2 text-stone-700 hover:bg-stone-200 rounded flex items-center gap-2">
-                      <User size={16} /> Profilim
+            <div className="px-2 py-2 space-y-1">
+              {currentUser ? (
+                <>
+                  <Link to="/profile" onClick={() => setIsMenuOpen(false)} className="block px-3 py-2 text-stone-700 hover:bg-stone-100 rounded-lg flex items-center gap-3 text-sm font-medium">
+                    <User size={18} className="text-stone-400" /> Profilim
+                  </Link>
+                  {isManager && (
+                    <Link to="/yonetim" onClick={() => setIsMenuOpen(false)} className="block px-3 py-2 text-stone-700 hover:bg-stone-100 rounded-lg flex items-center gap-3 text-sm font-bold">
+                      <Briefcase size={18} className="text-stone-400" /> Kulüp Yönetimi
                     </Link>
-                    {isManager && (
-                      <Link to="/yonetim" onClick={() => setIsMenuOpen(false)} className="block px-3 py-2 text-stone-700 hover:bg-stone-200 rounded flex items-center gap-2 font-bold">
-                        <Briefcase size={16} /> Kulüp Yönetimi
-                      </Link>
-                    )}
-                    <button onClick={() => { handleLogout(); setIsMenuOpen(false); }} className="w-full text-left px-3 py-2 text-red-600 hover:bg-red-50 rounded flex items-center gap-2">
-                      <LogOut size={16} /> Görüşürüz
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <Link to="/auth/login" onClick={() => setIsMenuOpen(false)} className="block px-3 py-2 text-stone-700 hover:bg-stone-200 rounded flex items-center gap-2">
-                      <LogIn size={16} /> Kampüse Gir
+                  )}
+                  {userProfile?.role === 'admin' && (
+                    <Link to="/admin" onClick={() => setIsMenuOpen(false)} className="block px-3 py-2 text-boun-blue hover:bg-blue-50 rounded-lg flex items-center gap-3 text-sm font-bold">
+                      <Lock size={18} /> Admin Paneli
                     </Link>
-                    <Link to="/auth/register" onClick={() => setIsMenuOpen(false)} className="block px-3 py-2 text-stone-700 hover:bg-stone-200 rounded flex items-center gap-2">
-                      <UserPlus size={16} /> Topluluğa Katıl
-                    </Link>
-                  </>
-                )}
-                <button onClick={handleContactClick} className="w-full mt-2 bg-stone-800 text-stone-100 px-4 py-2 rounded-md font-sans text-sm">
-                  Bize Ulaşın
-                </button>
-              </div>
+                  )}
+                  <button onClick={() => { handleLogout(); setIsMenuOpen(false); }} className="w-full text-left px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg flex items-center gap-3 text-sm font-medium">
+                    <LogOut size={18} /> Çıkış Yap
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link to="/auth/login" onClick={() => setIsMenuOpen(false)} className="block px-3 py-2 text-stone-700 hover:bg-stone-100 rounded-lg flex items-center gap-3 text-sm font-medium">
+                    <LogIn size={18} className="text-stone-400" /> Giriş Yap
+                  </Link>
+                  <Link to="/auth/register" onClick={() => setIsMenuOpen(false)} className="block px-3 py-2 text-stone-700 hover:bg-stone-100 rounded-lg flex items-center gap-3 text-sm font-medium">
+                    <UserPlus size={18} className="text-stone-400" /> Kayıt Ol
+                  </Link>
+                </>
+              )}
+
+              <div className="border-t border-stone-100 my-1 pt-1"></div>
+              <button onClick={handleContactClick} className="w-full text-left px-3 py-2 text-stone-500 hover:bg-stone-100 rounded-lg flex items-center gap-3 text-sm">
+                <Mail size={18} /> İletişim
+              </button>
             </div>
           </motion.div>
         )}

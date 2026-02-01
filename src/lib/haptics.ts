@@ -1,41 +1,34 @@
 /**
- * Haptic Feedback Utility
- * Provides tactile feedback for mobile users
- * Gracefully degrades if not supported
+ * Haptic Feedback Engine
+ * Provides tactile feedback for mobile interactions using the Vibration API.
  */
 
-type HapticPattern = 'light' | 'medium' | 'heavy' | 'success' | 'error' | 'warning';
+type HapticType = 'light' | 'medium' | 'success' | 'error' | 'warning';
 
-const patterns: Record<HapticPattern, number | number[]> = {
-    light: 5,                          // Quick tap (button press)
-    medium: 10,                        // Medium tap
-    heavy: 20,                         // Heavy tap
-    success: [100, 50, 100, 50, 200],  // Victory rhythm
-    error: [10, 50, 10],               // Double buzz (error)
-    warning: [50, 100, 50],            // Warning pattern
-};
+export const triggerHaptic = (type: HapticType) => {
+    // Check if vibration is supported
+    if (typeof navigator === 'undefined' || !navigator.vibrate) return;
 
-/**
- * Trigger haptic feedback if supported
- * @param type Type of haptic pattern
- */
-export const triggerHaptic = (type: HapticPattern = 'light'): void => {
-    if (!('vibrate' in navigator)) {
-        return; // Not supported, silently fail
+    switch (type) {
+        case 'light':
+            // Key press, toggle
+            navigator.vibrate(5);
+            break;
+        case 'medium':
+            // Important UI action
+            navigator.vibrate(15);
+            break;
+        case 'success':
+            // Victory! (Heartbeat pattern)
+            navigator.vibrate([20, 30, 20]);
+            break;
+        case 'error':
+            // Wrong input (Double shake)
+            navigator.vibrate([10, 30, 10, 30]);
+            break;
+        case 'warning':
+            // Alert
+            navigator.vibrate([30, 50, 10]);
+            break;
     }
-
-    try {
-        const pattern = patterns[type];
-        navigator.vibrate(pattern);
-    } catch (error) {
-        // Vibration API failed, ignore
-        console.debug('Haptic feedback not available');
-    }
-};
-
-/**
- * Check if haptic feedback is supported
- */
-export const isHapticSupported = (): boolean => {
-    return 'vibrate' in navigator;
 };

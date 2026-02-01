@@ -31,89 +31,83 @@ const GameCard: React.FC<GameCardProps> = ({
 
   return (
     <motion.div
-      whileHover={!isDisabled ? { y: -4, boxShadow: "0 10px 30px -10px rgba(0,0,0,0.1)" } : {}}
+      whileHover={!isDisabled ? { y: -4, rotate: -1 } : {}}
       whileTap={!isDisabled ? { scale: 0.98 } : {}}
       onClick={!isDisabled ? onClick : undefined}
       className={cn(
-        "relative rounded-xl overflow-hidden border transition-all duration-300 flex flex-col group select-none h-full",
+        "relative rounded-sm overflow-hidden flex flex-col group select-none h-full",
+        "border-2",
         isDisabled
-          ? "bg-stone-100/50 border-stone-200 cursor-not-allowed grayscale-[0.8] opacity-80"
-          : "bg-white border-stone-200 cursor-pointer shadow-sm hover:border-boun-gold",
+          ? "bg-stone-200 border-stone-300 cursor-not-allowed opacity-70"
+          : "bg-game-paper border-game-ink cursor-pointer shadow-[4px_4px_0px_0px_rgba(28,25,23,0.2)] hover:shadow-[6px_6px_0px_0px_rgba(28,25,23,0.3)]",
         span ? "md:col-span-2 md:row-span-2 min-h-[300px]" : "min-h-[180px]",
         className
       )}
     >
-      {/* Background Pattern/Image */}
+      {/* Texture Overlay */}
+      <div className="absolute inset-0 bg-noise opacity-50 pointer-events-none mix-blend-multiply" />
+
+      {/* Background Image (If present) */}
       {imageUrl && span && !isDisabled && (
-        <div className="absolute inset-0 bg-stone-900 z-0">
-          <img src={imageUrl} alt={title} className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-700" />
-          <div className="absolute inset-0 bg-gradient-to-t from-stone-900 via-stone-900/40 to-transparent" />
+        <div className="absolute inset-0 z-0">
+          <img src={imageUrl} alt={title} className="w-full h-full object-cover opacity-20 grayscale group-hover:grayscale-0 transition-all duration-700 mix-blend-multiply" />
+          <div className="absolute inset-0 bg-gradient-to-t from-game-paper via-transparent to-transparent" />
         </div>
       )}
 
-      {/* Content Container */}
-      <div className={cn("relative z-10 p-6 flex flex-col h-full", span && !isDisabled ? "justify-end" : "justify-between")}>
+      {/* Cartridge Label Design */}
+      <div className="relative z-10 p-5 flex flex-col h-full border-4 border-double border-game-ink/10 m-2">
 
-        {/* Header Icon/Badge */}
-        <div className="flex justify-between items-start mb-4">
-          {!span && (
-            <div className={cn(
-              "p-3 rounded-lg flex items-center justify-center transition-colors",
-              isDisabled ? "bg-stone-200 text-stone-400" : "bg-stone-100 text-stone-700 group-hover:bg-boun-gold group-hover:text-white"
-            )}>
-              {icon}
-            </div>
-          )}
+        {/* Header: Status Stamps */}
+        <div className="flex justify-between items-start mb-2">
+          {/* Icon Badge */}
+          <div className={cn(
+            "w-10 h-10 border-2 border-game-ink flex items-center justify-center rounded-full bg-stone-100 shadow-sm",
+            isDisabled ? "text-stone-400" : "text-game-ink group-hover:bg-game-ink group-hover:text-game-paper transition-colors"
+          )}>
+            {icon}
+          </div>
 
+          {/* Status Stamp */}
           {playedToday ? (
-            <span className="ml-auto text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-700 px-2 py-1 rounded flex items-center gap-1">
-              <CheckCircle size={10} fill="currentColor" /> Oynadın
-            </span>
+            <div className="border-2 border-game-win text-game-win px-2 py-1 transform rotate-[-5deg] font-bold uppercase text-[10px] tracking-widest bg-white/80 backdrop-blur-sm shadow-sm">
+              TAMAMLANDI
+            </div>
           ) : isLocked ? (
-            <span className="ml-auto text-[10px] font-bold uppercase tracking-wider bg-stone-200 text-stone-500 px-2 py-1 rounded flex items-center gap-1">
-              <Lock size={10} /> {status === 'coming_soon' ? 'Yakında' : 'Kilitli'}
-            </span>
+            <div className="border-2 border-stone-400 text-stone-500 px-2 py-1 font-bold uppercase text-[10px] tracking-widest bg-stone-200/50">
+              {status === 'coming_soon' ? 'YAKINDA' : 'KİLİTLİ'}
+            </div>
           ) : (
-            <span className={cn(
-              "flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded ml-auto",
-              span ? "bg-boun-gold text-white" : "bg-green-100 text-green-700"
-            )}>
-              {span ? <Star size={10} fill="currentColor" /> : <Play size={10} fill="currentColor" />}
-              {span ? 'Günün Oyunu' : 'Aktif'}
-            </span>
+            <div className="border-2 border-game-stamp text-game-stamp px-2 py-1 transform rotate-[2deg] font-bold uppercase text-[10px] tracking-widest bg-white/50 backdrop-blur-sm shadow-sm animate-pulse">
+              OYNA
+            </div>
           )}
         </div>
 
-        {/* Text Content */}
-        <div className={cn(span && !isDisabled ? "text-white" : "text-stone-900")}>
-          <h3 className={cn("font-serif font-bold leading-tight mb-2 group-hover:translate-x-1 transition-transform", span ? "text-3xl md:text-4xl" : "text-lg")}>
+        {/* Content */}
+        <div className="mt-auto">
+          <h3 className={cn(
+            "font-serif font-black text-game-ink uppercase tracking-tight leading-none mb-2",
+            span ? "text-4xl" : "text-xl"
+          )}>
             {title}
           </h3>
+
+          <div className="h-0.5 w-12 bg-game-ink mb-3 group-hover:w-full transition-all duration-500" />
+
           {description && (
-            <p className={cn(
-              "text-xs font-sans leading-relaxed line-clamp-2",
-              span && !isDisabled ? "text-stone-300" : "text-stone-500"
-            )}>
+            <p className="font-serif text-game-ink/80 text-xs italic leading-tight line-clamp-2">
               {description}
             </p>
           )}
 
-          {/* CTA Button */}
           {!isDisabled && !playedToday && (
-            <div className={cn(
-              "mt-4 flex items-center gap-2 text-xs font-bold uppercase tracking-widest transition-all",
-              span ? "text-boun-gold" : "text-stone-900 group-hover:text-boun-blue"
-            )}>
-              Oyna <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-            </div>
-          )}
-
-          {playedToday && (
-            <div className="mt-4 text-xs text-stone-500 italic">
-              Yarın yeni bir oyun için gel!
+            <div className="mt-4 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-game-ink">
+              BAŞLAMAK İÇİN DOKUN <ArrowRight size={12} />
             </div>
           )}
         </div>
+
       </div>
     </motion.div>
   );

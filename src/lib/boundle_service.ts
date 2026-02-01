@@ -27,7 +27,7 @@ export const getLeaderboard = async (): Promise<LeaderboardUser[]> => {
     const q = query(
       collection(db, "users"),
       orderBy("boundleTotalPoints", "desc"),
-      limit(20)
+      limit(50) // Fetch top 50 (UI filters 10/20/50)
     );
 
     // Using getDocs instead of onSnapshot for one-time fetch

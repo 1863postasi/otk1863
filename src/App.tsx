@@ -17,6 +17,8 @@ import RequireProfileSetup from './components/Auth/RequireProfileSetup'; // Onbo
 
 const { Routes, Route, useLocation } = router;
 
+import MobileBottomNav from './components/PWA/MobileBottomNav';
+
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
   // Hide header on all admin/manager pages and auth pages
@@ -28,14 +30,19 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       <RequireProfileSetup />
 
       {!hideHeader && <Header />}
+
       <main className="flex-grow">
         {children}
       </main>
+
       {!hideHeader && (
-        <footer className="bg-stone-900 text-stone-400 py-8 text-center text-sm font-serif border-t border-stone-800">
-          <p>© {new Date().getFullYear()} Boğaziçi Üniversitesi Öğrenci Temsilciliği Kurulu. Tüm hakları saklıdır.</p>
-          <p className="mt-2 opacity-50 text-xs">Bağımsız Öğrenci Platformu</p>
-        </footer>
+        <>
+          <footer className="bg-stone-900 text-stone-400 py-8 text-center text-sm font-serif border-t border-stone-800 mb-0 md:mb-0 pb-24 md:pb-8">
+            <p>© {new Date().getFullYear()} Boğaziçi Üniversitesi Öğrenci Temsilciliği Kurulu. Tüm hakları saklıdır.</p>
+            <p className="mt-2 opacity-50 text-xs">Bağımsız Öğrenci Platformu</p>
+          </footer>
+          <MobileBottomNav />
+        </>
       )}
     </div>
   );

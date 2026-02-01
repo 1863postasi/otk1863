@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { X, Delete, Loader2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { SPRINGS } from '../../lib/animations';
 import { checkDailyWord, calculateScore } from '../../lib/boundle_service';
 import { useAuth } from '../../context/AuthContext';
 import { ResultOverlay } from './ResultOverlay';
@@ -10,6 +11,7 @@ import { triggerHaptic } from '../../lib/haptics';
 interface GameModalProps {
   isOpen: boolean;
   onClose: () => void;
+  isHighContrast: boolean;
 }
 
 const ROWS = 6;
@@ -24,22 +26,9 @@ const KEYBOARD_ROWS = [
 
 type CellStatus = 'empty' | 'filled' | 'correct' | 'present' | 'absent';
 
-// Günün Falı - Münadi'nin listesi
-const FORTUNES = [
-  "Bugün yemekhanede sıra beklemeden yemek alacaksın (belki).",
-  "Kütüphanede aradığın o boş priz bugün seni bekliyor.",
-  "Kuzey rüzgarı sert, hırkanı almadan çıkma.",
-  "Dikkat et, çimlerin sulanma saati yaklaşıyor.",
-  "Bugün karşına çıkan ilk kediye selam ver, şans getirecek.",
-  "Superdorm yokuşunu çıkarken nefesin kesilmeyecek, formundasın.",
-  "Bugün Boğaz manzarasına karşı içeceğin çay her zamankinden lezzetli olacak.",
-  "Derste en arka sırayı kapmak senin kaderinde var.",
-  "Beklediğin shuttle tam sen durağa gelince kalkacak, koş yetiş!",
-  "Çantana dikkat et, kediler bugün biraz meraklı.",
-  "Albert Long Hall saatini bugün ilk defa doğru duyacaksın.",
-];
+import { getRandomFortune } from '../../lib/fortunes';
 
-const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose }) => {
+const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose, isHighContrast }) => {
   const { userProfile } = useAuth();
   const shouldReduceMotion = useReducedMotion();
 
@@ -61,6 +50,14 @@ const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose }) => {
   const [fortune, setFortune] = useState<string>('');
   const [showShareCard, setShowShareCard] = useState(false);
 
+  // Color Mapping Logic
+  const getColor = (status: CellStatus) => {
+    if (status === 'correct') return isHighContrast ? '#f5793a' : '#4ade80'; // HC: Orange, Normal: Green
+    if (status === 'present') return isHighContrast ? '#85c0f9' : '#facc15'; // HC: Blue, Normal: Yellow
+    if (status === 'absent') return '#78716c'; // Absent is always Gray
+    return 'transparent';
+  };
+
   // Reset Game
   useEffect(() => {
     if (isOpen) {
@@ -75,7 +72,7 @@ const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose }) => {
       setShowShareCard(false);
       setShakeRow(null);
       // Select random fortune
-      setFortune(FORTUNES[Math.floor(Math.random() * FORTUNES.length)]);
+      setFortune(getRandomFortune());
     }
   }, [isOpen]);
 
@@ -256,7 +253,7 @@ const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose }) => {
                       initial={false}
                       animate={{
                         scale: isActive ? 1.05 : 1,
-                        backgroundColor: status === 'correct' ? '#2d4f1e' : status === 'present' ? '#b48e43' : status === 'absent' ? '#78716c' : 'transparent',
+                        backgroundColor: getColor(status),
                         borderColor: status !== 'empty' ? 'transparent' : isFilled ? '#57534e' : '#d6d3d1',
                         color: status !== 'empty' ? '#ffffff' : '#1c1917',
                         // Rotate animation on reveal
@@ -306,6 +303,21 @@ const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose }) => {
               <div key={i} className="flex justify-center gap-1.5">
                 {row.map(key => {
                   const status = keyStatus[key];
+
+                  let btnClass = "bg-white text-stone-800 border-stone-300 hover:bg-stone-50"; // Default
+
+                  if (status === 'correct') {
+                    btnClass = isHighContrast
+                      ? "bg-game-hcWin text-white border-orange-800"
+                      : "bg-boun-green text-white border-green-900";
+                  } else if (status === 'present') {
+                    btnClass = isHighContrast
+                      ? "bg-game-hcPresent text-white border-blue-800"
+                      : "bg-boun-gold text-white border-yellow-800";
+                  } else if (status === 'absent') {
+                    btnClass = "bg-stone-500 text-white border-stone-700";
+                  }
+
                   return (
                     <motion.button
                       whileTap={{ scale: 0.95 }}
@@ -314,10 +326,7 @@ const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose }) => {
                       disabled={gameState !== 'playing' || loading}
                       className={cn(
                         "h-14 flex-1 rounded-[4px] font-serif font-bold text-lg transition-colors shadow-sm border-b-4",
-                        status === 'correct' ? "bg-boun-green text-white border-green-900" :
-                          status === 'present' ? "bg-boun-gold text-white border-yellow-800" :
-                            status === 'absent' ? "bg-stone-500 text-white border-stone-700" :
-                              "bg-white text-stone-800 border-stone-300 hover:bg-stone-50"
+                        btnClass
                       )}
                     >
                       {key}

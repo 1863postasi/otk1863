@@ -3,6 +3,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Share2, RotateCcw, Sparkles } from 'lucide-react';
 import ShareCard from './ShareCard';
+import { usePWAInstall } from '../../hooks/usePWAInstall';
 
 type CellStatus = 'empty' | 'filled' | 'correct' | 'present' | 'absent';
 
@@ -38,6 +39,8 @@ export const ResultOverlay: React.FC<ResultOverlayProps> = ({
     colors,
     fortune
 }) => {
+    const { supportsPWA, isInstalled, install } = usePWAInstall();
+
     return (
         <motion.div
             initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
@@ -115,6 +118,17 @@ export const ResultOverlay: React.FC<ResultOverlayProps> = ({
                         >
                             <RotateCcw size={24} /> KAPAT
                         </button>
+
+                        {/* PWA Install Button */}
+                        {/* Only show if supported AND not already installed */}
+                        {supportsPWA && !isInstalled && (
+                            <button
+                                onClick={install}
+                                className="w-full py-3 mt-2 bg-stone-200 text-stone-600 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-stone-300 transition-colors text-sm uppercase tracking-wide"
+                            >
+                                <span className="text-xl">📲</span> Ana Ekrana Ekle
+                            </button>
+                        )}
                     </div>
                 </motion.div>
             ) : (
