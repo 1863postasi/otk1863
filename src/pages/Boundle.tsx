@@ -16,7 +16,7 @@ const Boundle: React.FC = () => {
     const { userProfile, currentUser } = useAuth();
     const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
     const [loadingLB, setLoadingLB] = useState(true);
-    const [isGameOpen, setIsGameOpen] = useState(false);
+    const [selectedGame, setSelectedGame] = useState<'wordle' | null>(null);
     const [playedToday, setPlayedToday] = useState(false);
     const [leaderboardLimit, setLeaderboardLimit] = useState(20);
     const [isHighContrast, setIsHighContrast] = useState(false);
@@ -39,7 +39,7 @@ const Boundle: React.FC = () => {
                 setPlayedToday(result.played);
             });
         }
-    }, [currentUser, isGameOpen]); // Re-check after modal closes
+    }, [currentUser, selectedGame]); // Re-check after modal closes
 
     const container = {
         hidden: { opacity: 0 },
@@ -72,8 +72,9 @@ const Boundle: React.FC = () => {
 
             {/* GAME MODAL */}
             <GameModal
-                isOpen={isGameOpen}
-                onClose={() => setIsGameOpen(false)}
+                isOpen={!!selectedGame}
+                gameType={selectedGame}
+                onClose={() => setSelectedGame(null)}
                 isHighContrast={isHighContrast}
             />
 
@@ -153,7 +154,7 @@ const Boundle: React.FC = () => {
                                     description="5 Harfli, Boğaziçi temalı günlük kelime avı. Her gün yeni bir kelime."
                                     status="active"
                                     icon={<PenTool size={32} />}
-                                    onClick={() => setIsGameOpen(true)}
+                                    onClick={() => setSelectedGame('wordle')}
                                     span={true}
                                     imageUrl="https://cdn.1863postasi.org/boundle/wordle-bg.jpg"
                                     playedToday={playedToday}

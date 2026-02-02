@@ -1,184 +1,180 @@
-import React, { useState } from 'react';
-import { motion as m, AnimatePresence } from 'framer-motion';
+import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { MOCK_TIMELINE } from '../../lib/data';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
-const motion = m as any;
-
 const HeroTimeline: React.FC = () => {
-  const [activeIndex, setActiveIndex] = useState(MOCK_TIMELINE.length - 1); // Default to latest
+  const [activeIndex, setActiveIndex] = useState(MOCK_TIMELINE.length - 1);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const handlePrev = () => {
-    setActiveIndex((prev) => Math.max(0, prev - 1));
+  // Preload images for buttery smooth transitions
+  useEffect(() => {
+    MOCK_TIMELINE.forEach((item) => {
+      const img = new Image();
+      img.src = item.image;
+    });
+  }, []);
+
+  const handleNext = () => setActiveIndex((prev) => Math.min(MOCK_TIMELINE.length - 1, prev + 1));
+  const handlePrev = () => setActiveIndex((prev) => Math.max(0, prev - 1));
+
+  // Swipe logic
+  const onDragEnd = (event: any, info: any) => {
+    if (info.offset.x < -50) handleNext();
+    else if (info.offset.x > 50) handlePrev();
   };
 
-  const handleNext = () => {
-    setActiveIndex((prev) => Math.min(MOCK_TIMELINE.length - 1, prev + 1));
-  };
-
-  const handleDragEnd = (e: any, { offset, velocity }: any) => {
-    const swipe = Math.abs(offset.x) * velocity.x;
-    if (offset.x < -50 || swipe < -500) {
-      handleNext();
-    } else if (offset.x > 50 || swipe > 500) {
-      handlePrev();
-    }
-  };
-
-  // Spacing configurations
-  const SPACING_MOBILE = 90;
-  const SPACING_DESKTOP = 160;
+  const activeItem = MOCK_TIMELINE[activeIndex];
 
   return (
-    // FIX: Fixed height (h-[75vh]) instead of min-h-screen. 
-    // Added pt-28 to clear header.
-    <div className="relative w-full h-[85vh] md:h-[75vh] min-h-[600px] flex flex-col bg-stone-900 overflow-hidden pt-0 md:pt-28">
+    <div
+      className="relative w-full h-[85vh] md:h-[80vh] min-h-[600px] bg-stone-950 overflow-hidden flex flex-col justify-end group select-none"
+      ref={containerRef}
+    >
 
-      {/* 1. SYNCHRONIZED BACKGROUND */}
-      <AnimatePresence mode="popLayout">
-        <motion.div
-          key={activeIndex}
-          initial={{ opacity: 0, scale: 1.1 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 1.2, ease: "easeOut" }}
-          className="absolute inset-0 z-0"
-        >
-          <img
-            src={MOCK_TIMELINE[activeIndex].image}
-            alt={MOCK_TIMELINE[activeIndex].title}
-            className="w-full h-full object-cover opacity-60"
-          />
-          {/* Dark gradient overlay so white text pops */}
-          <div className="absolute inset-0 bg-gradient-to-t from-stone-900 via-stone-900/60 to-black/60" />
-        </motion.div>
-      </AnimatePresence>
+      {/* 1. CINEMATIC BACKGROUND LAYER */}
+      <div className="absolute inset-0 z-0">
+        <AnimatePresence mode="popLayout">
+          <motion.div
+            key={activeIndex}
+            initial={{ opacity: 0, scale: 1.1 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }} // Custom ease for "premium" feel
+            className="absolute inset-0"
+          >
+            {/* Dark Overlay Gradient - Mobile Optimized */}
+            <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/40 to-black/30 z-10" />
 
-      {/* 2. HERO CONTENT (MANIFESTO) - CENTERED */}
-      {/* Changed to flex-col justify-center items-center for perfect centering */}
-      <div className="relative z-10 w-full h-full flex flex-col justify-center items-center px-6 text-center pointer-events-none pb-24">
-        <motion.div
-          key={`text-${activeIndex}`}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-          // Added max-w-4xl to prevent text from hitting edges uncomfortably
-          className="pointer-events-auto max-w-4xl mx-auto"
-        >
-          <h4 className="text-boun-gold text-sm md:text-base font-bold tracking-[0.2em] uppercase mb-4 drop-shadow-md">
-            {MOCK_TIMELINE[activeIndex].year}
-          </h4>
-          <h1 className="font-serif text-3xl md:text-5xl lg:text-7xl text-stone-100 font-bold leading-tight mb-6 drop-shadow-xl">
-            {MOCK_TIMELINE[activeIndex].title}
-          </h1>
-          <p className="text-stone-200 font-serif text-lg md:text-xl font-light leading-relaxed drop-shadow-md px-4">
-            {MOCK_TIMELINE[activeIndex].desc}
-          </p>
-        </motion.div>
+            <img
+              src={activeItem.image}
+              alt={activeItem.title}
+              className="w-full h-full object-cover object-center opacity-70"
+              draggable={false}
+            />
+          </motion.div>
+        </AnimatePresence>
       </div>
 
-      {/* 3. TIMELINE STRIP - ABSOLUTE BOTTOM */}
-      <div className="absolute bottom-0 w-full bg-[#e6e2dd] h-20 md:h-24 shrink-0 flex items-center justify-center overflow-hidden border-t-4 border-boun-gold/20 z-20">
+      {/* 2. CONTENT LAYER */}
+      <div className="relative z-20 w-full max-w-7xl mx-auto px-6 md:px-12 pb-32 md:pb-40 flex flex-col md:flex-row items-end md:items-center justify-between gap-8 pointer-events-none">
 
-        {/* DESKTOP ARROWS (Close to Center) */}
-        <div className="hidden md:flex absolute inset-0 max-w-lg mx-auto items-center justify-between z-30 pointer-events-none">
-          <button
-            onClick={handlePrev}
-            disabled={activeIndex === 0}
-            className={cn(
-              "p-2 rounded-full text-[#5d4037] hover:text-[#3e2723] hover:bg-[#d7ccc8]/50 transition-all pointer-events-auto transform hover:scale-110",
-              activeIndex === 0 && "opacity-0 pointer-events-none"
-            )}
-          >
-            <ChevronLeft size={28} />
-          </button>
-          <button
-            onClick={handleNext}
-            disabled={activeIndex === MOCK_TIMELINE.length - 1}
-            className={cn(
-              "p-2 rounded-full text-[#5d4037] hover:text-[#3e2723] hover:bg-[#d7ccc8]/50 transition-all pointer-events-auto transform hover:scale-110",
-              activeIndex === MOCK_TIMELINE.length - 1 && "opacity-0 pointer-events-none"
-            )}
-          >
-            <ChevronRight size={28} />
-          </button>
-        </div>
-
-        {/* MOBILE ARROWS (Overlay Edges) */}
-        <div className="md:hidden absolute inset-0 z-30 flex items-center justify-between pointer-events-none px-2">
-          <button
-            onClick={handlePrev}
-            disabled={activeIndex === 0}
-            className={cn(
-              "p-1.5 bg-[#d7ccc8]/90 text-[#3e2723] rounded-full pointer-events-auto active:scale-95 transition-all shadow-sm",
-              activeIndex === 0 && "opacity-0"
-            )}
-          >
-            <ChevronLeft size={20} />
-          </button>
-          <button
-            onClick={handleNext}
-            disabled={activeIndex === MOCK_TIMELINE.length - 1}
-            className={cn(
-              "p-1.5 bg-[#d7ccc8]/90 text-[#3e2723] rounded-full pointer-events-auto active:scale-95 transition-all shadow-sm",
-              activeIndex === MOCK_TIMELINE.length - 1 && "opacity-0"
-            )}
-          >
-            <ChevronRight size={20} />
-          </button>
-        </div>
-
-        {/* Carousel Track */}
-        <div
-          className="relative w-full h-full flex items-center justify-center cursor-grab active:cursor-grabbing touch-pan-y"
-        >
+        {/* Left: Text Content */}
+        <div className="flex-1 text-left pointer-events-auto">
           <motion.div
-            className="absolute inset-0 flex items-center justify-center"
-            drag="x"
-            dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={0.2}
-            onDragEnd={handleDragEnd}
+            key={`text-${activeIndex}`}
+            initial={{ opacity: 0, y: 30, filter: 'blur(10px)' }}
+            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+            transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+            className="max-w-2xl"
           >
-            {MOCK_TIMELINE.map((item, index) => {
-              const diff = index - activeIndex;
-              const isCenter = diff === 0;
+            <div className="flex items-center gap-3 mb-4">
+              <span className="w-12 h-[2px] bg-boun-gold/80" />
+              <span className="text-boun-gold font-bold tracking-[0.2em] text-sm md:text-base uppercase shadow-black drop-shadow-lg">
+                {activeItem.year}
+              </span>
+            </div>
 
-              const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-              const spacing = isMobile ? SPACING_MOBILE : SPACING_DESKTOP;
+            <h1 className="font-serif text-4xl md:text-6xl lg:text-7xl text-white font-bold leading-[1.1] mb-6 drop-shadow-xl tracking-tight">
+              {activeItem.title}
+            </h1>
+
+            <p className="text-stone-300 font-sans text-lg md:text-xl font-light leading-relaxed max-w-prose drop-shadow-md border-l-2 border-stone-600 pl-6">
+              {activeItem.desc}
+            </p>
+          </motion.div>
+        </div>
+
+        {/* Right: Progress Circle (Desktop Only) */}
+        <div className="hidden md:flex flex-col items-center gap-4 shrink-0">
+          <div className="relative w-1 h-32 bg-stone-800 rounded-full overflow-hidden">
+            <motion.div
+              initial={false}
+              animate={{ height: `${((activeIndex + 1) / MOCK_TIMELINE.length) * 100}%` }}
+              transition={{ type: "spring", stiffness: 100, damping: 20 }}
+              className="absolute top-0 w-full bg-boun-gold"
+            />
+          </div>
+          <span className="text-stone-500 font-mono text-xs font-bold -rotate-90">
+            {activeIndex + 1} / {MOCK_TIMELINE.length}
+          </span>
+        </div>
+      </div>
+
+      {/* 3. INTERACTIVE TIMELINE STRIP (BOTTOM NAV) */}
+      <div className="absolute bottom-0 w-full h-24 md:h-28 z-30 bg-stone-900/80 backdrop-blur-xl border-t border-stone-800 flex flex-col justify-center">
+
+        {/* Mobile Swipe Handler Overlay */}
+        <motion.div
+          className="absolute inset-x-0 bottom-24 top-0 z-40 md:hidden"
+          drag="x"
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.2}
+          onDragEnd={onDragEnd}
+        />
+
+        <div className="max-w-7xl mx-auto w-full px-4 md:px-12 flex items-center justify-between">
+
+          {/* Navigation Buttons */}
+          <button
+            onClick={handlePrev}
+            disabled={activeIndex === 0}
+            className="p-3 rounded-full hover:bg-white/5 active:bg-white/10 text-stone-400 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-all md:mr-8"
+          >
+            <ChevronLeft size={24} />
+          </button>
+
+          {/* Timeline Ticks */}
+          <div className="flex-1 flex items-center justify-between md:justify-center md:gap-16 overflow-hidden px-4 relative h-16">
+            {/* Mask Gradients for smooth edges */}
+            <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-stone-900/80 to-transparent z-10 md:hidden" />
+            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-stone-900/80 to-transparent z-10 md:hidden" />
+
+            {MOCK_TIMELINE.map((item, idx) => {
+              // Calculate relative distance for opacity/scale logic
+              const dist = Math.abs(idx - activeIndex);
+              const isVisibleMobile = dist <= 1; // Only show neighbors on mobile
 
               return (
-                <motion.div
-                  key={index}
-                  onClick={() => setActiveIndex(index)}
-                  initial={false}
-                  animate={{
-                    x: diff * spacing,
-                    scale: isCenter ? 1.4 : 0.85,
-                    opacity: isCenter ? 1 : 0.4,
-                    filter: isCenter ? 'blur(0px)' : 'blur(1px)',
-                    zIndex: isCenter ? 10 : 1
-                  }}
-                  transition={{ type: "spring", stiffness: 250, damping: 25, mass: 0.8 }}
-                  className="absolute flex flex-col items-center justify-center cursor-pointer origin-center"
-                  style={{
-                    left: "50%",
-                    top: "50%",
-                    marginLeft: "-40px",
-                    marginTop: "-16px",
-                    width: "80px",
-                    height: "32px"
-                  }}
+                <button
+                  key={item.year}
+                  onClick={() => setActiveIndex(idx)}
+                  className={cn(
+                    "flex flex-col items-center gap-2 transition-all duration-500 group relative py-2",
+                    // Mobile visibility logic
+                    !isVisibleMobile ? "hidden md:flex" : "flex"
+                  )}
                 >
-                  <div className={`w-1.5 h-1.5 rounded-full mb-1 transition-colors duration-300 ${isCenter ? 'bg-[#3e2723]' : 'bg-[#a1887f]'}`} />
+                  {/* Dot */}
+                  <div className={cn(
+                    "w-2 h-2 rounded-full transition-all duration-500",
+                    idx === activeIndex
+                      ? "bg-boun-gold w-3 h-3 shadow-[0_0_10px_rgba(200,160,80,0.5)]"
+                      : "bg-stone-600 group-hover:bg-stone-400"
+                  )} />
 
-                  <span className={`font-serif text-lg md:text-xl font-bold transition-colors duration-300 whitespace-nowrap ${isCenter ? 'text-[#3e2723]' : 'text-[#8d6e63]'}`}>
+                  {/* Year text */}
+                  <span className={cn(
+                    "font-serif text-sm md:text-lg font-bold transition-all duration-500",
+                    idx === activeIndex
+                      ? "text-white scale-110"
+                      : "text-stone-600 group-hover:text-stone-400"
+                  )}>
                     {item.year}
                   </span>
-                </motion.div>
+                </button>
               );
             })}
-          </motion.div>
+          </div>
+
+          <button
+            onClick={handleNext}
+            disabled={activeIndex === MOCK_TIMELINE.length - 1}
+            className="p-3 rounded-full hover:bg-white/5 active:bg-white/10 text-stone-400 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-all md:ml-8"
+          >
+            <ChevronRight size={24} />
+          </button>
         </div>
       </div>
     </div>

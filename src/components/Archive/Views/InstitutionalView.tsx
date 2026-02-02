@@ -70,7 +70,6 @@ const InstitutionalView: React.FC<ViewProps> = ({ onBack }) => {
     const commissionFilter = searchParams.get('commission');
 
     const [activeTab, setActiveTab] = useState<TabMode>('institutional');
-    const [isExiting, setIsExiting] = useState(false);
 
     // -- INSTITUTIONAL STATE --
     const [rootCategories, setRootCategories] = useState<OTKDocument[]>([]);
@@ -254,11 +253,8 @@ const InstitutionalView: React.FC<ViewProps> = ({ onBack }) => {
     };
 
     // --- NAVIGATION ---
-    const handleSafeBack = () => {
-        setIsExiting(true);
-        setTimeout(() => {
-            onBack();
-        }, 0);
+    const handleBack = () => {
+        onBack();
     };
 
     // --- RENDER HELPERS ---
@@ -313,10 +309,10 @@ const InstitutionalView: React.FC<ViewProps> = ({ onBack }) => {
         <div className="flex flex-col min-h-full bg-[#f5f5f4] relative">
 
             {/* COMPACT HEADER */}
-            <div className="bg-white border-b border-stone-200 sticky top-14 md:top-0 z-30 shadow-sm">
+            <div className="bg-white border-b border-stone-200 sticky top-0 z-30 shadow-sm">
                 <div className="px-4 py-2 flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <button onClick={handleSafeBack} className="flex items-center gap-2 text-stone-600 hover:text-stone-900 transition-colors font-serif font-bold text-xs uppercase tracking-widest">
+                        <button onClick={handleBack} className="flex items-center gap-2 text-stone-600 hover:text-stone-900 transition-colors font-serif font-bold text-xs uppercase tracking-widest">
                             <ArrowLeft size={16} /> Lobiye Dön
                         </button>
                     </div>
@@ -326,274 +322,255 @@ const InstitutionalView: React.FC<ViewProps> = ({ onBack }) => {
                 <div className="px-4 flex gap-6 overflow-x-auto no-scrollbar border-t border-stone-100">
                     <button onClick={() => setActiveTab('institutional')} className={cn("py-3 text-xs md:text-sm font-serif font-bold transition-all relative whitespace-nowrap flex items-center gap-2", activeTab === 'institutional' ? "text-stone-900" : "text-stone-400 hover:text-stone-600")}>
                         <Building2 size={16} /> KURUMSAL BELGELER
-                        {activeTab === 'institutional' && !isExiting && <motion.div layoutId="tab-underline" className="absolute bottom-0 left-0 right-0 h-0.5 bg-stone-900" />}
+                        {activeTab === 'institutional' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-stone-900" />}
                     </button>
                     <button onClick={() => setActiveTab('academic')} className={cn("py-3 text-xs md:text-sm font-serif font-bold transition-all relative whitespace-nowrap flex items-center gap-2", activeTab === 'academic' ? "text-stone-900" : "text-stone-400 hover:text-stone-600")}>
                         <GraduationCap size={16} /> AKADEMİK HAVUZ
-                        {activeTab === 'academic' && !isExiting && <motion.div layoutId="tab-underline" className="absolute bottom-0 left-0 right-0 h-0.5 bg-stone-900" />}
+                        {activeTab === 'academic' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-stone-900" />}
                     </button>
                 </div>
             </div>
 
-            {/* CONTENT - Hidden immediately on exit to prevent crash */}
-            {!isExiting && (
-                <div className="flex-1 p-4 md:p-8 max-w-5xl mx-auto w-full">
-                    <AnimatePresence mode="wait">
+            {/* CONTENT */}
+            <div className="flex-1 p-4 md:p-8 max-w-5xl mx-auto w-full">
 
-                        {/* MODE A: INSTITUTIONAL */}
-                        {activeTab === 'institutional' && (
-                            <motion.div
-                                key="institutional"
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: 20 }}
-                                transition={{ duration: 0.2 }}
-                                className="space-y-4"
-                            >
-                                {commissionFilter && (
-                                    <div className="bg-stone-800 text-white p-4 rounded-lg flex items-center justify-between mb-6 shadow-lg">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-white/10 rounded-full"><Filter size={20} /></div>
-                                            <div><h3 className="font-bold text-sm">Filtrelenmiş Görünüm</h3><p className="text-xs text-stone-400">Sadece seçili komisyona ait belgeler listeleniyor.</p></div>
-                                        </div>
-                                        <button onClick={() => window.location.href = '/arsiv'} className="text-xs font-bold underline text-boun-gold">Filtreyi Kaldır</button>
-                                    </div>
-                                )}
-
-                                {/* List/Accordion */}
-                                {commissionFilter ? (
-                                    <div className="bg-white border border-stone-200 rounded-lg overflow-hidden shadow-sm">
-                                        <div className="p-4 bg-stone-50 border-b border-stone-200 font-bold text-stone-700 flex items-center gap-2"><FileText size={18} /> Bulunan Belgeler ({documents.length})</div>
-                                        {documents.map(doc => (
-                                            <div key={doc.id} onClick={() => handleFileClick(doc.url || "")} className="px-6 py-4 border-b border-stone-100 hover:bg-stone-50 cursor-pointer flex items-center gap-4">
-                                                <div className="p-2 bg-stone-100 rounded text-stone-500"><FileText size={20} /></div>
-                                                <div><h4 className="font-bold text-stone-800 text-sm">{doc.title}</h4><p className="text-xs text-stone-400">{doc.type === 'file' ? doc.size : 'Klasör'}</p></div>
-                                                <ExternalLink size={16} className="ml-auto text-stone-300" />
-                                            </div>
-                                        ))}
-                                        {documents.length === 0 && <div className="p-8 text-center text-stone-400">Bu komisyona ait belge bulunamadı.</div>}
-                                    </div>
-                                ) : (
-                                    rootCategories.length > 0 ? (
-                                        rootCategories.map((cat) => (
-                                            <div key={cat.id} className="bg-white border border-stone-200 rounded-lg overflow-hidden shadow-sm">
-                                                <button onClick={() => setExpandedCategory(expandedCategory === cat.id ? null : cat.id)} className="w-full px-6 py-4 flex items-center justify-between bg-stone-50 hover:bg-stone-100 transition-colors">
-                                                    <div className="flex items-center gap-3"><Folder className={cn("text-stone-400", expandedCategory === cat.id && "text-boun-gold fill-boun-gold")} size={20} /><span className="font-serif font-bold text-stone-800 text-lg">{cat.title}</span></div>
-                                                    <ChevronDown size={20} className={cn("text-stone-400 transition-transform", expandedCategory === cat.id && "rotate-180")} />
-                                                </button>
-                                                <AnimatePresence>
-                                                    {expandedCategory === cat.id && (
-                                                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                                                            {renderInstContentList(cat)}
-                                                        </motion.div>
-                                                    )}
-                                                </AnimatePresence>
-                                            </div>
-                                        ))
-                                    ) : (<div className="text-center py-12 text-stone-400 font-serif italic">Henüz bir kategori oluşturulmamış.</div>)
-                                )}
-                            </motion.div>
+                {/* MODE A: INSTITUTIONAL */}
+                {activeTab === 'institutional' && (
+                    <div className="space-y-4">
+                        {commissionFilter && (
+                            <div className="bg-stone-800 text-white p-4 rounded-lg flex items-center justify-between mb-6 shadow-lg">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-white/10 rounded-full"><Filter size={20} /></div>
+                                    <div><h3 className="font-bold text-sm">Filtrelenmiş Görünüm</h3><p className="text-xs text-stone-400">Sadece seçili komisyona ait belgeler listeleniyor.</p></div>
+                                </div>
+                                <button onClick={() => window.location.href = '/arsiv'} className="text-xs font-bold underline text-boun-gold">Filtreyi Kaldır</button>
+                            </div>
                         )}
 
-                        {/* MODE B: ACADEMIC (Dynamic) */}
-                        {activeTab === 'academic' && (
-                            <motion.div
-                                key="academic"
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: -20 }}
-                                transition={{ duration: 0.2 }}
-                                className="space-y-6"
-                            >
-                                {/* Search & Filter Header */}
-                                <div className="flex flex-col md:flex-row gap-3 bg-white p-3 rounded-xl border border-stone-200 shadow-sm">
-                                    {/* Search Input */}
-                                    <div className="relative flex-grow">
-                                        <input
-                                            type="text"
-                                            placeholder="Ders kodu ara... (Örn: CMPE150)"
-                                            value={academicSearch}
-                                            onChange={(e) => setAcademicSearch(e.target.value)}
-                                            className="w-full pl-9 pr-4 py-2.5 bg-stone-50 border border-stone-200 rounded-lg outline-none focus:border-stone-400 focus:ring-1 focus:ring-stone-400 transition-all font-sans font-medium uppercase text-sm"
-                                        />
-                                        <Search className="absolute left-3 top-3 text-stone-400" size={16} />
+                        {/* List/Accordion */}
+                        {commissionFilter ? (
+                            <div className="bg-white border border-stone-200 rounded-lg overflow-hidden shadow-sm">
+                                <div className="p-4 bg-stone-50 border-b border-stone-200 font-bold text-stone-700 flex items-center gap-2"><FileText size={18} /> Bulunan Belgeler ({documents.length})</div>
+                                {documents.map(doc => (
+                                    <div key={doc.id} onClick={() => handleFileClick(doc.url || "")} className="px-6 py-4 border-b border-stone-100 hover:bg-stone-50 cursor-pointer flex items-center gap-4">
+                                        <div className="p-2 bg-stone-100 rounded text-stone-500"><FileText size={20} /></div>
+                                        <div><h4 className="font-bold text-stone-800 text-sm">{doc.title}</h4><p className="text-xs text-stone-400">{doc.type === 'file' ? doc.size : 'Klasör'}</p></div>
+                                        <ExternalLink size={16} className="ml-auto text-stone-300" />
                                     </div>
-
-                                    {/* Filters Row */}
-                                    <div className="flex gap-2 w-full md:w-auto overflow-x-auto no-scrollbar items-center">
-                                        {/* Saved Toggle */}
-                                        <button
-                                            onClick={() => setShowSavedOnly(!showSavedOnly)}
-                                            className={cn(
-                                                "px-3 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap border flex items-center gap-1 h-10",
-                                                showSavedOnly
-                                                    ? "bg-boun-gold text-white border-boun-gold"
-                                                    : "bg-stone-50 text-stone-500 border-stone-200 hover:border-stone-400"
+                                ))}
+                                {documents.length === 0 && <div className="p-8 text-center text-stone-400">Bu komisyona ait belge bulunamadı.</div>}
+                            </div>
+                        ) : (
+                            rootCategories.length > 0 ? (
+                                rootCategories.map((cat) => (
+                                    <div key={cat.id} className="bg-white border border-stone-200 rounded-lg overflow-hidden shadow-sm">
+                                        <button onClick={() => setExpandedCategory(expandedCategory === cat.id ? null : cat.id)} className="w-full px-6 py-4 flex items-center justify-between bg-stone-50 hover:bg-stone-100 transition-colors">
+                                            <div className="flex items-center gap-3"><Folder className={cn("text-stone-400", expandedCategory === cat.id && "text-boun-gold fill-boun-gold")} size={20} /><span className="font-serif font-bold text-stone-800 text-lg">{cat.title}</span></div>
+                                            <ChevronDown size={20} className={cn("text-stone-400 transition-transform", expandedCategory === cat.id && "rotate-180")} />
+                                        </button>
+                                        <AnimatePresence>
+                                            {expandedCategory === cat.id && (
+                                                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                                                    {renderInstContentList(cat)}
+                                                </motion.div>
                                             )}
-                                            title="Sadece Kaydedilenler"
-                                        >
-                                            <Bookmark size={14} fill={showSavedOnly ? "currentColor" : "none"} />
-                                        </button>
-
-                                        {/* Type Filter */}
-                                        <div className="relative md:w-40 min-w-[140px]">
-                                            <select
-                                                value={selectedType}
-                                                onChange={(e) => setSelectedType(e.target.value)}
-                                                className="w-full pl-8 pr-4 py-2.5 bg-stone-50 border border-stone-200 rounded-lg outline-none appearance-none cursor-pointer font-bold text-stone-700 text-xs truncate h-10"
-                                            >
-                                                {RESOURCE_TYPES_FILTER.map(t => <option key={t} value={t}>{t}</option>)}
-                                            </select>
-                                            <Filter className="absolute left-2.5 top-3 text-stone-400" size={14} />
-                                            <ChevronDown className="absolute right-3 top-3 text-stone-400 pointer-events-none" size={14} />
-                                        </div>
-
-                                        {/* Term Filter */}
-                                        <div className="relative md:w-32 min-w-[120px]">
-                                            <select
-                                                value={selectedTerm}
-                                                onChange={(e) => setSelectedTerm(e.target.value)}
-                                                className="w-full pl-8 pr-4 py-2.5 bg-stone-50 border border-stone-200 rounded-lg outline-none appearance-none cursor-pointer font-bold text-stone-700 text-xs truncate h-10"
-                                            >
-                                                {availableTerms.map(t => <option key={t} value={t}>{t}</option>)}
-                                            </select>
-                                            <div className="absolute left-2.5 top-3 text-stone-400 font-serif text-[10px] font-bold">YIL</div>
-                                            <ChevronDown className="absolute right-3 top-3 text-stone-400 pointer-events-none" size={14} />
-                                        </div>
-
-                                        {/* Upload Button */}
-                                        <button
-                                            onClick={() => setIsUploadModalOpen(true)}
-                                            className="flex items-center justify-center gap-1 px-4 py-2.5 bg-boun-blue text-white rounded-lg text-xs font-bold shadow-sm hover:bg-blue-800 transition-colors whitespace-nowrap min-w-fit h-10"
-                                        >
-                                            <Plus size={16} /> <span className="hidden md:inline">Materyal Paylaş</span>
-                                        </button>
+                                        </AnimatePresence>
                                     </div>
+                                ))
+                            ) : (<div className="text-center py-12 text-stone-400 font-serif italic">Henüz bir kategori oluşturulmamış.</div>)
+                        )}
+                    </div>
+                )}
+
+                {/* MODE B: ACADEMIC (Dynamic) */}
+                {activeTab === 'academic' && (
+                    <div className="space-y-6">
+                        {/* Search & Filter Header */}
+                        <div className="flex flex-col md:flex-row gap-3 bg-white p-3 rounded-xl border border-stone-200 shadow-sm">
+                            {/* Search Input */}
+                            <div className="relative flex-grow">
+                                <input
+                                    type="text"
+                                    placeholder="Ders kodu ara... (Örn: CMPE150)"
+                                    value={academicSearch}
+                                    onChange={(e) => setAcademicSearch(e.target.value)}
+                                    className="w-full pl-9 pr-4 py-2.5 bg-stone-50 border border-stone-200 rounded-lg outline-none focus:border-stone-400 focus:ring-1 focus:ring-stone-400 transition-all font-sans font-medium uppercase text-sm"
+                                />
+                                <Search className="absolute left-3 top-3 text-stone-400" size={16} />
+                            </div>
+
+                            {/* Filters Row */}
+                            <div className="flex gap-2 w-full md:w-auto overflow-x-auto no-scrollbar items-center">
+                                {/* Saved Toggle */}
+                                <button
+                                    onClick={() => setShowSavedOnly(!showSavedOnly)}
+                                    className={cn(
+                                        "px-3 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap border flex items-center gap-1 h-10",
+                                        showSavedOnly
+                                            ? "bg-boun-gold text-white border-boun-gold"
+                                            : "bg-stone-50 text-stone-500 border-stone-200 hover:border-stone-400"
+                                    )}
+                                    title="Sadece Kaydedilenler"
+                                >
+                                    <Bookmark size={14} fill={showSavedOnly ? "currentColor" : "none"} />
+                                </button>
+
+                                {/* Type Filter */}
+                                <div className="relative md:w-40 min-w-[140px]">
+                                    <select
+                                        value={selectedType}
+                                        onChange={(e) => setSelectedType(e.target.value)}
+                                        className="w-full pl-8 pr-4 py-2.5 bg-stone-50 border border-stone-200 rounded-lg outline-none appearance-none cursor-pointer font-bold text-stone-700 text-xs truncate h-10"
+                                    >
+                                        {RESOURCE_TYPES_FILTER.map(t => <option key={t} value={t}>{t}</option>)}
+                                    </select>
+                                    <Filter className="absolute left-2.5 top-3 text-stone-400" size={14} />
+                                    <ChevronDown className="absolute right-3 top-3 text-stone-400 pointer-events-none" size={14} />
                                 </div>
 
-                                {/* Loading State */}
-                                {loadingAcad ? (
-                                    <div className="text-center py-12 text-stone-400 flex flex-col items-center">
-                                        <Loader2 className="animate-spin mb-2" size={32} />
-                                        <span className="font-serif">Akademik havuz taranıyor...</span>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-4">
-                                        {groupedCourses.length === 0 && (
-                                            <div className="text-center py-12 text-stone-400 border-2 border-dashed border-stone-200 rounded-xl">
-                                                <BookOpen className="mx-auto mb-2 opacity-50" size={32} />
-                                                <p>Aradığınız kriterlere uygun kaynak bulunamadı.</p>
-                                            </div>
-                                        )}
+                                {/* Term Filter */}
+                                <div className="relative md:w-32 min-w-[120px]">
+                                    <select
+                                        value={selectedTerm}
+                                        onChange={(e) => setSelectedTerm(e.target.value)}
+                                        className="w-full pl-8 pr-4 py-2.5 bg-stone-50 border border-stone-200 rounded-lg outline-none appearance-none cursor-pointer font-bold text-stone-700 text-xs truncate h-10"
+                                    >
+                                        {availableTerms.map(t => <option key={t} value={t}>{t}</option>)}
+                                    </select>
+                                    <div className="absolute left-2.5 top-3 text-stone-400 font-serif text-[10px] font-bold">YIL</div>
+                                    <ChevronDown className="absolute right-3 top-3 text-stone-400 pointer-events-none" size={14} />
+                                </div>
 
-                                        {groupedCourses.map((course) => {
-                                            // If showSavedOnly is on, auto-expand courses that have items
-                                            const isExpanded = showSavedOnly ? true : (expandedCourse === course.code);
+                                {/* Upload Button */}
+                                <button
+                                    onClick={() => setIsUploadModalOpen(true)}
+                                    className="flex items-center justify-center gap-1 px-4 py-2.5 bg-boun-blue text-white rounded-lg text-xs font-bold shadow-sm hover:bg-blue-800 transition-colors whitespace-nowrap min-w-fit h-10"
+                                >
+                                    <Plus size={16} /> <span className="hidden md:inline">Materyal Paylaş</span>
+                                </button>
+                            </div>
+                        </div>
 
-                                            return (
-                                                <div key={course.code} className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                                                    {/* Course Header */}
-                                                    <button
-                                                        onClick={() => !showSavedOnly && setExpandedCourse(isExpanded ? null : course.code)}
-                                                        className={cn(
-                                                            "w-full flex items-center justify-between p-5 md:p-6 bg-white hover:bg-stone-50 transition-colors",
-                                                            showSavedOnly && "cursor-default hover:bg-white"
-                                                        )}
-                                                    >
-                                                        <div className="flex items-center gap-4 text-left">
-                                                            <div className="w-14 h-14 bg-stone-100 rounded-lg flex items-center justify-center text-stone-600 font-bold shrink-0 border border-stone-200 text-lg">
-                                                                {course.code.substring(0, 2)}
-                                                            </div>
-                                                            <div>
-                                                                <h3 className="font-serif font-bold text-xl text-stone-900 leading-tight">
-                                                                    {course.code}
-                                                                </h3>
-                                                                <p className="text-sm text-stone-500 font-medium">
-                                                                    {course.totalCount} Kaynak Mevcut
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex items-center gap-4">
-                                                            <span className="hidden md:flex items-center gap-1 text-xs font-bold text-stone-400 bg-stone-100 px-2 py-1 rounded">
-                                                                <Layers size={12} /> {course.totalCount}
-                                                            </span>
-                                                            {!showSavedOnly && <ChevronDown size={20} className={cn("text-stone-400 transition-transform duration-300", isExpanded && "rotate-180 text-boun-gold")} />}
-                                                        </div>
-                                                    </button>
-
-                                                    {/* Course Content Accordion */}
-                                                    <AnimatePresence>
-                                                        {isExpanded && (
-                                                            <motion.div
-                                                                initial={{ height: 0 }}
-                                                                animate={{ height: "auto" }}
-                                                                exit={{ height: 0 }}
-                                                                className="overflow-hidden bg-stone-50/50 border-t border-stone-100"
-                                                            >
-                                                                <div className="p-6 pt-2 space-y-6">
-                                                                    {Object.entries(course.resources).map(([type, files]) => (
-                                                                        <div key={type}>
-                                                                            <h4 className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3 flex items-center gap-2 border-b border-stone-200 pb-1">
-                                                                                <div className="w-1.5 h-1.5 rounded-full bg-boun-gold"></div>
-                                                                                {type}
-                                                                            </h4>
-                                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                                                {(files as AcademicResource[]).map(file => {
-                                                                                    const isYoutube = file.mimeType?.includes('youtube') || file.url.includes('youtube');
-                                                                                    const isLink = !file.url.includes('r2.dev') && !isYoutube;
-                                                                                    const isSaved = userProfile?.savedLectureNoteIds?.includes(file.id);
-
-                                                                                    return (
-                                                                                        <div
-                                                                                            key={file.id}
-                                                                                            onClick={() => handleFileClick(file.url, file.mimeType)}
-                                                                                            className="bg-white border border-stone-200 p-3 rounded-lg flex items-center gap-3 cursor-pointer hover:border-boun-blue hover:shadow-sm transition-all group"
-                                                                                        >
-                                                                                            <div className={cn(
-                                                                                                "p-2 rounded text-stone-400 group-hover:text-white transition-colors shrink-0",
-                                                                                                isYoutube ? "bg-red-50 group-hover:bg-red-600 text-red-500" :
-                                                                                                    isLink ? "bg-blue-50 group-hover:bg-blue-600 text-blue-500" :
-                                                                                                        "bg-stone-50 group-hover:bg-stone-700"
-                                                                                            )}>
-                                                                                                {isYoutube ? <Youtube size={18} /> : isLink ? <LinkIcon size={18} /> : <FileText size={18} />}
-                                                                                            </div>
-                                                                                            <div className="flex-1 min-w-0">
-                                                                                                <div className="text-sm font-bold text-stone-700 truncate group-hover:text-stone-900">{file.title}</div>
-                                                                                                <div className="text-[10px] text-stone-400 flex flex-wrap gap-2 mt-0.5">
-                                                                                                    {file.term && <span>{file.term}</span>}
-                                                                                                    {file.instructor && <span className="text-stone-500 font-medium hidden sm:inline">• {file.instructor}</span>}
-                                                                                                </div>
-                                                                                            </div>
-
-                                                                                            {/* Bookmark Button */}
-                                                                                            <button
-                                                                                                onClick={(e) => { e.stopPropagation(); toggleBookmark('resource', file.id); }}
-                                                                                                className="text-stone-300 hover:text-boun-gold transition-colors p-1"
-                                                                                                title="Kaydet"
-                                                                                            >
-                                                                                                <Bookmark size={16} fill={isSaved ? "currentColor" : "none"} className={isSaved ? "text-boun-gold" : ""} />
-                                                                                            </button>
-                                                                                        </div>
-                                                                                    );
-                                                                                })}
-                                                                            </div>
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            </motion.div>
-                                                        )}
-                                                    </AnimatePresence>
-                                                </div>
-                                            );
-                                        })}
+                        {/* Loading State */}
+                        {loadingAcad ? (
+                            <div className="text-center py-12 text-stone-400 flex flex-col items-center">
+                                <Loader2 className="animate-spin mb-2" size={32} />
+                                <span className="font-serif">Akademik havuz taranıyor...</span>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {groupedCourses.length === 0 && (
+                                    <div className="text-center py-12 text-stone-400 border-2 border-dashed border-stone-200 rounded-xl">
+                                        <BookOpen className="mx-auto mb-2 opacity-50" size={32} />
+                                        <p>Aradığınız kriterlere uygun kaynak bulunamadı.</p>
                                     </div>
                                 )}
-                            </motion.div>
-                        )}
 
-                    </AnimatePresence>
-                </div>
-            )}
+                                {groupedCourses.map((course) => {
+                                    // If showSavedOnly is on, auto-expand courses that have items
+                                    const isExpanded = showSavedOnly ? true : (expandedCourse === course.code);
+
+                                    return (
+                                        <div key={course.code} className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                                            {/* Course Header */}
+                                            <button
+                                                onClick={() => !showSavedOnly && setExpandedCourse(isExpanded ? null : course.code)}
+                                                className={cn(
+                                                    "w-full flex items-center justify-between p-5 md:p-6 bg-white hover:bg-stone-50 transition-colors",
+                                                    showSavedOnly && "cursor-default hover:bg-white"
+                                                )}
+                                            >
+                                                <div className="flex items-center gap-4 text-left">
+                                                    <div className="w-14 h-14 bg-stone-100 rounded-lg flex items-center justify-center text-stone-600 font-bold shrink-0 border border-stone-200 text-lg">
+                                                        {course.code.substring(0, 2)}
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="font-serif font-bold text-xl text-stone-900 leading-tight">
+                                                            {course.code}
+                                                        </h3>
+                                                        <p className="text-sm text-stone-500 font-medium">
+                                                            {course.totalCount} Kaynak Mevcut
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-4">
+                                                    <span className="hidden md:flex items-center gap-1 text-xs font-bold text-stone-400 bg-stone-100 px-2 py-1 rounded">
+                                                        <Layers size={12} /> {course.totalCount}
+                                                    </span>
+                                                    {!showSavedOnly && <ChevronDown size={20} className={cn("text-stone-400 transition-transform duration-300", isExpanded && "rotate-180 text-boun-gold")} />}
+                                                </div>
+                                            </button>
+
+                                            {/* Course Content Accordion */}
+                                            <AnimatePresence>
+                                                {isExpanded && (
+                                                    <motion.div
+                                                        initial={{ height: 0 }}
+                                                        animate={{ height: "auto" }}
+                                                        exit={{ height: 0 }}
+                                                        className="overflow-hidden bg-stone-50/50 border-t border-stone-100"
+                                                    >
+                                                        <div className="p-6 pt-2 space-y-6">
+                                                            {Object.entries(course.resources).map(([type, files]) => (
+                                                                <div key={type}>
+                                                                    <h4 className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-3 flex items-center gap-2 border-b border-stone-200 pb-1">
+                                                                        <div className="w-1.5 h-1.5 rounded-full bg-boun-gold"></div>
+                                                                        {type}
+                                                                    </h4>
+                                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                                        {(files as AcademicResource[]).map(file => {
+                                                                            const isYoutube = file.mimeType?.includes('youtube') || file.url.includes('youtube');
+                                                                            const isLink = !file.url.includes('r2.dev') && !isYoutube;
+                                                                            const isSaved = userProfile?.savedLectureNoteIds?.includes(file.id);
+
+                                                                            return (
+                                                                                <div
+                                                                                    key={file.id}
+                                                                                    onClick={() => handleFileClick(file.url, file.mimeType)}
+                                                                                    className="bg-white border border-stone-200 p-3 rounded-lg flex items-center gap-3 cursor-pointer hover:border-boun-blue hover:shadow-sm transition-all group"
+                                                                                >
+                                                                                    <div className={cn(
+                                                                                        "p-2 rounded text-stone-400 group-hover:text-white transition-colors shrink-0",
+                                                                                        isYoutube ? "bg-red-50 group-hover:bg-red-600 text-red-500" :
+                                                                                            isLink ? "bg-blue-50 group-hover:bg-blue-600 text-blue-500" :
+                                                                                                "bg-stone-50 group-hover:bg-stone-700"
+                                                                                    )}>
+                                                                                        {isYoutube ? <Youtube size={18} /> : isLink ? <LinkIcon size={18} /> : <FileText size={18} />}
+                                                                                    </div>
+                                                                                    <div className="flex-1 min-w-0">
+                                                                                        <div className="text-sm font-bold text-stone-700 truncate group-hover:text-stone-900">{file.title}</div>
+                                                                                        <div className="text-[10px] text-stone-400 flex flex-wrap gap-2 mt-0.5">
+                                                                                            {file.term && <span>{file.term}</span>}
+                                                                                            {file.instructor && <span className="text-stone-500 font-medium hidden sm:inline">• {file.instructor}</span>}
+                                                                                        </div>
+                                                                                    </div>
+
+                                                                                    {/* Bookmark Button */}
+                                                                                    <button
+                                                                                        onClick={(e) => { e.stopPropagation(); toggleBookmark('resource', file.id); }}
+                                                                                        className="text-stone-300 hover:text-boun-gold transition-colors p-1"
+                                                                                        title="Kaydet"
+                                                                                    >
+                                                                                        <Bookmark size={16} fill={isSaved ? "currentColor" : "none"} className={isSaved ? "text-boun-gold" : ""} />
+                                                                                    </button>
+                                                                                </div>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
 
             {/* Upload Modal */}
             <ResourceUploadModal isOpen={isUploadModalOpen} onClose={() => setIsUploadModalOpen(false)} />

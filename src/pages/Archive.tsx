@@ -170,16 +170,18 @@ const Archive: React.FC = () => {
           >
             <motion.div
               key={activeView} // Inner key triggers the transition between views if wanted, or just mount/unmount
-              initial={{ opacity: 0, x: 50 }}
+              initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 50 }}
-              transition={{ duration: 0.4, ease: "easeOut" }}
-              className="h-full w-full overflow-y-auto custom-scrollbar"
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="h-full w-full overflow-y-auto custom-scrollbar will-change-transform"
             >
-              {activeView === 'resistance' && <ResistanceView onBack={() => setSearchParams({})} />}
-              {activeView === 'roots' && <RootsView onBack={() => setSearchParams({})} />}
-              {activeView === 'campus' && <CampusView onBack={() => setSearchParams({})} />}
-              {activeView === 'institutional' && <InstitutionalView onBack={() => setSearchParams({})} />}
+              <React.Suspense fallback={<div className="h-full w-full flex items-center justify-center"><div className="w-8 h-8 border-4 border-stone-200 border-t-stone-500 rounded-full animate-spin" /></div>}>
+                {activeView === 'resistance' && <ResistanceView onBack={() => setSearchParams({})} />}
+                {activeView === 'roots' && <RootsView onBack={() => setSearchParams({})} />}
+                {activeView === 'campus' && <CampusView onBack={() => setSearchParams({})} />}
+                {activeView === 'institutional' && <InstitutionalView onBack={() => setSearchParams({})} />}
+              </React.Suspense>
             </motion.div>
           </motion.div>
         )}

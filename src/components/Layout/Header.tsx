@@ -22,8 +22,8 @@ const Header: React.FC = () => {
     { name: 'Arşiv', path: '/arsiv', status: 'active' },
     { name: 'ÖTK', path: '/otk', status: 'active' },
     { name: 'Boundle', path: '/boundle', status: 'active' },
-    { name: 'Forum', path: '#', status: 'passive' },
-    { name: 'Yayınlar', path: '#', status: 'passive' },
+    { name: 'Forum', path: '/forum', status: 'active' },
+    { name: 'Yayınlar', path: '/yayinlar', status: 'active' },
   ];
 
   // Check if user manages any clubs

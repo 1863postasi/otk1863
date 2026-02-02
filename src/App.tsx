@@ -13,6 +13,17 @@ import Register from './pages/Auth/Register';
 import Profile from './pages/Profile'; // Import the new Profile page
 import Boundle from './pages/Boundle'; // Import Boundle Lobby
 import About from './pages/About'; // Import About Page
+import PublicationsPage from './pages/Publications'; // Import Publications Page
+import DiaryPage from './pages/Publications/Diary'; // Import Diary Page
+import PublicationDetail from './pages/Publications/PublicationDetail'; // Import Publication Detail Page
+import Forum from './pages/Forum';
+import AcademicReviews from './pages/Forum/Courses';
+import CourseDetail from './pages/Forum/CourseDetail';
+import InstructorDetail from './pages/Forum/InstructorDetail';
+import ClubReviews from './pages/Forum/Clubs';
+import ClubDetail from './pages/Forum/ClubDetail';
+import Community from './pages/Forum/Discussions';
+import ThreadDetail from './pages/Forum/ThreadDetail'; // Import ThreadDetail Page
 import ProtectedRoute from './components/Auth/ProtectedRoute';
 import RequireProfileSetup from './components/Auth/RequireProfileSetup'; // Onboarding Modal
 
@@ -60,6 +71,9 @@ const App: React.FC = () => {
           <Route path="/" element={<Home />} />
           <Route path="/otk" element={<OTK />} />
           <Route path="/hakkinda" element={<About />} />
+          <Route path="/yayinlar" element={<PublicationsPage />} />
+          <Route path="/yayinlar/:id" element={<PublicationDetail />} />
+          <Route path="/yayinlar-gunluk" element={<DiaryPage />} />
 
           {/* Auth Pages */}
           <Route path="/auth/login" element={<StudentLogin />} />
@@ -91,6 +105,72 @@ const App: React.FC = () => {
             element={
               <ProtectedRoute requireAdmin={false}>
                 <Boundle />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Forum Routes */}
+          <Route
+            path="/forum"
+            element={
+              <ProtectedRoute requireAdmin={false}>
+                <Forum />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/forum/akademik"
+            element={
+              <ProtectedRoute requireAdmin={false}>
+                <AcademicReviews />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/forum/ders/:courseCode"
+            element={
+              <ProtectedRoute requireAdmin={false}>
+                <CourseDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/forum/hoca/:instructorId"
+            element={
+              <ProtectedRoute requireAdmin={false}>
+                <InstructorDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/forum/kulupler"
+            element={
+              <ProtectedRoute requireAdmin={false}>
+                <ClubReviews />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/forum/kulupler/:clubId"
+            element={
+              <ProtectedRoute requireAdmin={false}>
+                <ClubDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/forum/topluluk"
+            element={
+              <ProtectedRoute requireAdmin={false}>
+                <Community />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/forum/topluluk/:id"
+            element={
+              <ProtectedRoute requireAdmin={false}>
+                <ThreadDetail />
               </ProtectedRoute>
             }
           />

@@ -8,8 +8,8 @@ const MobileBottomNav: React.FC = () => {
         { name: 'ÖTK', path: '/otk', icon: Users, disabled: false },
         { name: 'Arşiv', path: '/arsiv', icon: Archive, disabled: false },
         { name: 'Boundle', path: '/boundle', icon: Gamepad2, isCenter: true, disabled: false },
-        { name: 'Forum', path: '/forum', icon: MessageCircle, disabled: true },
-        { name: 'Yayınlar', path: '/yayinlar', icon: BookOpen, disabled: true },
+        { name: 'Forum', path: '/forum', icon: MessageCircle, disabled: false },
+        { name: 'Yayınlar', path: '/yayinlar', icon: BookOpen, disabled: false },
     ];
 
     return (
