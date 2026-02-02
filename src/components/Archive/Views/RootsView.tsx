@@ -41,7 +41,6 @@ const RootsView: React.FC<ViewProps> = ({ onBack }) => {
     // --- STATE ---
     const [stories, setStories] = useState<Story[]>([]);
     const [loading, setLoading] = useState(false);
-    const [lastDoc, setLastDoc] = useState<any>(null); // For pagination cursor
     const [hasMore, setHasMore] = useState(true); // Are there more?
 
     // Filters & Inputs
@@ -61,7 +60,7 @@ const RootsView: React.FC<ViewProps> = ({ onBack }) => {
     useEffect(() => {
         const timer = setTimeout(() => {
             setDebouncedSearch(searchQuery);
-        }, 500); // 500ms debounce
+        }, 300); // Faster debounce for Client Side
         return () => clearTimeout(timer);
     }, [searchQuery]);
 
@@ -79,100 +78,84 @@ const RootsView: React.FC<ViewProps> = ({ onBack }) => {
         'Tarihi Anlar'
     ];
 
-    // --- MAIN DATA FETCHING (Server Side) ---
-    const fetchStories = async (reset: boolean = false) => {
+    // --- MAIN DATA FETCHING (Smart Sync strategy) ---
+    // Goal: Fetch ALL data once, cache it, and only fetch updates (Diff) on subsequent visits.
+    // Filtering is done Client-Side for maximum speed and flexibility (Contains search etc.)
+
+    const fetchStories = async (forceRefresh = false) => {
         if (loading) return;
         setLoading(true);
 
         try {
-            // 1. Determine Query Constraints
-            let constraints: any[] = [];
-            let collectionRef = collection(db, "stories");
-            let q;
+            // 1. Initial Load from Cache
+            const cachedData = cache.get(CACHE_KEYS.ORIGINS) as Story[];
+            let currentStories = cachedData || [];
 
-            // Search > Date > Default
-            // Firestore Limitation: Can't Combine "Title Prefix" (Inequality) with "Date Range" (Inequality).
-            // Strategy: 
-            // - If Search is Active: Order by Title. (Date filter applied Client Side on result).
-            // - If Search is Inactive: Order by Year (if Date Filter) or CreatedAt.
+            // If we have cache and this is just a mount, set it immediately for perceived speed
+            if (currentStories.length > 0 && !forceRefresh) {
+                setStories(currentStories);
+            }
 
-            if (debouncedSearch) {
-                // Search Mode
-                constraints.push(orderBy("title"));
-                constraints.push(startAt(debouncedSearch));
-                constraints.push(endAt(debouncedSearch + '\uf8ff'));
-            } else if (dateRange.start || dateRange.end) {
-                // Date Mode (No Text Search)
-                // Assuming 'year' field is stored as string "YYYY" or number.
-                constraints.push(orderBy("year", "desc")); // Newest first usually? Or Asc? "desc" for Archive.
-                if (dateRange.start) {
-                    // start means "From 1990", so year >= 1990. 
-                    // Note: If desc sort, we might need careful range.
-                    // Actually, let's keep it simple. Filter >= Start, <= End.
-                    // For Descending sort:
-                    const startYear = dateRange.start.split('-')[0];
-                    constraints.push(where("year", ">=", startYear));
+            // 2. Smart Sync Check (Compare Latest)
+            // Get the very latet doc from Server
+            const latestQuery = query(collection(db, "stories"), orderBy("createdAt", "desc"), limit(1));
+            const latestSnapshot = await getDocs(latestQuery);
+
+            if (!latestSnapshot.empty) {
+                const serverLatest = latestSnapshot.docs[0].data();
+                const serverLatestId = latestSnapshot.docs[0].id;
+                // Simple Check: Does our cached list contain this ID?
+                const hasLatest = currentStories.some(s => s.id === serverLatestId);
+
+                // If we don't have the latest OR cache is empty OR forced refresh
+                if (!hasLatest || currentStories.length === 0 || forceRefresh) {
+
+                    let q;
+
+                    if (currentStories.length > 0 && !forceRefresh) {
+                        // Diff Fetch: Fetch items strictly NEWER than our top cached item
+                        // Sort cache desc first to find top
+                        const sortedCache = [...currentStories].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+                        const latestCached = sortedCache[0];
+
+                        if (latestCached?.createdAt) {
+                            // Fetch where createdAt > latestCached.createdAt
+                            q = query(collection(db, "stories"), where("createdAt", ">", latestCached.createdAt), orderBy("createdAt", "desc"));
+                        } else {
+                            // Fallback if no valid createdAt
+                            q = query(collection(db, "stories"), orderBy("createdAt", "desc"));
+                        }
+                    } else {
+                        // Full Fetch (if cache empty)
+                        // Note: Ideally use batching/pagination if >5000 docs. For 3000 it is acceptable.
+                        q = query(collection(db, "stories"), orderBy("createdAt", "desc"));
+                    }
+
+                    const snapshot = await getDocs(q);
+
+                    if (!snapshot.empty) {
+                        const newDocs = snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as object) })) as Story[];
+
+                        // Merge logic
+                        if (currentStories.length === 0 || forceRefresh) {
+                            currentStories = newDocs;
+                        } else {
+                            // Prepend new docs (assuming desc sort)
+                            // Deduplicate based on ID
+                            const existingIds = new Set(currentStories.map(s => s.id));
+                            const uniqueNew = newDocs.filter(d => !existingIds.has(d.id));
+                            currentStories = [...uniqueNew, ...currentStories];
+                        }
+
+                        // Sort combined list ensuring desc order
+                        // currentStories.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)); // Optional strict sort
+
+                        // Update State & Cache
+                        setStories(currentStories);
+                        cache.set(CACHE_KEYS.ORIGINS, currentStories, CACHE_TTL.EPIC); // 1 Year TTL
+                    }
                 }
-                if (dateRange.end) {
-                    const endYear = dateRange.end.split('-')[0];
-                    constraints.push(where("year", "<=", endYear));
-                }
-            } else {
-                // Default Sort
-                constraints.push(orderBy("createdAt", "desc"));
             }
-
-            // FILTER LOGIC (Category) - Equality, works with anything
-            if (activeFilter !== 'Tümü') {
-                constraints.push(where("category", "==", activeFilter));
-            }
-
-            // PAGINATION
-            if (!reset && lastDoc) {
-                constraints.push(startAfter(lastDoc));
-            }
-
-            constraints.push(limit(100)); // Server side limit
-
-            q = query(collectionRef, ...constraints);
-
-            // 2. CACHE CHECK (Only for default view - Page 1, No Search, No Filter)
-            const isDefaultView = !debouncedSearch && activeFilter === 'Tümü' && !dateRange.start && reset;
-            if (isDefaultView) {
-                const cached = cache.get(CACHE_KEYS.ORIGINS);
-                if (cached) {
-                    setStories(cached);
-                    // Since we have cache, we might not have the 'cursor' for the next page unless we saved it?
-                    // Usually we don't save cursors in simple cache. 
-                    // Strategy: If cached, show it. Then background fetch to update and get fresh cursor.
-                }
-            }
-
-            // 3. EXECUTE QUERY
-            const snapshot = await getDocs(q);
-
-            // 4. PROCESS RESULTS
-            const newStories = snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as object) })) as Story[];
-
-            // Handle Empty
-            setHasMore(newStories.length === 100);
-
-            // Create Cursor
-            setLastDoc(snapshot.docs[snapshot.docs.length - 1]);
-
-            // Set State
-            if (reset) {
-                setStories(newStories);
-                setChunkIndex(1);
-                // Update Cache if Default View
-                if (isDefaultView) {
-                    cache.set(CACHE_KEYS.ORIGINS, newStories, CACHE_TTL.EPIC);
-                }
-            } else {
-                // Append
-                setStories(prev => [...prev, ...newStories]);
-            }
-
         } catch (error) {
             console.error("Fetch Error:", error);
         } finally {
@@ -180,11 +163,63 @@ const RootsView: React.FC<ViewProps> = ({ onBack }) => {
         }
     };
 
-    // Trigger Fetch on Change
+    // Initial Load
     useEffect(() => {
-        // Reset and fetch when Search, Filter or Date changes
-        fetchStories(true);
-    }, [debouncedSearch, activeFilter, dateRange.start, dateRange.end]);
+        fetchStories();
+    }, []);
+
+    // -- DERIVED STATE (Client-Side Filtering) --
+    const filteredStories = useMemo(() => {
+        let result = stories;
+
+        // A. Saved Filter
+        if (showSavedOnly) {
+            const savedIds = userProfile?.savedRootIds || [];
+            result = result.filter(s => savedIds.includes(s.id));
+        }
+
+        // B. Category Filter
+        if (activeFilter !== 'Tümü') {
+            result = result.filter(story => story.category === activeFilter);
+        }
+
+        // C. Text Search (Title, Content, Tags) - Client Side Contains
+        if (debouncedSearch.trim()) {
+            const q = debouncedSearch.toLowerCase();
+            result = result.filter(s =>
+                s.title.toLowerCase().includes(q) ||
+                (s.content && s.content.toLowerCase().includes(q)) ||
+                s.tags?.some(tag => tag.toLowerCase().includes(q))
+            );
+        }
+
+        // D. Date Range Filter
+        if (dateRange.start || dateRange.end) {
+            result = result.filter(s => {
+                const storyYear = parseInt(s.year) || 0;
+                let startYear = 0;
+                let endYear = 9999;
+                if (dateRange.start) startYear = parseInt(dateRange.start.split('-')[0]); // YYYY-MM -> YYYY
+                if (dateRange.end) endYear = parseInt(dateRange.end.split('-')[0]);
+                return storyYear >= startYear && storyYear <= endYear;
+            });
+        }
+
+        return result;
+    }, [stories, activeFilter, showSavedOnly, userProfile?.savedRootIds, debouncedSearch, dateRange]);
+
+
+    // Pagination (Chunking) logic for Display
+    const displayedStories = useMemo(() => {
+        const end = chunkIndex * CHUNK_SIZE;
+        return filteredStories.slice(0, end);
+    }, [filteredStories, chunkIndex]);
+
+    // Helper to check if more pages available
+    useEffect(() => {
+        setHasMore(displayedStories.length < filteredStories.length);
+    }, [displayedStories.length, filteredStories.length]);
+
 
     // Deep Link Logic (Open story from URL)
     const [searchParams, setSearchParams] = useSearchParams();
@@ -194,11 +229,8 @@ const RootsView: React.FC<ViewProps> = ({ onBack }) => {
             const targetStory = stories.find(s => s.id === storyIdFromUrl);
             if (targetStory) {
                 setSelectedStory(targetStory);
-                // Clean URL without refreshing
                 const newParams = new URLSearchParams(searchParams);
                 newParams.delete('storyId');
-                // We replace history to keep back button functional but clean current state
-                // We won't force URL change to avoid re-renders, just set state.
             }
         }
     }, [stories, searchParams]);
@@ -250,7 +282,6 @@ const RootsView: React.FC<ViewProps> = ({ onBack }) => {
     const openStory = (story: Story) => {
         setSelectedStory(story);
         setActiveImageIndex(0);
-        // Push state for back button handling
         window.history.pushState({ modalOpen: true }, '', '');
     }
 
@@ -258,24 +289,8 @@ const RootsView: React.FC<ViewProps> = ({ onBack }) => {
     useEffect(() => {
         const handlePopState = (event: PopStateEvent) => {
             if (selectedStory) {
-                // If modal is open and back is pressed, close modal and stay on view
-                event.preventDefault(); // Sometimes needed depending on browser
+                event.preventDefault();
                 setSelectedStory(null);
-            } else {
-                // If no modal, go back to Lobby (handled by React Router if we push URL, but here we use View State)
-                // However, Archive.tsx handles view switching. RootsView is just a component.
-                // If user presses back in RootsView, we want to go to Lobby.
-                // Standard browser Back likely goes to previous ROUTE. 
-                // We need to intercept if we want "Back -> Lobby", OR rely on "Lobiye Dön" button.
-                // User Request: "arşivde bir kısımdayken telefonun geri git tuşuna basıldğında arşiv lobisine dönülmeli."
-                // Since this component is mounted *inside* /arsiv, if we didn't push a state for RootsView, back button leaves /arsiv.
-                // To fix this: Archive.tsx should push state when entering a view.
-
-                // For THIS component (RootsView), we only handle the Modal closing standardly.
-                // The parent (Archive.tsx) should probably handle the "View -> Lobby" transition if we want precise control,
-                // OR we accept that Back leaves the page unless we hacked the history stack on mount.
-
-                // Let's implement the Modal closing here correctly first:
             }
         };
 
@@ -283,63 +298,14 @@ const RootsView: React.FC<ViewProps> = ({ onBack }) => {
         return () => window.removeEventListener('popstate', handlePopState);
     }, [selectedStory]);
 
-    // Close modal helper (removes history state if manual close)
     const closeStory = () => {
         setSelectedStory(null);
-        // If we manually close, we should go back in history to remove the 'modalOpen' state
-        // ONLY if the current state was actually pushed by us. 
-        // A simple way is just `history.back()` but that triggers popstate.
-        // Better: Check state.
         if (window.history.state && window.history.state.modalOpen) {
             window.history.back();
         }
     }
 
     // --- Helper: SAFE URL & EMBED ---
-
-    // --- HELPERS (Layout) ---
-
-    // 1. Displayed Stories
-    // Logic: Return ALL filtered stories accumulated so far (Infinite Scroll).
-    // Hybrid Filter: If Search is active, Server ignored Date. So we filter Date here.
-    const displayedStories = useMemo(() => {
-        let result = stories;
-
-        // If Search was active, Server returned matches by Title (ignoring Date).
-        // We must filter by Date client-side to satisfy "Simultaneous" requirement.
-        if (debouncedSearch && (dateRange.start || dateRange.end)) {
-            result = result.filter(s => {
-                const storyYear = parseInt(s.year) || 0;
-                let startYear = 0;
-                let endYear = 9999;
-                if (dateRange.start) startYear = parseInt(dateRange.start.split('-')[0]);
-                if (dateRange.end) endYear = parseInt(dateRange.end.split('-')[0]);
-                return storyYear >= startYear && storyYear <= endYear;
-            });
-        }
-
-        // Then Slice for "Load More" effect (though usually we show all if Infinite Append)
-        return result.slice(0, chunkIndex * 100);
-    }, [stories, chunkIndex, debouncedSearch, dateRange]);
-
-    // 2. Featured Story
-    // Pick a random story from the current loaded batch (stories).
-    // Ideally this should be a stable pick so it doesn't change on every render.
-    const featuredStory = useMemo(() => {
-        if (stories.length === 0) return null;
-        // Seed random index based on list length to be somewhat stable or just random
-        const randomIndex = Math.floor(Math.random() * stories.length);
-        return stories[randomIndex];
-    }, [stories.length]); // Only change if count changes (load more) or mount.
-
-    // NEXT PAGE HANDLER
-    const handleNextPage = () => {
-        if (!hasMore || loading) return;
-        setChunkIndex(prev => prev + 1);
-        fetchStories(false);
-    };
-
-    // 3. Image/Video Helpers
     const ensureAbsoluteUrl = (url: string) => {
         if (!url) return '';
         if (url.startsWith('http://') || url.startsWith('https://')) {
@@ -361,71 +327,93 @@ const RootsView: React.FC<ViewProps> = ({ onBack }) => {
         return url.endsWith('.mp4') || url.endsWith('.webm') || url.endsWith('.mov');
     };
 
+    // Featured Story (stable pick)
+    const featuredStory = useMemo(() => {
+        if (stories.length === 0) return null;
+        // Simple random pick based on length
+        const randomIndex = Math.floor(Math.random() * stories.length);
+        return stories[randomIndex];
+    }, [stories.length]);
+
+    // NEXT PAGE HANDLER
+    const handleNextPage = () => {
+        if (displayedStories.length >= filteredStories.length) return;
+        setChunkIndex(prev => prev + 1);
+    };
+
+
     return (
         <div className="min-h-full bg-[#f5f5f4] text-stone-900 font-sans relative pb-20">
 
             {/* 1. COMPACT HEADER & FILTERS */}
             <div className="sticky top-0 z-40 bg-[#f5f5f4]/95 backdrop-blur-md border-b border-stone-200 shadow-sm transition-all">
 
-                <div className="px-4 py-3 max-w-7xl mx-auto flex flex-col md:flex-row gap-4 items-center justify-between">
+                <div className="px-4 py-3 max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-y-3 gap-x-4">
 
-                    {/* A. Back & Title */}
-                    <div className="flex items-center gap-4 w-full md:w-auto">
+                    {/* Title & Mobile Back */}
+                    <div className="flex items-center gap-3 shrink-0 w-full md:w-auto">
+                        <button onClick={onBack} className="p-2 -ml-2 hover:bg-stone-200 rounded-full transition-colors md:hidden">
+                            <ArrowLeft size={20} />
+                        </button>
+                        {/* Desktop Back */}
                         <button
                             onClick={onBack}
-                            className="flex items-center gap-2 text-stone-600 hover:text-stone-900 transition-colors font-serif font-bold text-xs uppercase tracking-widest shrink-0"
+                            className="hidden md:flex items-center gap-2 text-stone-600 hover:text-stone-900 transition-colors font-serif font-bold text-xs uppercase tracking-widest shrink-0"
                         >
                             <ArrowLeft size={16} /> Lobiye Dön
                         </button>
-                        <div className="h-4 w-px bg-stone-300 hidden md:block"></div>
-                        <h1 className="font-serif font-bold text-lg text-stone-800 hidden md:block">Kökenler ve Hikayeler</h1>
+                        <div className="h-4 w-px bg-stone-300 hidden md:block mx-2"></div>
+                        <div>
+                            <h1 className="font-serif text-lg md:text-xl font-bold text-stone-800 leading-none">Kökenler</h1>
+                            <p className="text-[10px] md:text-xs text-stone-500 font-medium tracking-wide">Toplumsal Tarih Arşivi</p>
+                        </div>
                     </div>
 
-                    {/* B. Active Tools (Search, Date, Filter) */}
-                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar w-full md:w-auto pb-2 md:pb-0">
+                    {/* Controls Container (Wrapped Flex for Mobile) */}
+                    <div className="flex flex-wrap items-center justify-start md:justify-end gap-2 md:gap-3 w-full md:flex-1">
 
-                        {/* Search Input */}
-                        <div className="relative group shrink-0 w-40 focus-within:w-60 transition-all duration-300">
-                            <Search className="absolute left-2.5 top-2.5 text-stone-400 group-focus-within:text-stone-600" size={14} />
+                        {/* Category Filter (Elegant Style) */}
+                        <div className="relative shrink-0 flex-1 md:flex-none min-w-[120px]">
+                            <select
+                                value={activeFilter}
+                                onChange={(e) => setActiveFilter(e.target.value)}
+                                className="w-full appearance-none pl-3 pr-8 py-2 bg-white border border-stone-200 rounded-lg text-xs font-serif font-bold text-stone-700 shadow-sm outline-none focus:border-boun-blue focus:ring-1 focus:ring-boun-blue cursor-pointer transition-all hover:bg-stone-50"
+                            >
+                                {filters.map(f => <option key={f} value={f}>{f}</option>)}
+                            </select>
+                            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-stone-400">
+                                <ChevronRight size={14} className="rotate-90" />
+                            </div>
+                        </div>
+
+                        {/* Search */}
+                        <div className="relative flex-1 md:flex-none min-w-[140px] md:w-64 transition-all">
+                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" size={14} />
                             <input
                                 type="text"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 placeholder="Ara..."
-                                className="w-full pl-8 pr-3 py-2 bg-white border border-stone-200 rounded-lg text-xs font-bold text-stone-700 outline-none focus:border-stone-400 shadow-sm"
+                                className="w-full pl-8 pr-3 py-2 bg-white border border-stone-200 rounded-lg text-xs font-medium text-stone-700 outline-none focus:border-stone-400 focus:shadow-sm transition-shadow"
                             />
                         </div>
 
-                        {/* Date Filter (Compact) */}
-                        <div className="flex items-center bg-white border border-stone-200 rounded-lg px-2 py-1.5 gap-2 shrink-0 shadow-sm">
-                            <Calendar size={14} className="text-stone-400" />
+                        {/* Date Filter (Improved & Larger) */}
+                        <div className="flex items-center bg-white border border-stone-200 rounded-lg px-2 py-1 gap-1 shrink-0 shadow-sm relative group flex-1 md:flex-none justify-center">
+                            <Calendar size={14} className="text-stone-400 ml-1 shrink-0" />
                             <input
                                 type="month"
                                 value={dateRange.start}
                                 onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                                className="w-24 text-[10px] bg-transparent outline-none font-bold text-stone-600 uppercase"
+                                className="w-24 text-[10px] md:text-xs bg-transparent outline-none font-bold text-stone-600 uppercase py-1 cursor-pointer hover:bg-stone-50 rounded text-center"
                             />
-                            <span className="text-stone-300">-</span>
+                            <span className="text-stone-300 shrink-0">-</span>
                             <input
                                 type="month"
                                 value={dateRange.end}
                                 onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                                className="w-24 text-[10px] bg-transparent outline-none font-bold text-stone-600 uppercase"
+                                className="w-24 text-[10px] md:text-xs bg-transparent outline-none font-bold text-stone-600 uppercase py-1 cursor-pointer hover:bg-stone-50 rounded text-center"
                             />
-                        </div>
-
-                        {/* Category Filter Dropdown (Mobile optimized) */}
-                        <div className="shrink-0 relative">
-                            <select
-                                value={activeFilter}
-                                onChange={(e) => setActiveFilter(e.target.value)}
-                                className="w-32 pl-3 pr-8 py-2 bg-stone-800 text-stone-100 rounded-lg text-xs font-bold appearance-none cursor-pointer outline-none shadow-md hover:bg-stone-700 transition-colors"
-                            >
-                                {filters.map(f => <option key={f} value={f}>{f}</option>)}
-                            </select>
-                            <div className="absolute right-2.5 top-2.5 pointer-events-none text-stone-400">
-                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
-                            </div>
                         </div>
 
                         {/* Saved Toggle */}
@@ -433,7 +421,7 @@ const RootsView: React.FC<ViewProps> = ({ onBack }) => {
                             onClick={() => setShowSavedOnly(!showSavedOnly)}
                             className={cn(
                                 "p-2 rounded-lg transition-all border shrink-0",
-                                showSavedOnly ? "bg-boun-gold border-boun-gold text-white" : "bg-white border-stone-200 text-stone-400 hover:border-stone-400"
+                                showSavedOnly ? "bg-boun-gold border-boun-gold text-white shadow-inner" : "bg-white border-stone-200 text-stone-400 hover:border-stone-400 hover:text-stone-600"
                             )}
                             title="Kaydedilenler"
                         >
@@ -444,7 +432,7 @@ const RootsView: React.FC<ViewProps> = ({ onBack }) => {
                 </div>
             </div>
 
-            {/* 2. FEATURED STORY (Random) */}
+            {/* 2. FEATURED STORY (Random - Only Show on Default View) */}
             {featuredStory && !debouncedSearch && activeFilter === 'Tümü' && !showSavedOnly && chunkIndex === 1 && (
                 <div className="px-4 py-6 max-w-7xl mx-auto">
                     <motion.div
@@ -490,7 +478,7 @@ const RootsView: React.FC<ViewProps> = ({ onBack }) => {
                         <div className="w-8 h-8 border-4 border-stone-200 border-t-stone-500 rounded-full animate-spin"></div>
                         Arşiv taranıyor...
                     </div>
-                ) : stories.length === 0 ? (
+                ) : filteredStories.length === 0 ? (
                     <div className="text-center py-20 text-stone-400 font-serif italic border-2 border-dashed border-stone-200 rounded-xl bg-stone-50">
                         {debouncedSearch ? "Aramanızla eşleşen hikaye bulunamadı." : "Bu kategoride henüz hikaye yok."}
                     </div>
@@ -500,7 +488,6 @@ const RootsView: React.FC<ViewProps> = ({ onBack }) => {
                             key={chunkIndex}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
                             transition={{ duration: 0.5 }}
                             className="columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4 pb-8"
                         >
@@ -600,7 +587,7 @@ const RootsView: React.FC<ViewProps> = ({ onBack }) => {
 
                             <button
                                 onClick={() => { handleNextPage(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                                disabled={!hasMore && chunkIndex * CHUNK_SIZE >= stories.length}
+                                disabled={displayedStories.length >= filteredStories.length}
                                 className="px-4 py-2 bg-stone-800 text-stone-100 rounded-lg text-sm font-bold shadow-md hover:bg-stone-700 disabled:opacity-30 disabled:shadow-none transition-all flex items-center gap-2"
                             >
                                 {loading ? "Yükleniyor..." : "Sıradaki Anılar"} <ChevronRight size={16} />
@@ -652,7 +639,6 @@ const RootsView: React.FC<ViewProps> = ({ onBack }) => {
                                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                         />
                                     ) : selectedStory.images && selectedStory.images.length > 0 ? (
-                                        /* 2. R2 Files (Images/Videos) */
                                         /* 2. R2 Files (Images/Videos) */
                                         <div className="relative w-full h-full flex items-center justify-center bg-black">
                                             <AnimatePresence initial={false} custom={slideDirection} mode="popLayout">
