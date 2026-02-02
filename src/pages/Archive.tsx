@@ -17,7 +17,7 @@ type ArchiveView = 'lobby' | 'roots' | 'campus' | 'institutional' | 'resistance'
 const Archive: React.FC = () => {
   // State to manage the current view (like a mini-router)
   const [activeView, setActiveView] = useState<ArchiveView>('lobby');
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Check URL params for deep linking (e.g. from Commissions page or Story Link)
   useEffect(() => {
@@ -31,6 +31,8 @@ const Archive: React.FC = () => {
       setActiveView('institutional');
     } else if (storyId) {
       setActiveView('roots');
+    } else {
+      setActiveView('lobby');
     }
   }, [searchParams]);
 
@@ -118,7 +120,7 @@ const Archive: React.FC = () => {
                 {categories.map((cat, idx) => (
                   <motion.button
                     key={cat.id}
-                    onClick={() => setActiveView(cat.id)}
+                    onClick={() => setSearchParams({ view: cat.id })}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.3 + (idx * 0.1) }}
@@ -174,10 +176,10 @@ const Archive: React.FC = () => {
               transition={{ duration: 0.4, ease: "easeOut" }}
               className="h-full w-full overflow-y-auto custom-scrollbar"
             >
-              {activeView === 'resistance' && <ResistanceView onBack={() => setActiveView('lobby')} />}
-              {activeView === 'roots' && <RootsView onBack={() => setActiveView('lobby')} />}
-              {activeView === 'campus' && <CampusView onBack={() => setActiveView('lobby')} />}
-              {activeView === 'institutional' && <InstitutionalView onBack={() => setActiveView('lobby')} />}
+              {activeView === 'resistance' && <ResistanceView onBack={() => setSearchParams({})} />}
+              {activeView === 'roots' && <RootsView onBack={() => setSearchParams({})} />}
+              {activeView === 'campus' && <CampusView onBack={() => setSearchParams({})} />}
+              {activeView === 'institutional' && <InstitutionalView onBack={() => setSearchParams({})} />}
             </motion.div>
           </motion.div>
         )}

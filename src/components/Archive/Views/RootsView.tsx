@@ -346,7 +346,7 @@ const RootsView: React.FC<ViewProps> = ({ onBack }) => {
         <div className="min-h-full bg-[#f5f5f4] text-stone-900 font-sans relative pb-20">
 
             {/* 1. COMPACT HEADER & FILTERS */}
-            <div className="sticky top-0 z-40 bg-[#f5f5f4]/95 backdrop-blur-md border-b border-stone-200 shadow-sm transition-all">
+            <div className="sticky top-14 md:top-0 z-40 bg-[#f5f5f4]/95 backdrop-blur-md border-b border-stone-200 shadow-sm transition-all">
 
                 <div className="px-4 py-3 max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-y-3 gap-x-4">
 

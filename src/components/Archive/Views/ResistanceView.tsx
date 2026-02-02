@@ -345,7 +345,7 @@ const ResistanceView: React.FC<ResistanceViewProps> = ({ onBack }) => {
         <div className="fixed inset-0 top-14 bg-[#f5f5f4] overflow-hidden text-[#292524] z-40">
 
             {/* HEADER */}
-            <div className="absolute top-0 left-0 right-0 z-50 p-4 flex justify-between items-start pointer-events-none bg-gradient-to-b from-[#f5f5f4] to-transparent h-24">
+            <div className="absolute top-0 left-0 right-0 z-50 p-4 pt-12 md:pt-4 flex justify-between items-start pointer-events-none bg-gradient-to-b from-[#f5f5f4] to-transparent h-32 md:h-24">
                 <button
                     onClick={handleBack}
                     className="pointer-events-auto flex items-center gap-2 text-stone-600 hover:text-stone-900 transition-colors bg-white/90 backdrop-blur px-4 py-2 border border-stone-200 shadow-sm rounded-full"

@@ -156,7 +156,7 @@ const CampusView: React.FC<ViewProps> = ({ onBack }) => {
             {/* 1. LEFT PANEL: DIRECTORY */}
             <div className="w-full md:w-80 flex flex-col border-r border-stone-300 bg-white z-20 shadow-xl md:shadow-none h-[40vh] md:h-full order-2 md:order-1 shrink-0">
                 {/* Header */}
-                <div className="p-4 border-b border-stone-200 bg-stone-50">
+                <div className="p-4 pt-16 md:pt-4 border-b border-stone-200 bg-stone-50">
                     <button
                         onClick={onBack}
                         className="flex items-center gap-2 text-stone-500 hover:text-boun-red transition-colors font-serif font-bold text-xs uppercase tracking-widest mb-4"
