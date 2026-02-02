@@ -16,14 +16,14 @@ import About from './pages/About'; // Import About Page
 import PublicationsPage from './pages/Publications'; // Import Publications Page
 import DiaryPage from './pages/Publications/Diary'; // Import Diary Page
 import PublicationDetail from './pages/Publications/PublicationDetail'; // Import Publication Detail Page
-import Forum from './pages/Forum';
+import Forum from './pages/Forum/index';
 import AcademicReviews from './pages/Forum/Courses';
 import CourseDetail from './pages/Forum/CourseDetail';
 import InstructorDetail from './pages/Forum/InstructorDetail';
 import ClubReviews from './pages/Forum/Clubs';
 import ClubDetail from './pages/Forum/ClubDetail';
 import Community from './pages/Forum/Discussions';
-import Marketplace from './pages/Forum/Marketplace';
+import Marketplace from './pages/Forum/Marketplace'; // Import New Marketplace Page
 import ThreadDetail from './pages/Forum/ThreadDetail'; // Import ThreadDetail Page
 import ProtectedRoute from './components/Auth/ProtectedRoute';
 import RequireProfileSetup from './components/Auth/RequireProfileSetup'; // Onboarding Modal
@@ -176,7 +176,7 @@ const App: React.FC = () => {
             }
           />
           <Route
-            path="/forum/pazar-yeri"
+            path="/forum/pazar"
             element={
               <ProtectedRoute requireAdmin={false}>
                 <Marketplace />

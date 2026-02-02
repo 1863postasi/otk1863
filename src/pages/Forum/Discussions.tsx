@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, ThumbsUp, MessageCircle, Share2, MoreHorizontal, Filter, Plus, Search } from 'lucide-react';
-
+import { ThumbsUp, MessageCircle, Share2, MoreHorizontal, Plus } from 'lucide-react';
+import ForumSidebar from '../../components/Forum/Sidebar';
 import { ForumThread } from './types';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -50,10 +50,17 @@ const Community: React.FC = () => {
     return (
         <div className="min-h-screen bg-stone-50 pt-20 pb-20">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="max-w-4xl mx-auto">
+                <div className="flex flex-col lg:flex-row gap-8">
+
+                    {/* LEFT SIDEBAR (Desktop Navigation) */}
+                    <div className="hidden lg:block w-64 shrink-0">
+                        {/* We need to adjust Sidebar to accept props or handle its own state logic if needed, 
+                             but for now let's use the one we created which uses Links */}
+                        <ForumSidebar />
+                    </div>
 
                     {/* MAIN CONTENT (Feed) */}
-                    <div className="w-full">
+                    <div className="flex-1 min-w-0">
 
                         {/* Mobile Category Selector (Horizontal Scroll) */}
                         <div className="lg:hidden mb-6 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
@@ -77,20 +84,14 @@ const Community: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Header */}
-                        <div className="mb-8">
-                            <h1 className="text-3xl font-serif font-bold text-stone-900 mb-2">Topluluk & Tartışma</h1>
-                            <p className="text-stone-500">Kampüs gündemini takip et, fikirlerini paylaş</p>
-                        </div>
-
                         {/* Header & Filters */}
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                            <h2 className="text-2xl font-bold text-stone-900 capitalize flex items-center gap-2">
+                            <h1 className="text-2xl font-bold text-stone-900 capitalize flex items-center gap-2">
                                 {currentCategory.replace('-', ' ')}
                                 <span className="text-sm font-normal text-stone-400 bg-stone-100 px-2 py-0.5 rounded-full">
                                     {threads.length} tartışma
                                 </span>
-                            </h2>
+                            </h1>
 
                             <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-stone-200 shadow-sm self-start">
                                 <button
@@ -214,6 +215,27 @@ const Community: React.FC = () => {
                         </div>
 
                     </div>
+
+                    {/* RIGHT SIDEBAR (Trending / Ads - Desktop Only) */}
+                    <div className="hidden xl:block w-72 shrink-0">
+                        <div className="sticky top-24 bg-white rounded-xl border border-stone-200 p-5 shadow-sm">
+                            <h3 className="font-bold text-stone-900 mb-4 flex items-center gap-2">
+                                <span className="bg-yellow-100 p-1 rounded">🔥</span> Gündem
+                            </h3>
+                            <ul className="space-y-4">
+                                {[1, 2, 3].map(i => (
+                                    <li key={i} className="group cursor-pointer">
+                                        <div className="text-xs font-semibold text-stone-400 mb-0.5">Akademik</div>
+                                        <div className="text-sm font-medium text-stone-900 group-hover:text-boun-blue transition-colors">
+                                            Yemekhane zamları geri çekilsin!
+                                        </div>
+                                        <div className="text-xs text-stone-500 mt-1">1.2b Post • 50k Like</div>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 

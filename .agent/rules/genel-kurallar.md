@@ -6,6 +6,10 @@ trigger: always_on
 
 Bu workspace'te çalışan tüm Yapay Zeka (AI) asistanları ve geliştiriciler aşağıdaki kurallara **kesinlikle** uymalıdır.
 
+> [!CRITICAL] **DİL KURALI ve İLETİŞİM:**
+> **Tüm Artifact'ler (implementation_plan.md, task.md, walkthrough.md) ve raporlar KESİNLİKLE TÜRKÇE hazırlanmalıdır.**
+> Kullanıcı ile iletişim dili her zaman Türkçe olmalıdır. Yabancı dilde plan veya rapor sunmak **yasaktır**. Ajanlar, kullanıcı isteklerine Türkçe yanıt vermelidir.
+
 ## 0. Proje Mimarisi ve Backend Teknolojileri (KORUNMASI GEREKEN YAPI)
 Proje, sunucusuz (serverless) mimari üzerine kuruludur. Aşağıdaki yapı taşları projenin omurgasını oluşturur ve **bozulmamalıdır**:
 *   **Firebase (Core Backend):**
