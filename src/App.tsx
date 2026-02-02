@@ -23,6 +23,7 @@ import InstructorDetail from './pages/Forum/InstructorDetail';
 import ClubReviews from './pages/Forum/Clubs';
 import ClubDetail from './pages/Forum/ClubDetail';
 import Community from './pages/Forum/Discussions';
+import Marketplace from './pages/Forum/Marketplace';
 import ThreadDetail from './pages/Forum/ThreadDetail'; // Import ThreadDetail Page
 import ProtectedRoute from './components/Auth/ProtectedRoute';
 import RequireProfileSetup from './components/Auth/RequireProfileSetup'; // Onboarding Modal

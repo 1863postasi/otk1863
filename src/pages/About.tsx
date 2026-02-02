@@ -51,7 +51,7 @@ const About: React.FC = () => {
                         {/* SECTION: INTRO & GOVERNANCE */}
                         <section className="space-y-6">
                             <p className="text-lg text-stone-700 font-serif italic border-l-4 border-boun-gold pl-4 py-1 bg-amber-50/50">
-                                Bu platform, yetki ve sorumlulukların paylaşıldığı federatif bir yapı ile yönetilmektedir:
+                                Bu platform, yetki ve sorumlulukların paylaşıldığı ikili bir yapı ile yönetilmektedir:
                             </p>
 
                             <div className="grid md:grid-cols-2 gap-6 mt-4">
@@ -72,7 +72,7 @@ const About: React.FC = () => {
                                         İçerik & Kürasyon
                                     </h3>
                                     <p className="text-sm text-stone-600">
-                                        Platformun kalbi olan "Arşiv", "Süreli Yayınlar" ve "Ortak Öğrenci Takvimi" modüllerinin kürasyonu ve editöryal bağımsızlığı
+                                        Platformun kalbi olan "Arşiv", "Yayınlar" ve "Ortak Öğrenci Takvimi" modüllerinin kürasyonu ve editöryal bağımsızlığı
                                         <strong className="text-stone-900"> Kolektif Hamlin (KH)</strong> inisiyatifindedir.
                                     </p>
                                 </div>
@@ -80,7 +80,7 @@ const About: React.FC = () => {
 
                             <div className="bg-stone-50 p-4 rounded border border-stone-200 text-sm text-stone-600 flex gap-3 items-start">
                                 <Users size={20} className="shrink-0 mt-0.5 text-stone-400" />
-                                <p>Arşiv; başta <strong>ÖTK Arşiv Komitesi</strong> ve <strong>BogaziciMemories</strong> olmak üzere kolektif hafızaya önem veren tüm öğrencilerin katkılarıyla oluşturulmuştur.</p>
+                                <p>Arşiv; başta <strong>Kolektif Hamlin (KH)</strong>, <strong>ÖTK Arşiv Komitesi</strong> ve <strong>BogaziciMemories</strong> olmak üzere kolektif hafızaya önem veren tüm öğrencilerin katkılarıyla oluşturulmuştur.</p>
                             </div>
                         </section>
 

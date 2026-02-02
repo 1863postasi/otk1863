@@ -1,128 +1,95 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { BookOpen, Users, MessageSquare, ArrowRight, Star, GraduationCap, PartyPopper } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { BookOpen, Users, MessageSquare, Store } from 'lucide-react';
 
-const Forum: React.FC = () => {
-    const categories = [
+const ForumLobby: React.FC = () => {
+    const sections = [
         {
-            id: 'academic',
+            id: 'akademik',
             title: 'Akademik Değerlendirme',
-            description: 'Dersler ve hocalar hakkında deneyimlerini paylaş, dönemini daha iyi planla.',
-            icon: GraduationCap,
-            color: 'bg-blue-500',
-            textColor: 'text-blue-500',
-            gradient: 'from-blue-500 to-cyan-400',
-            stats: '150+ Ders, 80+ Hoca',
-            link: '/forum/akademik',
-            featured: true
+            description: 'Dersleri ve hocaları değerlendir',
+            icon: BookOpen,
+            path: '/forum/akademik',
+            gradient: 'from-blue-500/10 to-blue-600/5',
+            iconColor: 'text-blue-600',
+            hoverBorder: 'hover:border-blue-500/50',
         },
         {
-            id: 'clubs',
-            title: 'Kulüpler & Etkinlikler',
-            description: 'Kampüsün kalbini atan kulüpleri ve etkinlikleri oyla, yorumla.',
-            icon: PartyPopper,
-            color: 'bg-purple-500',
-            textColor: 'text-purple-500',
-            gradient: 'from-purple-500 to-pink-500',
-            stats: '45 Kulüp, 120+ Etkinlik',
-            link: '/forum/kulupler'
+            id: 'kulupler',
+            title: 'Kulüp & Etkinlikler',
+            description: 'Kulüpleri keşfet ve yorumla',
+            icon: Users,
+            path: '/forum/kulupler',
+            gradient: 'from-purple-500/10 to-purple-600/5',
+            iconColor: 'text-purple-600',
+            hoverBorder: 'hover:border-purple-500/50',
         },
         {
-            id: 'community',
+            id: 'topluluk',
             title: 'Topluluk & Tartışma',
-            description: 'Kampüs gündemini takip et, tartışmalara katıl ve sosyalleş.',
+            description: 'Kampüs gündemini takip et',
             icon: MessageSquare,
-            color: 'bg-orange-500',
-            textColor: 'text-orange-500',
-            gradient: 'from-orange-500 to-amber-400',
-            stats: 'Global Gündem',
-            link: '/forum/topluluk'
-        }
+            path: '/forum/topluluk',
+            gradient: 'from-green-500/10 to-green-600/5',
+            iconColor: 'text-green-600',
+            hoverBorder: 'hover:border-green-500/50',
+        },
+        {
+            id: 'pazar',
+            title: 'Pazar Yeri',
+            description: 'Al, sat ve kirala',
+            icon: Store,
+            path: '/forum/pazar-yeri',
+            gradient: 'from-amber-500/10 to-amber-600/5',
+            iconColor: 'text-amber-600',
+            hoverBorder: 'hover:border-amber-500/50',
+        },
     ];
 
     return (
-        <div className="min-h-screen bg-stone-50 pb-24 md:pb-12 pt-20">
+        <div className="min-h-screen bg-stone-50 pt-20 pb-20">
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
 
-            {/* HERO SECTION */}
-            <section className="relative px-4 sm:px-6 lg:px-8 mb-12">
-                <div className="max-w-7xl mx-auto">
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="text-center md:text-left mb-12"
-                    >
-                        <h1 className="text-4xl md:text-6xl font-serif font-bold text-stone-900 mb-4">
-                            Öğrenci Forumu
-                        </h1>
-                        <p className="text-lg md:text-xl text-stone-600 max-w-2xl">
-                            Boğaziçi'nin dijital meydanı. Dersleri değerlendir, etkinlikleri yorumla ve kampüs gündemini belirle.
-                        </p>
-                    </motion.div>
-
-                    {/* CATEGORY CARDS */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {categories.map((category, index) => (
-                            <motion.div
-                                key={category.id}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.1 }}
+                {/* Main Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+                    {sections.map((section, index) => (
+                        <motion.div
+                            key={section.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.1 }}
+                        >
+                            <Link
+                                to={section.path}
+                                className={`group block bg-white rounded-2xl border-2 border-stone-200 ${section.hoverBorder} hover:shadow-xl transition-all duration-300 overflow-hidden h-full`}
                             >
-                                <Link to={category.link} className="group relative block h-full">
-                                    <div className="absolute inset-0 bg-white rounded-2xl shadow-xl transform transition-transform group-hover:-translate-y-2 duration-300" />
-                                    <div className="relative h-full bg-white rounded-2xl border border-stone-100 p-8 overflow-hidden z-10 transition-colors group-hover:border-stone-200">
+                                {/* Card Content */}
+                                <div className={`bg-gradient-to-br ${section.gradient} p-8 h-full flex flex-col items-center justify-center text-center relative`}>
 
-                                        {/* Background Gradient Blob */}
-                                        <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${category.gradient} opacity-10 rounded-bl-full transform group-hover:scale-110 transition-transform duration-500`} />
+                                    {/* Decorative Background Element */}
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/30 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-500" />
 
-                                        <div className="relative z-10">
-                                            <div className={`w-14 h-14 rounded-xl ${category.color} bg-opacity-10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
-                                                <category.icon className={`w-7 h-7 ${category.textColor}`} />
-                                            </div>
-
-                                            <h3 className="text-2xl font-bold text-stone-900 mb-3 group-hover:text-stone-700 transition-colors">
-                                                {category.title}
-                                            </h3>
-
-                                            <p className="text-stone-600 mb-6 leading-relaxed">
-                                                {category.description}
-                                            </p>
-
-                                            <div className="flex items-center justify-between mt-auto">
-                                                <span className="text-xs font-semibold uppercase tracking-wider text-stone-400 bg-stone-100 px-2 py-1 rounded-md">
-                                                    {category.stats}
-                                                </span>
-                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center bg-stone-50 group-hover:${category.textColor} transition-colors`}>
-                                                    <ArrowRight size={16} />
-                                                </div>
-                                            </div>
-                                        </div>
+                                    {/* Icon */}
+                                    <div className={`w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-white shadow-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 relative z-10`}>
+                                        <section.icon className={`w-8 h-8 md:w-10 md:h-10 ${section.iconColor}`} />
                                     </div>
-                                </Link>
-                            </motion.div>
-                        ))}
-                    </div>
-                </div>
-            </section>
 
-            {/* RECENT ACTIVITY / TRENDING (Placeholder for now) */}
-            <section className="px-4 sm:px-6 lg:px-8">
-                <div className="max-w-7xl mx-auto">
-                    <div className="flex items-center justify-between mb-8">
-                        <h2 className="text-2xl font-bold text-stone-900 flex items-center gap-2">
-                            <Star className="text-boun-gold" fill="currentColor" />
-                            Gündemdekiler
-                        </h2>
-                    </div>
-
-                    <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-8 text-center text-stone-500">
-                        <p>Henüz yeni bir aktivite yok. İlk tartışmayı başlatan sen ol!</p>
-                    </div>
+                                    {/* Text */}
+                                    <h2 className="text-xl md:text-2xl font-bold text-stone-900 mb-2 relative z-10">
+                                        {section.title}
+                                    </h2>
+                                    <p className="text-sm md:text-base text-stone-600 relative z-10">
+                                        {section.description}
+                                    </p>
+                                </div>
+                            </Link>
+                        </motion.div>
+                    ))}
                 </div>
-            </section>
+            </div>
         </div>
     );
 };
 
-export default Forum;
+export default ForumLobby;
