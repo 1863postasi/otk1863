@@ -1,12 +1,12 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, BookOpen, Quote, BookMarked } from 'lucide-react';
+import { ArrowRight, BookOpen, Quote } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PUBLICATIONS } from './data';
 
 // --- COMPONENTS ---
 
-// Hero Section with Overlapping Background & Diary Badge
+// Hero Section with Overlapping Background
 const Hero = () => {
     return (
         <section className="relative h-[30vh] min-h-[280px] flex items-center justify-center overflow-visible bg-stone-900 text-stone-100">
@@ -19,27 +19,6 @@ const Hero = () => {
                 />
                 <div className="absolute inset-0 bg-gradient-to-b from-stone-900/80 via-stone-900/60 to-transparent" />
             </div>
-
-            {/* Mysterious Diary Icon Badge */}
-            <Link
-                to="/yayinlar-gunluk"
-                className="absolute top-20 right-4 md:top-6 md:right-6 z-30 group"
-            >
-                <motion.div
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="relative"
-                >
-                    {/* Pulsing Glow */}
-                    <div className="absolute inset-0 bg-amber-500/20 rounded-full blur-xl animate-pulse opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-                    {/* Icon Container */}
-                    <div className="relative w-10 h-10 md:w-14 md:h-14 bg-stone-800/60 backdrop-blur-md rounded-full border border-stone-700/50 flex items-center justify-center shadow-lg group-hover:border-amber-500/40 transition-all duration-300">
-                        <BookMarked size={16} className="text-stone-400 group-hover:text-amber-400 transition-colors duration-300 md:w-5 md:h-5" />
-                        <div className="absolute -top-0.5 -right-0.5 w-2 h-2 md:w-3 md:h-3 bg-amber-500 rounded-full animate-pulse" />
-                    </div>
-                </motion.div>
-            </Link>
 
             <div className="relative z-10 container mx-auto px-4 text-center">
                 <motion.h1
@@ -63,14 +42,14 @@ const Hero = () => {
     );
 }
 
-// Section Header
+// Section Header - White text for visibility on dark background
 const SectionHeader = ({ title, subtitle }: { title: string, subtitle?: string }) => (
     <div className="mb-6 md:mb-8 px-4 md:px-0">
-        <h2 className="text-2xl md:text-3xl font-serif font-bold text-stone-900">
+        <h2 className="text-2xl md:text-3xl font-serif font-bold text-white" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.6)' }}>
             {title}
         </h2>
-        {subtitle && <p className="text-stone-500 mt-1.5 text-xs md:text-sm max-w-xl">{subtitle}</p>}
-        <div className="h-0.5 w-16 bg-boun-blue mt-3 rounded-full" />
+        {subtitle && <p className="text-white/95 mt-1.5 text-xs md:text-sm max-w-xl" style={{ textShadow: '0 1px 6px rgba(0,0,0,0.8)' }}>{subtitle}</p>}
+        <div className="h-0.5 w-16 bg-white/90 mt-3 rounded-full shadow-2xl" />
     </div>
 );
 
@@ -124,10 +103,10 @@ const PublicationsPage = () => {
     const navigate = useNavigate();
 
     return (
-        <div className="min-h-screen bg-stone-50 pb-24">
+        <div className="min-h-screen bg-transparent pb-32 relative">
             <Hero />
 
-            {/* Content starts overlapping hero background */}
+            {/* Content starts overlapping hero background - NO WHITE BACKGROUND */}
             <div className="relative z-20 max-w-7xl mx-auto -mt-[15vh] px-4 sm:px-6 lg:px-8 space-y-12 md:space-y-20">
 
                 {/* 1. SECTION: PERIODICALS */}
@@ -150,7 +129,7 @@ const PublicationsPage = () => {
 
 
                 {/* 2. SECTION: FANZINES */}
-                <section>
+                <section className="bg-stone-50 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-12 rounded-2xl">
                     <SectionHeader title="Fanzinler" subtitle="Bağımsız, özgür ve filtresiz. Öğrencilerin kendi imkanlarıyla çıkardığı fanzinler ve broşürler." />
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -194,6 +173,27 @@ const PublicationsPage = () => {
                 </section>
 
             </div>
+
+            {/* Mysterious Diary Footer Bar - ENHANCED */}
+            <Link to="/yayinlar-gunluk" className="fixed bottom-0 left-0 right-0 z-40 group">
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 1.2, duration: 1 }}
+                    className="relative"
+                >
+                    {/* Vertical Mysterious Line */}
+                    <div className="h-2 w-full bg-gradient-to-r from-transparent via-stone-800/60 to-transparent group-hover:via-amber-700/80 transition-all duration-700 shadow-2xl" />
+
+                    {/* Hover Content - Bottom Sheet Style */}
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-500 whitespace-nowrap">
+                        <div className="bg-stone-900/98 backdrop-blur-xl px-6 py-3 rounded-t-2xl border-t-2 border-x-2 border-amber-700/40 shadow-2xl">
+                            <p className="text-xs text-stone-300 italic font-serif mb-1">"Unutulan anılar, yazılmayı bekliyor..."</p>
+                            <p className="text-[10px] text-amber-500 font-bold tracking-widest text-center">BİR ÖĞRENCİNİN GÜNLÜĞÜ</p>
+                        </div>
+                    </div>
+                </motion.div>
+            </Link>
         </div>
     );
 };
