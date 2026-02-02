@@ -70,8 +70,8 @@ const Archive: React.FC = () => {
   ];
 
   return (
-    // Fixed height container for single-screen feel on Lobby (h-[calc(100vh-56px)])
-    <div className="h-dvh md:h-[calc(100vh-56px)] bg-[#f5f5f4] font-sans relative overflow-hidden">
+    // Fixed height container for single-screen feel on Lobby
+    <div className="h-dvh md:h-[calc(100vh-56px)] bg-[#f5f5f4] font-sans relative overflow-hidden flex flex-col">
 
       <AnimatePresence mode="wait">
 
@@ -83,40 +83,38 @@ const Archive: React.FC = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="h-full flex flex-col justify-center items-center overflow-hidden"
+            className="h-full flex flex-col justify-center items-center overflow-hidden relative"
           >
-            {/* 1. TOP SECTION (Compact) */}
-            <div className="relative w-full flex flex-col items-center text-center z-10 shrink-0 mb-4 md:mb-6 mt-4 md:mt-8">
+            {/* Center Container */}
+            <div className="flex flex-col items-center justify-center w-full max-w-4xl px-4 md:px-8 space-y-8 md:space-y-12 -mt-12 md:-mt-0">
 
-              {/* Logo Image */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.8 }}
-                className="mb-2"
-              >
-                <img src="https://cdn.1863postasi.org/bg/kh-logo.png" alt="Kolektif Hamlin Logo" className="h-10 md:h-14 w-auto object-contain opacity-90 drop-shadow-sm" />
-              </motion.div>
+              {/* 1. HEADER (Logo & Title) */}
+              <div className="text-center flex flex-col items-center">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.8 }}
+                  className="mb-4 md:mb-6"
+                >
+                  <img src="https://cdn.1863postasi.org/bg/kh-logo.png" alt="Kolektif Hamlin Logo" className="h-16 md:h-20 w-auto object-contain opacity-90 drop-shadow-sm" />
+                </motion.div>
 
-              {/* Main Title Area */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.2 }}
-                className="mb-2"
-              >
-                <h1 className="font-serif text-xl md:text-3xl text-stone-900 font-bold tracking-tight mb-1">
-                  KOLEKTİF HAMLİN
-                </h1>
-                <p className="font-serif text-stone-500 font-medium text-[10px] md:text-xs tracking-wide leading-relaxed uppercase">
-                  ÖTK Arşivi ve BogaziciMemories katkılarıyla...
-                </p>
-              </motion.div>
-            </div>
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, delay: 0.2 }}
+                >
+                  <h1 className="font-serif text-2xl md:text-4xl text-stone-900 font-bold tracking-tight mb-2">
+                    KOLEKTİF HAMLİN
+                  </h1>
+                  <p className="font-serif text-stone-500 font-medium text-xs md:text-sm tracking-wide uppercase">
+                    ÖTK Arşivi ve BogaziciMemories katkılarıyla...
+                  </p>
+                </motion.div>
+              </div>
 
-            {/* 2. GRID SECTION (Compact & Centered) */}
-            <div className="w-full max-w-4xl mx-auto px-4 md:px-8 flex-1 flex flex-col justify-start md:justify-center pb-20 md:pb-0">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 w-full">
+              {/* 2. GRID (Ghost Buttons) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 md:gap-y-6 w-full">
                 {categories.map((cat, idx) => (
                   <motion.button
                     key={cat.id}
@@ -125,56 +123,62 @@ const Archive: React.FC = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.3 + (idx * 0.1) }}
                     className={cn(
-                      "group relative flex items-center justify-center gap-3 p-4 md:p-6 rounded-xl transition-all duration-300",
-                      "hover:bg-white hover:shadow-lg bg-white/50 border border-stone-200 hover:border-stone-300",
-                      cat.borderColor
+                      "group relative flex items-center gap-4 p-4 md:p-6 rounded-xl transition-all duration-300",
+                      "hover:bg-stone-200/50", // Ghost style: transparent normally, subtle gray on hover
+                      "text-left"
                     )}
                   >
                     {/* Icon */}
                     <div className={cn(
-                      "p-2 rounded-full bg-stone-100 group-hover:bg-stone-50 transition-colors shrink-0",
+                      "p-3 rounded-full bg-stone-200/50 group-hover:bg-white transition-colors shrink-0 text-stone-700 group-hover:text-black shadow-sm",
                       cat.color
                     )}>
                       {cat.icon}
                     </div>
 
-                    {/* Text (Centered Name Only) */}
-                    <div className="text-center">
-                      <h3 className="font-serif text-sm md:text-base font-bold text-stone-800 group-hover:text-black uppercase tracking-wide">
+                    {/* Text */}
+                    <div className="flex-1">
+                      <h3 className="font-serif text-base md:text-lg font-bold text-stone-700 group-hover:text-black uppercase tracking-wide transition-colors">
                         {cat.title}
                       </h3>
                     </div>
 
                     {/* Hover Arrow */}
-                    <div className="absolute right-4 opacity-0 group-hover:opacity-100 transition-all duration-300 transform -translate-x-2 group-hover:translate-x-0">
-                      <ArrowRight className="text-stone-400" size={16} />
+                    <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 transform -translate-x-2 group-hover:translate-x-0 text-stone-400">
+                      <ArrowRight size={20} />
                     </div>
                   </motion.button>
                 ))}
               </div>
 
-              {/* 3. FOOTER (Moved Closer) */}
-              <div className="text-center mt-6 md:mt-8">
-                <p className="font-serif italic text-stone-400 text-[10px] md:text-xs font-medium tracking-wide opacity-80">
+              {/* 3. FOOTER */}
+              <div className="text-center pt-8 md:pt-12">
+                <p className="font-serif italic text-stone-400 text-[10px] md:text-xs font-medium tracking-wide opacity-70">
                   Bu arşiv, Boğaziçi Üniversitesi öğrencilerinin ortak mirasıdır.
                 </p>
               </div>
+
             </div>
           </motion.div>
         ) : (
-          /* SUB VIEWS CONTAINER */
+          /* SUB VIEWS CONTAINER - Rendered directly to fix Exit Animation/White Screen */
           <motion.div
-            key="subview"
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 50 }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
-            className="h-full w-full overflow-y-auto custom-scrollbar bg-[#f5f5f4]"
+            key="subview-container" // Key needs to match for AnimatePresence to detect swap
+            className="h-full w-full overflow-hidden bg-[#f5f5f4]"
           >
-            {activeView === 'resistance' && <ResistanceView onBack={() => setActiveView('lobby')} />}
-            {activeView === 'roots' && <RootsView onBack={() => setActiveView('lobby')} />}
-            {activeView === 'campus' && <CampusView onBack={() => setActiveView('lobby')} />}
-            {activeView === 'institutional' && <InstitutionalView onBack={() => setActiveView('lobby')} />}
+            <motion.div
+              key={activeView} // Inner key triggers the transition between views if wanted, or just mount/unmount
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 50 }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
+              className="h-full w-full overflow-y-auto custom-scrollbar"
+            >
+              {activeView === 'resistance' && <ResistanceView onBack={() => setActiveView('lobby')} />}
+              {activeView === 'roots' && <RootsView onBack={() => setActiveView('lobby')} />}
+              {activeView === 'campus' && <CampusView onBack={() => setActiveView('lobby')} />}
+              {activeView === 'institutional' && <InstitutionalView onBack={() => setActiveView('lobby')} />}
+            </motion.div>
           </motion.div>
         )}
 

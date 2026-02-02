@@ -70,7 +70,6 @@ const InstitutionalView: React.FC<ViewProps> = ({ onBack }) => {
     const commissionFilter = searchParams.get('commission');
 
     const [activeTab, setActiveTab] = useState<TabMode>('institutional');
-    const [isExiting, setIsExiting] = useState(false);
 
     // -- INSTITUTIONAL STATE --
     const [rootCategories, setRootCategories] = useState<OTKDocument[]>([]);
@@ -253,14 +252,9 @@ const InstitutionalView: React.FC<ViewProps> = ({ onBack }) => {
         }
     };
 
-    // --- SAFE BACK NAVIGATION ---
+    // --- NAVIGATION ---
     const handleSafeBack = () => {
-        setIsExiting(true);
-        // Small delay to let React process the state update and remove the layoutId element
-        // before unmounting the component. This prevents the Framer Motion crash.
-        setTimeout(() => {
-            onBack();
-        }, 0);
+        onBack();
     };
 
     // --- RENDER HELPERS ---
@@ -328,11 +322,11 @@ const InstitutionalView: React.FC<ViewProps> = ({ onBack }) => {
                 <div className="px-4 flex gap-6 overflow-x-auto no-scrollbar border-t border-stone-100">
                     <button onClick={() => setActiveTab('institutional')} className={cn("py-3 text-xs md:text-sm font-serif font-bold transition-all relative whitespace-nowrap flex items-center gap-2", activeTab === 'institutional' ? "text-stone-900" : "text-stone-400 hover:text-stone-600")}>
                         <Building2 size={16} /> KURUMSAL BELGELER
-                        {activeTab === 'institutional' && !isExiting && <motion.div layoutId="tab-underline" className="absolute bottom-0 left-0 right-0 h-0.5 bg-stone-900" />}
+                        {activeTab === 'institutional' && <motion.div layoutId="tab-underline" className="absolute bottom-0 left-0 right-0 h-0.5 bg-stone-900" />}
                     </button>
                     <button onClick={() => setActiveTab('academic')} className={cn("py-3 text-xs md:text-sm font-serif font-bold transition-all relative whitespace-nowrap flex items-center gap-2", activeTab === 'academic' ? "text-stone-900" : "text-stone-400 hover:text-stone-600")}>
                         <GraduationCap size={16} /> AKADEMİK HAVUZ
-                        {activeTab === 'academic' && !isExiting && <motion.div layoutId="tab-underline" className="absolute bottom-0 left-0 right-0 h-0.5 bg-stone-900" />}
+                        {activeTab === 'academic' && <motion.div layoutId="tab-underline" className="absolute bottom-0 left-0 right-0 h-0.5 bg-stone-900" />}
                     </button>
                 </div>
             </div>
