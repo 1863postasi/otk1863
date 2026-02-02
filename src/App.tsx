@@ -176,6 +176,14 @@ const App: React.FC = () => {
             }
           />
           <Route
+            path="/forum/pazar-yeri"
+            element={
+              <ProtectedRoute requireAdmin={false}>
+                <Marketplace />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/yonetim"
             element={
               <ProtectedRoute requireAdmin={false}>
