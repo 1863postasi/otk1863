@@ -60,15 +60,14 @@ const SecretDiaryButton = () => {
     const handleClick = () => {
         if (!isUNLOCKED) {
             setIsUNLOCKED(true);
-            setTimeout(() => {
-                navigate('/yayinlar-gunluk');
-            }, 1200); // Wait for animation
+        } else {
+            navigate('/yayinlar-gunluk');
         }
     };
 
     return (
         <div className="flex flex-col items-center justify-center py-12">
-            <h2 className="text-3xl font-serif font-bold text-stone-900 mb-8 tracking-tight">Gizli</h2>
+            <h2 className="text-3xl font-serif font-bold text-stone-900 mb-8 tracking-tight">Özel</h2>
 
             <motion.div
                 layout
@@ -124,17 +123,7 @@ const SecretDiaryButton = () => {
                 )}
             </motion.div>
 
-            <AnimatePresence>
-                {!isUNLOCKED && (
-                    <motion.p
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="mt-4 text-xs font-mono text-stone-400 uppercase tracking-widest"
-                    >
-                        Sadece Üyeler İçin
-                    </motion.p>
-                )}
-            </AnimatePresence>
+
         </div>
     );
 };
@@ -157,39 +146,26 @@ const PublicationsPage: React.FC = () => {
                 </div>
 
                 {/* Hero Content */}
-                <div className="absolute inset-0 flex flex-col items-center pt-32 md:pt-40 z-10 text-center px-4">
-                    <motion.span
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2 }}
-                        className="text-stone-300 text-xs md:text-sm font-mono uppercase tracking-[0.3em] backdrop-blur-sm py-1 px-3 rounded-full border border-white/10 mb-6"
-                    >
-                        Arşiv & Hafıza
-                    </motion.span>
+                <div className="absolute inset-0 flex flex-col items-center pt-24 md:pt-32 z-10 text-center px-4">
+
 
                     <motion.h1
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.8, ease: "easeOut" }}
-                        className="text-6xl md:text-9xl font-serif font-black text-white tracking-tighter shadow-2xl drop-shadow-lg mb-4"
+                        className="text-5xl md:text-8xl font-serif font-black text-white tracking-tighter shadow-2xl drop-shadow-lg mb-4"
                     >
                         Kütüphane
                     </motion.h1>
-
-                    <motion.h2
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.5, duration: 0.8 }}
-                        className="text-2xl md:text-3xl font-light text-stone-400 tracking-wide font-serif italic"
-                    >
-                        Süreli Yayınlar
-                    </motion.h2>
                 </div>
             </div>
 
             {/* --- PERIODICALS STRIP (Overlapping Hero) --- */}
-            <div className="relative z-20 -mt-64 md:-mt-48 mb-24">
-                <div className="w-full overflow-x-auto pb-12 pt-12 px-8 scrollbar-hide">
+            <div className="relative z-20 -mt-64 md:-mt-48 mb-12">
+                <div className="container mx-auto px-8 md:px-20 mb-6">
+                    <h2 className="text-4xl md:text-6xl font-serif font-bold text-white/90 tracking-tight drop-shadow-lg">Süreli Yayınlar</h2>
+                </div>
+                <div className="w-full overflow-x-auto pb-12 pt-4 px-8 scrollbar-hide">
                     <motion.div
                         initial={{ opacity: 0, x: 100 }}
                         animate={{ opacity: 1, x: 0 }}
@@ -210,12 +186,12 @@ const PublicationsPage: React.FC = () => {
             </div>
 
             {/* --- DIVIDER --- */}
-            <div className="container mx-auto px-12 mb-16">
+            <div className="container mx-auto px-12 mb-12">
                 <hr className="border-stone-200" />
             </div>
 
             {/* --- FANZINES STRIP --- */}
-            <section className="mb-24">
+            <section className="mb-12">
                 <div className="container mx-auto px-8 md:px-20 mb-10 flex items-end justify-between">
                     <div>
                         <h2 className="text-4xl md:text-6xl font-serif font-bold text-stone-900 tracking-tight">Fanzinler</h2>
@@ -244,7 +220,7 @@ const PublicationsPage: React.FC = () => {
             </section>
 
             {/* --- DIVIDER --- */}
-            <div className="container mx-auto px-12 mb-16">
+            <div className="container mx-auto px-12 mb-12">
                 <hr className="border-stone-200" />
             </div>
 

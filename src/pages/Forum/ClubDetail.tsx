@@ -5,7 +5,6 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Calendar, MapPin, Globe, Bookmark, Star, Users, MessageSquare } from 'lucide-react';
 import { doc, getDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import ForumSidebar from '../../components/Forum/Sidebar';
 import { formatDate } from '../../lib/utils';
 import { useAuth } from '../../context/AuthContext';
 
@@ -92,11 +91,6 @@ const ClubDetail: React.FC = () => {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex flex-col lg:flex-row gap-8">
 
-                    {/* SIDEBAR */}
-                    <div className="hidden lg:block w-64 shrink-0">
-                        <ForumSidebar />
-                    </div>
-
                     {/* MAIN CONTENT */}
                     <div className="flex-1 min-w-0">
 
@@ -107,7 +101,7 @@ const ClubDetail: React.FC = () => {
                         </Link>
 
                         {/* CLUB HERO HEADER */}
-                        <div className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-sm mb-6">
+                        <div className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-sm mb-6 relative z-10">
                             <div className="h-32 bg-stone-900 relative">
                                 {/* Banner Pattern */}
                                 <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]"></div>
@@ -225,8 +219,8 @@ const ClubDetail: React.FC = () => {
                                                         <button
                                                             onClick={() => handleBookmark(event.id)}
                                                             className={`self-start p-2 rounded-full transition-colors ${bookmarkedEvents.includes(event.id)
-                                                                    ? 'bg-boun-blue text-white shadow-lg'
-                                                                    : 'bg-stone-50 text-stone-400 hover:bg-stone-100 hover:text-stone-600'
+                                                                ? 'bg-boun-blue text-white shadow-lg'
+                                                                : 'bg-stone-50 text-stone-400 hover:bg-stone-100 hover:text-stone-600'
                                                                 }`}
                                                             title={bookmarkedEvents.includes(event.id) ? "Kaydedildi" : "Kaydet"}
                                                         >

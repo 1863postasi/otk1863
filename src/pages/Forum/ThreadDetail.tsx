@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, MessageSquare, ThumbsUp, Share2, MoreHorizontal, Send, CornerDownRight } from 'lucide-react';
-import ForumSidebar from '../../components/Forum/Sidebar';
 import { ForumThread, ForumComment } from './types'; // Ensure types are exported from types.ts
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -73,11 +72,6 @@ const ThreadDetail: React.FC = () => {
         <div className="min-h-screen bg-stone-50 pt-20 pb-20">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex flex-col lg:flex-row gap-8">
-
-                    {/* LEFT SIDEBAR */}
-                    <div className="hidden lg:block w-64 shrink-0">
-                        <ForumSidebar />
-                    </div>
 
                     {/* MAIN CONTENT */}
                     <div className="flex-1 min-w-0">

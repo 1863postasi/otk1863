@@ -37,6 +37,11 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Hide header on all admin/manager pages and auth pages
   const hideHeader = location.pathname.startsWith('/admin') || location.pathname.startsWith('/auth') || location.pathname.startsWith('/yonetim');
 
+  // Scroll to top on route change
+  React.useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+
   return (
     <div className="flex flex-col min-h-screen text-stone-900 font-sans selection:bg-boun-blue/20 relative overflow-x-hidden">
       {/* GLOBAL OVERLAY FOR ONBOARDING */}
