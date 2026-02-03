@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { ArrowLeft, BookOpen, Star, User, MessageSquare, Plus, ThumbsUp, ShieldCheck } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, BookOpen, Star, User, MessageSquare, Plus, ThumbsUp, ShieldCheck, Loader2, X } from 'lucide-react';
 import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import ForumSidebar from '../../components/Forum/Sidebar';
 import { useAuth } from '../../context/AuthContext';
 import { Course, Review, Instructor } from './types';
-import { TextArea, Input } from '../../pages/Admin/components/SharedUI'; // Reusing generic UI
-import { formatDate } from '../../lib/utils';
+import { TextArea } from '../../pages/Admin/components/SharedUI';
+import { cn } from '../../lib/utils';
 
 const CourseDetail: React.FC = () => {
     const { courseCode } = useParams<{ courseCode: string }>();
@@ -19,35 +18,29 @@ const CourseDetail: React.FC = () => {
     const [reviews, setReviews] = useState<Review[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Review Form
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [reviewData, setReviewData] = useState({ rating: 5, comment: '', isAnonymous: false });
     const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
-        // MOCK FETCH for now - In production use courseCode to query firestore "courses" collection
-        // Simulating delay and data
         const fetchData = async () => {
-            await new Promise(r => setTimeout(r, 500));
+            await new Promise(r => setTimeout(r, 600));
 
-            // Mock Course
             setCourse({
                 id: '1',
                 code: courseCode || 'CMPE101',
-                name: 'Introduction to Computing', // In real app, fetch name based on code
+                name: 'Introduction to Computing',
                 department: courseCode?.replace(/[0-9]/g, '') || 'CMPE',
                 rating: 3.8,
                 reviewCount: 42,
                 instructors: ['1', '2']
             });
 
-            // Mock Instructors for this course
             setInstructors([
                 { id: '1', name: 'Ali Hoca', department: 'CMPE', rating: 4.5, reviewCount: 10, courses: [] },
                 { id: '2', name: 'Veli Hoca', department: 'CMPE', rating: 3.0, reviewCount: 5, courses: [] },
             ]);
 
-            // Mock Reviews
             setReviews([
                 {
                     id: 'r1', type: 'course', targetId: '1', userId: 'u1',
@@ -78,218 +71,272 @@ const CourseDetail: React.FC = () => {
         setSubmitting(true);
         try {
             const newReview: any = {
-                type: 'course',
-                targetId: course?.id, // Should be real ID
-                userId: userProfile.uid,
+                type: 'course', targetId: course?.id, userId: userProfile.uid,
                 userDisplayName: reviewData.isAnonymous ? 'Anonim Öğrenci' : (userProfile.username || 'Öğrenci'),
                 userPhotoUrl: reviewData.isAnonymous ? null : userProfile.photoUrl,
-                isAnonymous: reviewData.isAnonymous,
-                rating: reviewData.rating,
-                comment: reviewData.comment,
-                likes: 0,
-                timestamp: serverTimestamp()
+                isAnonymous: reviewData.isAnonymous, rating: reviewData.rating, comment: reviewData.comment,
+                likes: 0, timestamp: serverTimestamp()
             };
-
             await addDoc(collection(db, "reviews"), newReview);
-
-            // Optimistic update
             setReviews([{ ...newReview, id: 'temp-' + Date.now(), timestamp: { seconds: Date.now() / 1000 } }, ...reviews]);
             setIsReviewModalOpen(false);
             setReviewData({ rating: 5, comment: '', isAnonymous: false });
-        } catch (e) {
-            console.error(e);
-            alert("Hata oluştu.");
-        } finally {
-            setSubmitting(false);
-        }
+        } catch (e) { console.error(e); alert("Hata"); } finally { setSubmitting(false); }
     };
 
-    if (loading) return <div className="min-h-screen bg-stone-50 pt-20 flex justify-center"><div className="animate-spin text-stone-400">Loading...</div></div>;
+    if (loading) return (
+        <div className="h-dvh flex items-center justify-center bg-[#f5f5f4]">
+            <Loader2 className="animate-spin text-stone-400" size={32} />
+        </div>
+    );
     if (!course) return null;
 
     return (
-        <div className="min-h-screen bg-stone-50 pt-20 pb-20">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex flex-col lg:flex-row gap-8">
+        <div className="min-h-screen bg-[#f5f5f4] font-sans selection:bg-blue-100 flex flex-col">
 
-                    {/* SIDEBAR */}
-                    <div className="hidden lg:block w-64 shrink-0">
-                        <ForumSidebar />
-                    </div>
-
-                    {/* MAIN CONTENT */}
-                    <div className="flex-1 min-w-0">
-                        <Link to="/forum/akademik" className="inline-flex items-center gap-2 text-stone-500 hover:text-stone-900 mb-6 transition-colors font-medium">
-                            <ArrowLeft size={20} />
-                            Akademik Arama
-                        </Link>
-
-                        {/* COURSE HERO */}
-                        <div className="bg-white rounded-xl border border-stone-200 p-8 shadow-sm mb-8 relative overflow-hidden">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-stone-100 rounded-bl-full -mr-8 -mt-8"></div>
-
-                            <div className="flex justify-between items-start relative z-10">
-                                <div>
-                                    <h1 className="text-4xl font-bold text-stone-900 font-serif mb-2">{course.code}</h1>
-                                    <h2 className="text-xl text-stone-600 mb-4">{course.name}</h2>
-                                    <div className="flex items-center gap-2">
-                                        <span className="bg-stone-900 text-white px-3 py-1 rounded text-xs font-bold uppercase tracking-wider">{course.department}</span>
-                                        <div className="flex items-center gap-1 text-amber-500 font-bold bg-amber-50 px-2 py-1 rounded">
-                                            <Star size={14} fill="currentColor" /> {course.rating}
-                                        </div>
-                                        <span className="text-xs text-stone-400">{course.reviewCount} değerlendirme</span>
-                                    </div>
-                                </div>
-                                <div className="text-right hidden sm:block">
-                                    <div className="text-sm font-bold text-stone-400 uppercase mb-1">Zorluk</div>
-                                    <div className="h-2 w-24 bg-stone-100 rounded-full overflow-hidden">
-                                        <div className="h-full bg-red-400 w-[80%]"></div>
-                                    </div>
-                                    <div className="text-xs text-red-500 font-bold mt-1">Yüksek</div>
-                                </div>
-                            </div>
+            {/* 1. COMPACT HEADER */}
+            <div className="bg-[#f5f5f4]/80 backdrop-blur-md border-b border-stone-200 sticky top-0 z-50">
+                <div className="max-w-4xl mx-auto px-4 lg:px-6 h-16 flex items-center justify-between">
+                    <Link to="/forum/akademik" className="group flex items-center gap-2 text-stone-500 hover:text-stone-900 transition-colors">
+                        <div className="p-2 rounded-full group-hover:bg-stone-200/50 transition-colors">
+                            <ArrowLeft size={18} />
                         </div>
+                        <span className="font-bold text-sm hidden md:inline">Akademik Arama</span>
+                    </Link>
 
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
-                            {/* LEFT COLUMN: INSTRUCTORS & STATS */}
-                            <div className="space-y-6">
-                                <div className="bg-white rounded-xl border border-stone-200 p-6 shadow-sm">
-                                    <h3 className="font-bold text-stone-900 mb-4 flex items-center gap-2">
-                                        <User size={18} /> Veren Hocalar
-                                    </h3>
-                                    <div className="space-y-3">
-                                        {instructors.map(inst => (
-                                            <Link key={inst.id} to={`/forum/hoca/${inst.id}`} className="flex items-center justify-between p-3 rounded-lg hover:bg-stone-50 transition-colors group">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-full bg-stone-200 flex items-center justify-center font-bold text-stone-500 text-xs">
-                                                        {inst.name.substring(0, 2)}
-                                                    </div>
-                                                    <span className="font-bold text-stone-700 group-hover:text-stone-900">{inst.name}</span>
-                                                </div>
-                                                <div className="text-xs font-bold text-amber-500 flex items-center gap-1">
-                                                    <Star size={12} fill="currentColor" /> {inst.rating}
-                                                </div>
-                                            </Link>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="bg-blue-50 rounded-xl border border-blue-100 p-6 text-blue-900">
-                                    <h4 className="font-bold mb-2 text-sm flex items-center gap-2"><ShieldCheck size={16} /> Tavsiye</h4>
-                                    <p className="text-xs leading-relaxed opacity-80">
-                                        Öğrencilerin %70'i bu dersi "Zorunlu Olduğu İçin" alıyor. Geçme notu ortalaması CB civarında.
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* RIGHT COLUMN: REVIEWS */}
-                            <div className="lg:col-span-2">
-                                <div className="flex justify-between items-center mb-6">
-                                    <h3 className="font-bold text-xl text-stone-900">Öğrenci Yorumları</h3>
-                                    <button
-                                        onClick={() => setIsReviewModalOpen(true)}
-                                        className="bg-stone-900 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-stone-700 transition-colors flex items-center gap-2"
-                                    >
-                                        <Plus size={16} /> Yorum Yap
-                                    </button>
-                                </div>
-
-                                <div className="space-y-4">
-                                    {reviews.map(review => (
-                                        <div key={review.id} className="bg-white rounded-xl border border-stone-200 p-6 shadow-sm">
-                                            <div className="flex justify-between items-start mb-3">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${review.isAnonymous ? 'bg-stone-800 text-stone-400' : 'bg-boun-blue/10 text-boun-blue'}`}>
-                                                        {review.isAnonymous ? '?' : (review.userDisplayName?.[0] || 'U')}
-                                                    </div>
-                                                    <div>
-                                                        <div className="font-bold text-stone-900 text-sm flex items-center gap-2">
-                                                            {review.userDisplayName}
-                                                            {review.userBadge && <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 rounded">{review.userBadge}</span>}
-                                                        </div>
-                                                        <div className="text-xs text-stone-400">
-                                                            {/* Simple simulated date format */}
-                                                            {review.timestamp?.seconds ? new Date(review.timestamp.seconds * 1000).toLocaleDateString() : 'Bugün'}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-0.5 text-amber-400">
-                                                    {[...Array(5)].map((_, i) => (
-                                                        <Star key={i} size={14} fill={i < review.rating ? "currentColor" : "none"} className={i < review.rating ? "" : "text-stone-300"} />
-                                                    ))}
-                                                </div>
-                                            </div>
-                                            <p className="text-stone-700 text-sm leading-relaxed mb-4">{review.comment}</p>
-                                            <div className="flex items-center gap-4 text-xs font-bold text-stone-400">
-                                                <button className="flex items-center gap-1 hover:text-stone-600 transition-colors">
-                                                    <ThumbsUp size={14} /> Faydalı ({review.likes})
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-1.5 bg-white px-3 py-1 rounded-full border border-stone-100 shadow-sm">
+                            <Star size={14} className="fill-amber-400 text-amber-400" />
+                            <span className="text-sm font-bold text-stone-900">{course.rating}</span>
                         </div>
-
+                        <button
+                            onClick={() => setIsReviewModalOpen(true)}
+                            className="bg-stone-900 text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-black transition-colors"
+                        >
+                            Değerlendir
+                        </button>
                     </div>
                 </div>
             </div>
 
-            {/* REVIEW MODAL */}
-            {isReviewModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-stone-900/50 backdrop-blur-sm p-4">
-                    <div className="bg-white w-full max-w-lg rounded-xl shadow-2xl overflow-hidden p-6">
-                        <h3 className="font-bold text-lg text-stone-900 mb-4">Bu Dersi Değerlendir</h3>
+            <div className="flex-1 w-full max-w-4xl mx-auto px-4 lg:px-6 py-8">
 
-                        <div className="space-y-4">
+                {/* 2. COURSE HERO */}
+                <div className="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-stone-200/60 mb-8 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-3xl opacity-50 -translate-y-1/2 translate-x-1/2" />
+
+                    <div className="relative z-10">
+                        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                             <div>
-                                <label className="block text-xs font-bold text-stone-400 uppercase mb-2">Puanın</label>
-                                <div className="flex gap-2">
-                                    {[1, 2, 3, 4, 5].map(star => (
-                                        <button
-                                            key={star}
-                                            onClick={() => setReviewData({ ...reviewData, rating: star })}
-                                            className="p-1 hover:scale-110 transition-transform"
-                                        >
-                                            <Star
-                                                size={32}
-                                                className={star <= reviewData.rating ? "text-amber-400 fill-current" : "text-stone-200"}
-                                            />
-                                        </button>
-                                    ))}
+                                <div className="flex items-center gap-3 mb-2">
+                                    <h1 className="text-4xl md:text-5xl font-serif font-black text-stone-900 tracking-tight">{course.code}</h1>
+                                    <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-md text-xs font-bold uppercase tracking-wider border border-blue-100 self-center">
+                                        {course.department}
+                                    </span>
+                                </div>
+                                <h2 className="text-xl md:text-2xl font-medium text-stone-600 mb-6">{course.name}</h2>
+
+                                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-stone-100/50 rounded-lg border border-stone-100">
+                                    <div className="flex -space-x-2">
+                                        {/* Mock avatars */}
+                                        <div className="w-6 h-6 rounded-full bg-stone-200 border-2 border-white" />
+                                        <div className="w-6 h-6 rounded-full bg-stone-300 border-2 border-white" />
+                                        <div className="w-6 h-6 rounded-full bg-stone-400 border-2 border-white" />
+                                    </div>
+                                    <span className="text-xs font-bold text-stone-500 pl-1">{course.reviewCount} öğrenci değerlendirdi</span>
                                 </div>
                             </div>
 
-                            <TextArea
-                                label="Yorumun"
-                                placeholder="Dersin işlenişi, sınavları ve genel tavsiyelerin..."
-                                className="h-32"
-                                value={reviewData.comment}
-                                onChange={(v: string) => setReviewData({ ...reviewData, comment: v })}
-                            />
-
-                            <div className="flex items-center gap-2 p-3 bg-stone-50 rounded border border-stone-200 cursor-pointer" onClick={() => setReviewData(p => ({ ...p, isAnonymous: !p.isAnonymous }))}>
-                                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${reviewData.isAnonymous ? 'bg-stone-900 border-stone-900' : 'bg-white border-stone-300'}`}>
-                                    {reviewData.isAnonymous && <div className="w-2 h-2 bg-white rounded-full" />}
+                            {/* Difficulty Gauge (Visual only) */}
+                            <div className="bg-stone-50 p-4 rounded-xl border border-stone-100 w-full md:w-auto min-w-[180px]">
+                                <div className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2">Zorluk Seviyesi</div>
+                                <div className="h-2 w-full bg-stone-200 rounded-full overflow-hidden mb-1">
+                                    <motion.div
+                                        initial={{ width: 0 }}
+                                        animate={{ width: '85%' }}
+                                        className="h-full bg-red-400 rounded-full"
+                                    />
                                 </div>
-                                <span className="text-sm font-bold text-stone-700 select-none">Bu yorumu anonim olarak paylaş</span>
-                            </div>
-
-                            <div className="flex justify-end gap-3 mt-4">
-                                <button onClick={() => setIsReviewModalOpen(false)} className="px-4 py-2 font-bold text-stone-500 hover:bg-stone-100 rounded">İptal</button>
-                                <button
-                                    onClick={handleSubmitReview}
-                                    disabled={submitting}
-                                    className="bg-stone-900 text-white px-6 py-2 rounded font-bold hover:bg-stone-700 transition-colors disabled:opacity-50"
-                                >
-                                    {submitting ? 'Gönderiliyor...' : 'Gönder'}
-                                </button>
+                                <div className="flex justify-between text-xs font-bold">
+                                    <span className="text-red-500">Yüksek</span>
+                                    <span className="text-stone-300">8.5/10</span>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            )}
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+                    {/* LEFT COL: INSTRUCTORS & INFO */}
+                    <div className="space-y-6">
+                        {/* Instructors */}
+                        <div className="space-y-3">
+                            <h3 className="text-sm font-bold text-stone-400 uppercase tracking-widest pl-1">Veren Hocalar</h3>
+                            {instructors.map(inst => (
+                                <Link
+                                    key={inst.id}
+                                    to={`/forum/hoca/${inst.id}`}
+                                    className="flex items-center justify-between p-3 rounded-xl bg-white border border-stone-200 hover:border-blue-300 hover:shadow-sm transition-all group"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-xs">
+                                            {inst.name.substring(0, 2)}
+                                        </div>
+                                        <div className="text-sm font-bold text-stone-700 group-hover:text-stone-900">{inst.name}</div>
+                                    </div>
+                                    <div className="flex items-center gap-1 text-xs font-bold text-amber-500 bg-amber-50 px-1.5 py-0.5 rounded">
+                                        <Star size={10} fill="currentColor" /> {inst.rating}
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+
+                        {/* Advice Box */}
+                        <div className="bg-blue-50/50 rounded-xl border border-blue-100 p-5">
+                            <h4 className="font-bold text-blue-900 text-sm flex items-center gap-2 mb-2">
+                                <ShieldCheck size={16} /> ÖTK İpucu
+                            </h4>
+                            <p className="text-xs text-blue-800/80 leading-relaxed">
+                                Bu ders genellikle 3. sınıfta alınır. Projeler dönem sonu notunun %40'ını oluşturur. Grup arkadaşlarınızı iyi seçin!
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* RIGHT COL: REVIEWS */}
+                    <div className="md:col-span-2 space-y-6">
+                        <div className="flex items-center justify-between pl-1">
+                            <h3 className="text-sm font-bold text-stone-400 uppercase tracking-widest">Öğrenci Yorumları</h3>
+                        </div>
+
+                        <div className="space-y-4">
+                            {reviews.map((review, idx) => (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: idx * 0.1 }}
+                                    key={review.id}
+                                    className="bg-white p-5 md:p-6 rounded-xl border border-stone-200 shadow-sm"
+                                >
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className={cn(
+                                                "w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs select-none",
+                                                review.isAnonymous ? "bg-stone-100 text-stone-400" : "bg-blue-50 text-blue-600"
+                                            )}>
+                                                {review.isAnonymous ? '?' : (review.userDisplayName?.[0] || 'U')}
+                                            </div>
+                                            <div>
+                                                <div className="font-bold text-stone-900 text-sm flex items-center gap-2">
+                                                    {review.userDisplayName}
+                                                    {review.userBadge && <span className="text-[10px] bg-stone-100 text-stone-500 px-1.5 rounded">{review.userBadge}</span>}
+                                                </div>
+                                                <div className="text-[10px] text-stone-400 font-medium">
+                                                    {review.timestamp?.seconds ? new Date(review.timestamp.seconds * 1000).toLocaleDateString("tr-TR", { month: 'long', year: 'numeric' }) : 'Bugün'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-0.5">
+                                            {[...Array(5)].map((_, i) => (
+                                                <Star key={i} size={14} className={i < review.rating ? "fill-amber-400 text-amber-400" : "fill-stone-100 text-stone-200"} />
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <p className="text-stone-700 text-sm leading-relaxed whitespace-pre-line">
+                                        {review.comment}
+                                    </p>
+
+                                    <div className="mt-4 pt-4 border-t border-stone-50 flex items-center justify-end">
+                                        <button className="flex items-center gap-1.5 text-xs font-bold text-stone-400 hover:text-stone-600 transition-colors">
+                                            <ThumbsUp size={14} /> Faydalı ({review.likes})
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            ))}
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            {/* REVIEW MODAL (Same component structure as Instructor) */}
+            <AnimatePresence>
+                {isReviewModalOpen && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-stone-900/40 backdrop-blur-sm p-4">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                            className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden"
+                        >
+                            <div className="px-6 py-4 border-b border-stone-100 flex justify-between items-center bg-stone-50/50">
+                                <h3 className="font-serif font-bold text-lg text-stone-800">
+                                    Değerlendir: {course.code}
+                                </h3>
+                                <button onClick={() => setIsReviewModalOpen(false)} className="p-1 rounded-full hover:bg-stone-200 transition-colors">
+                                    <X size={20} className="text-stone-400" />
+                                </button>
+                            </div>
+
+                            <div className="p-6 space-y-6">
+                                <div>
+                                    <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">Puanın</label>
+                                    <div className="flex justify-center gap-3">
+                                        {[1, 2, 3, 4, 5].map(star => (
+                                            <button
+                                                key={star}
+                                                onMouseEnter={() => setReviewData(p => ({ ...p, rating: star }))}
+                                                className="group p-2 transition-transform hover:scale-110 focus:outline-none"
+                                            >
+                                                <Star
+                                                    size={36}
+                                                    className={cn(
+                                                        "transition-colors duration-200",
+                                                        star <= reviewData.rating ? "fill-amber-400 text-amber-400" : "fill-stone-100 text-stone-200"
+                                                    )}
+                                                />
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <TextArea
+                                    label="Deneyimin"
+                                    placeholder="Dersin işlenişi, sınavları ve genel tavsiyelerin..."
+                                    className="h-32 text-sm"
+                                    value={reviewData.comment}
+                                    onChange={(v: string) => setReviewData({ ...reviewData, comment: v })}
+                                />
+
+                                <div
+                                    className="flex items-center gap-3 p-3 rounded-lg border border-stone-200 cursor-pointer hover:bg-stone-50 transition-colors select-none"
+                                    onClick={() => setReviewData(p => ({ ...p, isAnonymous: !p.isAnonymous }))}
+                                >
+                                    <div className={cn(
+                                        "w-5 h-5 rounded border flex items-center justify-center transition-colors",
+                                        reviewData.isAnonymous ? "bg-stone-900 border-stone-900" : "bg-white border-stone-300"
+                                    )}>
+                                        {reviewData.isAnonymous && <div className="w-2 h-2 bg-white rounded-full" />}
+                                    </div>
+                                    <span className="text-sm font-medium text-stone-600">Bu yorumu <strong>anonim</strong> olarak paylaş</span>
+                                </div>
+
+                                <button
+                                    onClick={handleSubmitReview}
+                                    disabled={submitting}
+                                    className="w-full bg-stone-900 text-white py-3 rounded-xl font-bold text-sm hover:bg-black transition-all shadow-lg shadow-stone-900/20 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                >
+                                    {submitting && <Loader2 size={16} className="animate-spin" />}
+                                    {submitting ? 'Gönderiliyor...' : 'Yorumu Gönder'}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
         </div>
     );
 };
