@@ -6,14 +6,17 @@ import { uploadFile } from '../lib/storage';
 import { updateUserProfile, changePassword } from '../lib/user_service';
 import { MOCK_FACULTIES } from '../lib/data';
 import { cn } from '../lib/utils';
-import { Archive, Settings, Bookmark, X, Edit3, GraduationCap } from 'lucide-react';
+import { Archive, Settings, Bookmark, X, Edit3, GraduationCap, ShoppingBag, MessageCircle } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 // Modular Components
 import IdentityCard from './Profile/IdentityCard';
 import MyListings from './Profile/MyListings';
+import MyMarketplaceListings from './Profile/MyMarketplaceListings';
+import MessagesTab from './Profile/MessagesTab';
 import SavedEvents from './Profile/SavedEvents';
 import SettingsTab from './Profile/SettingsTab';
+import { Listing } from '../Forum/types';
 
 interface LostItem {
     id: string;
@@ -39,15 +42,30 @@ interface SavedEvent {
     clubName: string;
 }
 
+interface Message {
+    id: string;
+    fromId: string;
+    fromName: string;
+    toId: string;
+    listingId: string;
+    listingTitle: string;
+    content: string;
+    createdAt: any;
+    read: boolean;
+    contactInfo?: string;
+}
+
 const Profile = () => {
     const { userProfile, currentUser, refreshProfile, logout } = useAuth();
 
     // UI State
-    const [activeTab, setActiveTab] = useState<'listings' | 'saved' | 'settings'>('listings');
+    const [activeTab, setActiveTab] = useState<'lost' | 'market' | 'messages' | 'saved' | 'settings'>('market');
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
     // Data State
-    const [myItems, setMyItems] = useState<LostItem[]>([]);
+    const [lostItems, setLostItems] = useState<LostItem[]>([]);
+    const [marketItems, setMarketItems] = useState<Listing[]>([]);
+    const [messages, setMessages] = useState<Message[]>([]);
     const [savedEvents, setSavedEvents] = useState<SavedEvent[]>([]);
     const [loadingData, setLoadingData] = useState(true);
     const [clubNames, setClubNames] = useState<Record<string, string>>({});
@@ -62,17 +80,40 @@ const Profile = () => {
     const [avatarUploading, setAvatarUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // 1. Fetch My Listings
+    // 1. Fetch User Data (Parallel)
     useEffect(() => {
         if (!currentUser) return;
-        const q = query(collection(db, "lost-items"), where("ownerId", "==", currentUser.uid));
-        const unsub = onSnapshot(q, (snapshot) => {
+
+        // A. Lost Items
+        const qLost = query(collection(db, "lost-items"), where("ownerId", "==", currentUser.uid));
+        const unsubLost = onSnapshot(qLost, (snapshot) => {
             const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as LostItem[];
             data.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-            setMyItems(data);
+            setLostItems(data);
+        });
+
+        // B. Marketplace Listings
+        const qMarket = query(collection(db, "listings"), where("sellerId", "==", currentUser.uid));
+        const unsubMarket = onSnapshot(qMarket, (snapshot) => {
+            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Listing[];
+            data.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+            setMarketItems(data);
+        });
+
+        // C. Messages (To Me)
+        const qMessages = query(collection(db, "messages"), where("toId", "==", currentUser.uid));
+        const unsubMessages = onSnapshot(qMessages, (snapshot) => {
+            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Message[];
+            data.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+            setMessages(data);
             setLoadingData(false);
         });
-        return () => unsub();
+
+        return () => {
+            unsubLost();
+            unsubMarket();
+            unsubMessages();
+        };
     }, [currentUser]);
 
     // 2. Fetch Saved Events
@@ -157,6 +198,13 @@ const Profile = () => {
         }
     };
 
+    // Mark Marketplace Item as Sold
+    const handleMarkSold = async (id: string) => {
+        if (window.confirm("Bu ilanı SATILDI olarak işaretlemek istediğinize emin misiniz?")) {
+            await updateDoc(doc(db, "listings", id), { status: 'sold' });
+        }
+    };
+
     const openEdit = () => {
         if (userProfile) {
             setEditForm({
@@ -172,6 +220,16 @@ const Profile = () => {
 
     const departments = MOCK_FACULTIES.flatMap(f => f.departments.map(d => d.name)).sort();
 
+    // Tab Button Logic
+    const TabButton = ({ id, icon: Icon, label }: { id: typeof activeTab, icon: any, label: string }) => (
+        <button
+            onClick={() => setActiveTab(id)}
+            className={cn("flex-1 py-3 px-4 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 min-w-max", activeTab === id ? "bg-stone-900 text-white shadow-md" : "text-stone-500 hover:bg-stone-50")}
+        >
+            <Icon size={16} /> {label}
+        </button>
+    );
+
     return (
         <div className="min-h-screen bg-[#efede6] pt-8 pb-20 px-4 md:px-8 font-sans">
             <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -182,7 +240,7 @@ const Profile = () => {
                     fileInputRef={fileInputRef}
                     avatarUploading={avatarUploading}
                     clubNames={clubNames}
-                    myItemsCount={myItems.length}
+                    myItemsCount={lostItems.length}
                     savedEventsCount={userProfile.savedEventIds?.length || 0}
                     onAvatarUpload={handleAvatarUpload}
                     onEditClick={openEdit}
@@ -193,29 +251,18 @@ const Profile = () => {
 
                     {/* Tab Navigation */}
                     <div className="flex bg-white p-1 rounded-xl shadow-sm border border-stone-200 mb-6 sticky top-20 z-10 overflow-x-auto">
-                        <button
-                            onClick={() => setActiveTab('listings')}
-                            className={cn("flex-1 py-3 px-4 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 min-w-max", activeTab === 'listings' ? "bg-stone-900 text-white shadow-md" : "text-stone-500 hover:bg-stone-50")}
-                        >
-                            <Archive size={16} /> Kayıp İlanlarım
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('saved')}
-                            className={cn("flex-1 py-3 px-4 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 min-w-max", activeTab === 'saved' ? "bg-stone-900 text-white shadow-md" : "text-stone-500 hover:bg-stone-50")}
-                        >
-                            <Bookmark size={16} /> Kaydedilenler
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('settings')}
-                            className={cn("flex-1 py-3 px-4 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 min-w-max", activeTab === 'settings' ? "bg-stone-900 text-white shadow-md" : "text-stone-500 hover:bg-stone-50")}
-                        >
-                            <Settings size={16} /> Ayarlar
-                        </button>
+                        <TabButton id="market" icon={ShoppingBag} label="İlanlarım" />
+                        <TabButton id="messages" icon={MessageCircle} label={`Mesajlar (${messages.filter(m => !m.read).length})`} />
+                        <TabButton id="lost" icon={Archive} label="Kayıp/Buluntu" />
+                        <TabButton id="saved" icon={Bookmark} label="Kaydedilenler" />
+                        <TabButton id="settings" icon={Settings} label="Ayarlar" />
                     </div>
 
                     <div className="min-h-[400px]">
                         <AnimatePresence mode="wait">
-                            {activeTab === 'listings' && <MyListings items={myItems} loading={loadingData} onResolve={handleResolveItem} />}
+                            {activeTab === 'market' && <MyMarketplaceListings items={marketItems} loading={loadingData} onMarkSold={handleMarkSold} />}
+                            {activeTab === 'messages' && <MessagesTab messages={messages} loading={loadingData} />}
+                            {activeTab === 'lost' && <MyListings items={lostItems} loading={loadingData} onResolve={handleResolveItem} />}
                             {activeTab === 'saved' && <SavedEvents events={savedEvents} />}
                             {activeTab === 'settings' && <SettingsTab onPasswordChange={handlePasswordChange} onLogout={logout} />}
                         </AnimatePresence>
@@ -223,7 +270,7 @@ const Profile = () => {
                 </div>
             </div>
 
-            {/* EDIT PROFILE MODAL */}
+            {/* EDIT PROFILE MODAL (Same as before) */}
             <AnimatePresence>
                 {isEditModalOpen && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">

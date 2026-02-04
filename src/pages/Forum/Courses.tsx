@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Search, Plus, BookOpen, GraduationCap, ArrowRight, Star,
-    Loader2, X, ChevronDown, Sparkles
+    Loader2, X, ChevronDown
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { collection, addDoc } from 'firebase/firestore';
@@ -14,13 +14,7 @@ import { format } from 'date-fns';
 // --- MOCK DATA ---
 const MOCK_DEPARTMENTS = ["CMPE", "EE", "IE", "ME", "CE", "PHYS", "CHEM", "MATH", "HUM", "EC", "PSY", "SOC", "POLS", "HIST"];
 
-// --- SURPRISE ELEMENT: LIVE TICKER DATA ---
-const TICKER_ITEMS = [
-    { text: "CMPE150 için yeni bir değerlendirme: 'Hayat kurtaran ders!'", time: "2 dk önce" },
-    { text: "Mehmet Hoca haftanın en popüleri seçildi.", time: "15 dk önce" },
-    { text: "PHYS101 final notları açıklandı, ortalama yükselişte.", time: "1 sa önce" },
-    { text: "Kütüphane doluluk oranı: %85", time: "Canlı" },
-];
+
 
 const AcademicReviews: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'courses' | 'instructors'>('courses');
@@ -98,22 +92,7 @@ const AcademicReviews: React.FC = () => {
     return (
         <div className="min-h-screen flex flex-col bg-[#f0f0f0] font-sans selection:bg-stone-900 selection:text-white overflow-x-hidden">
 
-            {/* --- SURPRISE ELEMENT: LIVE TICKER --- */}
-            <div className="bg-stone-900 text-stone-400 text-[10px] md:text-xs py-1.5 overflow-hidden whitespace-nowrap relative z-50 border-b border-stone-800">
-                <motion.div
-                    animate={{ x: ["100%", "-100%"] }}
-                    transition={{ repeat: Infinity, duration: 25, ease: "linear" }}
-                    className="flex items-center gap-12 inline-block w-full"
-                >
-                    {TICKER_ITEMS.concat(TICKER_ITEMS).map((item, i) => (
-                        <div key={i} className="flex items-center gap-2 shrink-0">
-                            <Sparkles size={10} className="text-amber-500" />
-                            <span className="font-bold text-stone-200">{item.text}</span>
-                            <span className="opacity-50">· {item.time}</span>
-                        </div>
-                    ))}
-                </motion.div>
-            </div>
+
 
             {/* --- HEADER --- */}
             <div className="sticky top-0 z-40 bg-[#f0f0f0]/80 backdrop-blur-xl border-b border-stone-200/50 transition-all duration-300">

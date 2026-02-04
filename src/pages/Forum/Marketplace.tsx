@@ -1,201 +1,534 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Filter, Plus, Heart, MapPin, Tag, ShoppingBag, Book, Laptop, Home, Coffee } from 'lucide-react';
+import { Search, Plus, Filter, MapPin, Tag, X, MessageCircle, Share2, Heart, Upload, CheckCircle, Loader2, Camera, Phone, Send } from 'lucide-react';
+import { collection, query, where, orderBy, getDocs, addDoc, serverTimestamp, limit } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
+import { Listing } from './types';
+import { cn } from '../../lib/utils';
+import { useAuth } from '../../context/AuthContext';
+import { uploadFile } from '../../lib/storage';
 
-// MOCK DATA
-const MOCK_ITEMS = [
-    {
-        id: 1,
-        title: "Calculus 1 (Thomas Calculus) - Temiz",
-        price: 450,
-        currency: "₺",
-        category: "kitap",
-        image: "https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=400",
-        seller: "Ahmet Y.",
-        location: "Kuzey Kampüs",
-        date: "2 saat önce"
-    },
-    {
-        id: 2,
-        title: "iPad Air 5. Nesil + Pencil",
-        price: 18500,
-        currency: "₺",
-        category: "elektronik",
-        image: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&q=80&w=400",
-        seller: "Zeynep K.",
-        location: "Güney Kampüs",
-        date: "5 saat önce"
-    },
-    {
-        id: 3,
-        title: "Ikea Çalışma Masası",
-        price: 1200,
-        currency: "₺",
-        category: "ev-esbasi",
-        image: "https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?auto=format&fit=crop&q=80&w=400",
-        seller: "Mehmet A.",
-        location: "Uçaksavar",
-        date: "1 gün önce"
-    },
-    {
-        id: 4,
-        title: "Sosyolojiye Giriş Ders Notları",
-        price: 0,
-        currency: "₺",
-        category: "notlar",
-        image: "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&q=80&w=400",
-        seller: "Elif S.",
-        location: "Online",
-        date: "3 gün önce"
-    }
-];
+// --- TYPES ---
+// Message type for internal notes
+interface Message {
+    id?: string;
+    fromId: string;
+    fromName: string;
+    toId: string;
+    listingId: string;
+    listingTitle: string;
+    content: string;
+    createdAt: any;
+    read: boolean;
+    contactInfo?: string; // Optional contact info from buyer
+}
 
-const CATEGORIES = [
-    { id: 'all', name: 'Tümü', icon: ShoppingBag },
-    { id: 'kitap', name: 'Kitap & Kırtasiye', icon: Book },
-    { id: 'elektronik', name: 'Elektronik', icon: Laptop },
-    { id: 'ev-esbasi', name: 'Ev Eşyası', icon: Home },
-    { id: 'diger', name: 'Diğer', icon: Coffee },
-];
+// --- COMPONENTS ---
 
-const Marketplace: React.FC = () => {
-    const [activeCategory, setActiveCategory] = useState('all');
-    const [searchQuery, setSearchQuery] = useState('');
+const CategoryPill = ({ label, active, onClick }: { label: string, active: boolean, onClick: () => void }) => (
+    <button
+        onClick={onClick}
+        className={cn(
+            "px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all border shadow-sm",
+            active
+                ? "bg-emerald-900 text-white border-emerald-900"
+                : "bg-white text-stone-600 border-stone-200 hover:border-emerald-200"
+        )}
+    >
+        {label}
+    </button>
+);
 
-    const filteredItems = MOCK_ITEMS.filter(item => {
-        const matchesCategory = activeCategory === 'all' || item.category === activeCategory;
-        const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase());
-        return matchesCategory && matchesSearch;
-    });
+const ProductCard = ({ item, onClick }: { item: Listing, onClick: () => void }) => (
+    <motion.div
+        layoutId={`product-${item.id}`}
+        onClick={onClick}
+        className="break-inside-avoid mb-4 group relative rounded-xl overflow-hidden cursor-pointer bg-white shadow-sm hover:shadow-md transition-shadow"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+    >
+        {/* Image */}
+        <div className="w-full bg-stone-200 relative aspect-[4/5] sm:aspect-auto">
+            {item.images?.[0] ? (
+                <img
+                    src={item.images[0]}
+                    alt={item.title}
+                    className="w-full h-full object-cover opacity-95 group-hover:scale-105 transition-transform duration-700 ease-out"
+                    loading="lazy"
+                />
+            ) : (
+                <div className="w-full h-48 flex items-center justify-center bg-stone-100 text-stone-300">
+                    <Camera size={32} />
+                </div>
+            )}
+
+            {/* Price Tag */}
+            <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-md px-2 py-1 rounded-lg shadow-sm border border-stone-100 z-10">
+                <span className="text-xs font-black text-emerald-700">
+                    {item.price === 0 ? "BEDAVA" : `${item.price} ${item.currency || '₺'}`}
+                </span>
+            </div>
+
+            {/* Sold Overlay */}
+            {item.status === 'sold' && (
+                <div className="absolute inset-0 bg-black/50 z-20 flex items-center justify-center backdrop-blur-[1px]">
+                    <span className="border-4 border-white text-white px-4 py-1 font-black text-xl uppercase -rotate-12 tracking-widest opacity-80">Satıldı</span>
+                </div>
+            )}
+        </div>
+
+        <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent text-white pt-10">
+            <h3 className="font-bold text-sm leading-tight mb-0.5 line-clamp-2">{item.title}</h3>
+            <div className="flex items-center gap-1 text-[10px] text-white/80">
+                <MapPin size={10} />
+                <span>Kuzey Kampüs</span>
+            </div>
+        </div>
+    </motion.div>
+);
+
+
+const ProductSheet = ({ item, onClose, onContact }: { item: Listing, onClose: () => void, onContact: () => void }) => {
+    if (!item) return null;
+
+    const whatsappLink = item.contact?.whatsapp
+        ? (item.contact.whatsapp.startsWith('http') ? item.contact.whatsapp : `https://wa.me/${item.contact.whatsapp.replace(/[^0-9]/g, '')}`)
+        : null;
 
     return (
-        <div className="min-h-screen bg-stone-50 pb-20 pt-20">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-end justify-center sm:items-center bg-black/60 backdrop-blur-sm p-0 sm:p-4"
+            onClick={onClose}
+        >
+            <motion.div
+                layoutId={`product-${item.id}`}
+                className="bg-white w-full max-w-lg h-[85vh] sm:h-auto sm:max-h-[85vh] rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl flex flex-col relative"
+                onClick={(e) => e.stopPropagation()}
+                drag="y"
+                dragConstraints={{ top: 0, bottom: 100 }}
+                onDragEnd={(_, info) => { if (info.offset.y > 100) onClose(); }}
+            >
+                {/* Drag Handle */}
+                <div className="absolute top-0 left-0 right-0 h-6 flex justify-center pt-2 z-20 pointer-events-none">
+                    <div className="w-12 h-1.5 bg-white/50 backdrop-blur-md rounded-full" />
+                </div>
 
-                {/* HEADER */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-                    <div>
-                        <h1 className="text-3xl font-bold text-stone-900 mb-2">Pazar Yeri</h1>
-                        <p className="text-stone-500">Boğaziçi öğrencilerinden güvenli ikinci el alışveriş.</p>
+                <button onClick={onClose} className="absolute top-4 right-4 z-20 p-2 bg-black/20 hover:bg-black/40 text-white rounded-full backdrop-blur-md">
+                    <X size={20} />
+                </button>
+
+                {/* Image */}
+                <div className="h-64 sm:h-80 bg-stone-100 shrink-0 relative">
+                    <img src={item.images?.[0] || "https://source.unsplash.com/random"} className="w-full h-full object-cover" alt={item.title} />
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 overflow-y-auto p-6 bg-white">
+                    <div className="flex justify-between items-start mb-4">
+                        <div>
+                            <h2 className="text-2xl font-serif font-bold text-stone-900 leading-tight mb-1">{item.title}</h2>
+                            <div className="flex items-center gap-2 text-stone-500 text-sm font-medium">
+                                <span className={cn("px-2 py-0.5 rounded text-xs uppercase tracking-wider font-bold",
+                                    item.condition === 'new' ? "bg-emerald-100 text-emerald-800" : "bg-stone-100 text-stone-600"
+                                )}>{item.condition || "İkinci El"}</span>
+                                <span>•</span>
+                                <span>{new Date(item.createdAt?.seconds ? item.createdAt.seconds * 1000 : Date.now()).toLocaleDateString('tr-TR')}</span>
+                            </div>
+                        </div>
+                        <div className="text-right">
+                            <div className="text-2xl font-black text-emerald-600">
+                                {item.price === 0 ? "BEDAVA" : `${item.price} ${item.currency || '₺'}`}
+                            </div>
+                        </div>
                     </div>
-                    <button className="flex items-center gap-2 bg-emerald-600 text-white px-5 py-2.5 rounded-full font-medium hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-200 active:scale-95">
-                        <Plus size={20} />
-                        <span>İlan Ver</span>
+
+                    <div className="w-full h-px bg-stone-100 my-4" />
+
+                    {/* Seller */}
+                    <div className="flex items-center gap-3 mb-6 p-3 rounded-xl border border-stone-100 bg-stone-50/50">
+                        <div className="w-10 h-10 rounded-full bg-stone-200 overflow-hidden flex items-center justify-center text-stone-500 font-bold text-lg">
+                            {item.sellerPhotoUrl ? <img src={item.sellerPhotoUrl} alt={item.sellerName} className="w-full h-full object-cover" /> : item.sellerName?.charAt(0)}
+                        </div>
+                        <div className="flex-1">
+                            <div className="font-bold text-stone-900 text-sm">{item.sellerName || "İsimsiz Satıcı"}</div>
+                            <div className="text-xs text-stone-500 flex items-center gap-1">
+                                <MapPin size={10} /> Kampüs İçi
+                            </div>
+                        </div>
+                    </div>
+
+                    <p className="text-stone-600 text-sm leading-relaxed whitespace-pre-wrap">{item.description}</p>
+                </div>
+
+                {/* Footer Actions */}
+                <div className="p-4 border-t border-stone-100 bg-white sticky bottom-0 z-10 flex flex-col gap-2">
+                    {whatsappLink && (
+                        <a
+                            href={whatsappLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-green-600 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-green-700 transition-colors shadow-lg active:scale-95"
+                        >
+                            <MessageCircle size={18} />
+                            WhatsApp ile İletişime Geç
+                        </a>
+                    )}
+
+                    <button
+                        onClick={onContact}
+                        className="bg-emerald-900 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-emerald-800 transition-colors shadow-lg active:scale-95"
+                    >
+                        <Send size={18} />
+                        Satıcıya Not Bırak
                     </button>
-                </div>
 
-                {/* SEARCH & FILTERS */}
-                <div className="sticky top-20 z-30 bg-stone-50/95 backdrop-blur-sm py-2 mb-6">
-                    <div className="flex flex-col md:flex-row gap-4">
-
-                        {/* Search Bar */}
-                        <div className="relative flex-1 group">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-hover:text-emerald-600 transition-colors" size={20} />
-                            <input
-                                type="text"
-                                placeholder="Ne arıyorsun? (Kitap, masa, kulaklık...)"
-                                className="w-full bg-white border border-stone-200 rounded-xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                            />
+                    {item.contact?.phone && (
+                        <div className="text-center text-xs text-stone-400 font-mono mt-1">
+                            Tel: {item.contact.phone}
                         </div>
-
-                        {/* Categories */}
-                        <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
-                            {CATEGORIES.map(cat => (
-                                <button
-                                    key={cat.id}
-                                    onClick={() => setActiveCategory(cat.id)}
-                                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium whitespace-nowrap transition-all border ${activeCategory === cat.id
-                                            ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                                            : 'bg-white border-stone-200 text-stone-600 hover:border-emerald-200 hover:text-emerald-600'
-                                        }`}
-                                >
-                                    <cat.icon size={18} />
-                                    {cat.name}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
+                    )}
                 </div>
+            </motion.div>
+        </motion.div>
+    );
+}
 
-                {/* ITEMS GRID */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    <AnimatePresence mode="popLayout">
-                        {filteredItems.map(item => (
-                            <motion.div
-                                key={item.id}
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.9 }}
-                                layout
-                                className="group bg-white rounded-2xl border border-stone-100 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer"
-                            >
-                                {/* Image Area */}
-                                <div className="relative aspect-[4/3] overflow-hidden bg-stone-100">
-                                    <img
-                                        src={item.image}
-                                        alt={item.title}
-                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                    />
-                                    <div className="absolute top-3 right-3">
-                                        <button className="bg-white/90 backdrop-blur p-2 rounded-full text-stone-400 hover:text-red-500 transition-colors shadow-sm">
-                                            <Heart size={18} />
-                                        </button>
-                                    </div>
-                                    {item.price === 0 && (
-                                        <div className="absolute top-3 left-3 bg-emerald-500 text-white text-xs font-bold px-2 py-1 rounded-md shadow-sm">
-                                            ÜCRETSİZ
-                                        </div>
-                                    )}
-                                </div>
+// NOTE MODAL
+const SendNoteModal = ({ isOpen, onClose, listing, currentUser }: { isOpen: boolean, onClose: () => void, listing: Listing, currentUser: any }) => {
+    const [message, setMessage] = useState("");
+    const [contact, setContact] = useState("");
+    const [sending, setSending] = useState(false);
 
-                                {/* Content Area */}
-                                <div className="p-4">
-                                    <div className="flex items-start justify-between gap-2 mb-2">
-                                        <h3 className="font-bold text-stone-900 line-clamp-2 leading-tight group-hover:text-emerald-700 transition-colors">
-                                            {item.title}
-                                        </h3>
-                                    </div>
+    const handleSend = async () => {
+        if (!message.trim()) return;
+        setSending(true);
+        try {
+            await addDoc(collection(db, "messages"), {
+                fromId: currentUser.uid,
+                fromName: currentUser.displayName || "Kullanıcı",
+                toId: listing.sellerId,
+                listingId: listing.id,
+                listingTitle: listing.title,
+                content: message,
+                contactInfo: contact,
+                createdAt: serverTimestamp(),
+                read: false
+            });
+            alert("Mesajınız iletildi!");
+            onClose();
+        } catch (error) {
+            console.error(error);
+            alert("Gönderilemedi.");
+        } finally {
+            setSending(false);
+        }
+    };
 
-                                    <div className="flex items-baseline gap-1 mb-4">
-                                        <span className="text-lg font-bold text-emerald-600">
-                                            {item.price === 0 ? 'Bedava' : `${item.price} ${item.currency}`}
-                                        </span>
-                                    </div>
+    if (!isOpen) return null;
 
-                                    <div className="flex items-center justify-between text-xs text-stone-500 border-t border-stone-100 pt-3">
-                                        <div className="flex items-center gap-1.5">
-                                            <div className="w-5 h-5 rounded-full bg-stone-200 overflow-hidden">
-                                                <img src={`https://ui-avatars.com/api/?name=${item.seller}&background=random`} alt={item.seller} />
-                                            </div>
-                                            <span className="font-medium">{item.seller}</span>
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                            <MapPin size={14} />
-                                            <span>{item.location}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        ))}
-                    </AnimatePresence>
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="font-bold text-lg">Satıcıya Not Bırak</h3>
+                    <button onClick={onClose}><X size={20} className="text-stone-400" /></button>
                 </div>
+                <p className="text-sm text-stone-500 mb-4">
+                    <strong>{listing.title}</strong> ilanı için mesaj gönderiyorsunuz.
+                </p>
 
-                {/* Empty State */}
-                {filteredItems.length === 0 && (
-                    <div className="text-center py-20">
-                        <div className="bg-stone-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 text-stone-400">
-                            <Search size={40} />
-                        </div>
-                        <h3 className="text-lg font-bold text-stone-900 mb-2">Sonuç bulunamadı</h3>
-                        <p className="text-stone-500">Aramanızla eşleşen ilan yok.</p>
-                    </div>
-                )}
+                <textarea
+                    className="w-full border p-3 rounded-lg text-sm bg-stone-50 outline-none focus:border-emerald-500 mb-3"
+                    rows={4}
+                    placeholder="Mesajınız..."
+                    value={message}
+                    onChange={e => setMessage(e.target.value)}
+                />
 
-            </div>
+                <input
+                    type="text"
+                    className="w-full border p-3 rounded-lg text-sm bg-stone-50 outline-none focus:border-emerald-500 mb-4"
+                    placeholder="Size ulaşabileceği iletişim bilgisi (Tel/Insta)"
+                    value={contact}
+                    onChange={e => setContact(e.target.value)}
+                />
+
+                <button
+                    onClick={handleSend}
+                    disabled={sending}
+                    className="w-full bg-emerald-900 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                    {sending ? <Loader2 className="animate-spin" /> : <><Send size={16} /> Gönder</>}
+                </button>
+            </motion.div>
         </div>
     );
 };
 
-export default Marketplace;
+
+// --- MAIN PAGE ---
+
+export default function Marketplace() {
+    const { userProfile, currentUser } = useAuth();
+    const [items, setItems] = useState<Listing[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [activeCategory, setActiveCategory] = useState("Tümü");
+    const [selectedItem, setSelectedItem] = useState<Listing | null>(null);
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
+
+    // Form inputs
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+    const categories = ["Tümü", "Kitap", "Elektronik", "Ev Eşyası", "Notlar", "Giyim", "Diğer"];
+
+    // Fetch Listings with Cache Strategy
+    useEffect(() => {
+        const fetchItems = async () => {
+            const CACHE_KEY = 'marketplace_data';
+            const CACHE_TIME_KEY = 'marketplace_timestamp';
+            const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+            // 1. Try to load from cache first
+            const cachedData = localStorage.getItem(CACHE_KEY);
+            const cachedTime = localStorage.getItem(CACHE_TIME_KEY);
+            const now = Date.now();
+
+            if (cachedData && cachedTime && (now - parseInt(cachedTime) < CACHE_DURATION)) {
+                try {
+                    setItems(JSON.parse(cachedData));
+                    setLoading(false);
+                    console.log("Loaded marketplace from cache");
+                    return; // Exit early
+                } catch (e) {
+                    console.error("Cache parse error", e);
+                }
+            }
+
+            // 2. Fetch from Firestore if cache invalid/expired
+            try {
+                const q = query(
+                    collection(db, "listings"),
+                    where("status", "==", "active"),
+                    orderBy("createdAt", "desc"),
+                    limit(50)
+                );
+                const snapshot = await getDocs(q);
+                const data = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data(),
+                    // Convert timestamps to serializable format for localStorage
+                    createdAt: { seconds: doc.data().createdAt?.seconds || Date.now() / 1000 }
+                } as Listing));
+
+                setItems(data);
+
+                // Save to Cache
+                localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+                localStorage.setItem(CACHE_TIME_KEY, now.toString());
+
+            } catch (error) {
+                console.error("Fetch error:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchItems();
+    }, []);
+
+    // Derived State for Filtering
+    const filteredItems = items.filter(item => {
+        if (activeCategory === "Tümü") return true;
+        // Check if category matches or tags include category
+        return item.category === activeCategory || item.tags?.includes(activeCategory);
+    });
+
+    const handleCreateSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!currentUser || !userProfile) {
+            alert("İlan vermek için giriş yapmalısınız.");
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const form = e.target as HTMLFormElement;
+            const formData = new FormData(form);
+
+            let imageURL = "";
+            if (selectedFile) {
+                const result = await uploadFile(selectedFile, 'marketplace');
+                imageURL = result.url;
+            }
+
+            // WhatsApp formatting
+            let whatsappRaw = formData.get('whatsapp') as string;
+            let formattedWa = whatsappRaw ? `https://wa.me/${whatsappRaw.replace(/[^0-9]/g, '')}` : undefined;
+
+            const newListing: Omit<Listing, 'id'> = { // id added by addDoc
+                title: formData.get('title') as string,
+                description: formData.get('description') as string,
+                price: Number(formData.get('price')),
+                currency: '₺',
+                category: formData.get('category') as string,
+                condition: formData.get('condition') as any,
+                images: imageURL ? [imageURL] : [],
+                sellerId: currentUser.uid,
+                sellerName: userProfile.username || 'Anonim',
+                sellerPhotoUrl: userProfile.photoUrl || undefined,
+                contact: {
+                    whatsapp: formattedWa,
+                    phone: formData.get('phone') as string
+                },
+                tags: [formData.get('category') as string],
+                createdAt: serverTimestamp(),
+                status: 'active',
+                views: 0,
+                likes: 0
+            };
+
+            await addDoc(collection(db, "listings"), newListing);
+            alert("İlan yayınlandı!");
+            window.location.reload();
+        } catch (error) {
+            console.error("Create error:", error);
+            alert("İlan oluşturulurken bir hata oluştu: " + error);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <div className="min-h-screen bg-stone-50 pb-20 relative">
+
+            {/* Header */}
+            <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-xl border-b border-stone-200">
+                <div className="max-w-7xl mx-auto px-4 py-4">
+                    <div className="flex items-center justify-between mb-4">
+                        <h1 className="text-xl font-bold font-serif text-stone-800">Kampüs Pazarı</h1>
+                        <button className="p-2 bg-stone-100 rounded-full"><Filter size={18} /></button>
+                    </div>
+                    {/* Categories */}
+                    <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+                        {categories.map(cat => (
+                            <CategoryPill key={cat} label={cat} active={activeCategory === cat} onClick={() => setActiveCategory(cat)} />
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* List */}
+            <div className="max-w-7xl mx-auto px-3 py-4">
+                {loading ? (
+                    <div className="flex justify-center py-20"><Loader2 className="animate-spin text-emerald-600" /></div>
+                ) : (
+                    <div className="columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4">
+                        <AnimatePresence>
+                            {filteredItems.map(item => (
+                                <ProductCard key={item.id} item={item} onClick={() => setSelectedItem(item)} />
+                            ))}
+                        </AnimatePresence>
+                        {filteredItems.length === 0 && (
+                            <div className="text-center py-20 text-stone-400 col-span-full w-full">İlan bulunamadı.</div>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* Default FAB */}
+            <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => {
+                    if (currentUser) setIsAddModalOpen(true);
+                    else alert("Giriş yapmanız gerekiyor.");
+                }}
+                className="fixed bottom-6 right-6 z-40 bg-emerald-600 text-white rounded-full p-4 shadow-xl flex items-center gap-2 font-bold pr-6"
+            >
+                <Plus size={24} /> İlan Ver
+            </motion.button>
+
+            {/* Detail Sheet */}
+            <AnimatePresence>
+                {selectedItem && (
+                    <ProductSheet
+                        item={selectedItem}
+                        onClose={() => setSelectedItem(null)}
+                        onContact={() => {
+                            if (!currentUser) return alert("Giriş yapmalısınız!");
+                            setIsNoteModalOpen(true);
+                        }}
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* Message Modal */}
+            {selectedItem && (
+                <SendNoteModal
+                    isOpen={isNoteModalOpen}
+                    onClose={() => setIsNoteModalOpen(false)}
+                    listing={selectedItem}
+                    currentUser={currentUser}
+                />
+            )}
+
+            {/* Create Modal */}
+            {createPortal(
+                <AnimatePresence>
+                    {isAddModalOpen && (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                            <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="bg-white w-full max-w-lg rounded-2xl max-h-[90vh] flex flex-col overflow-hidden">
+                                <div className="p-4 border-b flex justify-between items-center bg-stone-50">
+                                    <h3 className="font-bold text-lg">Yeni İlan</h3>
+                                    <button onClick={() => setIsAddModalOpen(false)}><X /></button>
+                                </div>
+                                <form onSubmit={handleCreateSubmit} className="p-6 overflow-y-auto space-y-4">
+                                    <input name="title" placeholder="Başlık" className="w-full border p-3 rounded-lg" required />
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <input name="price" type="number" placeholder="Fiyat (TL)" className="w-full border p-3 rounded-lg" required />
+                                        <select name="category" className="w-full border p-3 rounded-lg">
+                                            {categories.filter(c => c !== 'Tümü').map(c => <option key={c} value={c}>{c}</option>)}
+                                        </select>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <select name="condition" className="w-full border p-3 rounded-lg">
+                                            <option value="new">Yeni</option>
+                                            <option value="like-new">Yeni Gibi</option>
+                                            <option value="good">İyi</option>
+                                            <option value="fair">İdare Eder</option>
+                                        </select>
+                                        <input name="phone" placeholder="Görünen Tel (Opsiyonel)" className="w-full border p-3 rounded-lg" />
+                                    </div>
+
+                                    <input name="whatsapp" placeholder="WhatsApp No (örn: 90555...)" className="w-full border p-3 rounded-lg border-green-200 bg-green-50" />
+                                    <p className="text-[10px] text-green-700 -mt-2">WhatsApp linki oluşturmak için kullanılır.</p>
+
+                                    <textarea name="description" rows={3} placeholder="Açıklama" className="w-full border p-3 rounded-lg" required />
+
+                                    {/* Simplified File Upload */}
+                                    <div className="border-2 border-dashed p-4 rounded-lg text-center cursor-pointer hover:bg-stone-50" onClick={() => document.getElementById('file-upload')?.click()}>
+                                        {selectedFile ? selectedFile.name : "Fotoğraf Yükle"}
+                                        <input id="file-upload" type="file" hidden accept="image/*" onChange={e => e.target.files && setSelectedFile(e.target.files[0])} />
+                                    </div>
+
+                                    <button disabled={isSubmitting} className="w-full bg-emerald-900 text-white font-bold py-3 rounded-xl flex justify-center">
+                                        {isSubmitting ? <Loader2 className="animate-spin" /> : "Yayınla"}
+                                    </button>
+                                </form>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>,
+                document.body
+            )}
+
+        </div>
+    );
+}

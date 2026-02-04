@@ -2,22 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Calendar, MapPin, Globe, Bookmark, Star, Users, MessageSquare } from 'lucide-react';
-import { doc, getDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { ArrowLeft, Calendar, MapPin, Globe, Bookmark, Star, Users, MessageSquare, Loader2, Instagram } from 'lucide-react';
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { formatDate } from '../../lib/utils';
 import { useAuth } from '../../context/AuthContext';
-
-// Types
-interface ClubData {
-    id: string;
-    name: string;
-    shortName: string;
-    description: string;
-    website?: string;
-    type: string;
-    founded?: string;
-}
+import { Club } from './types'; // Use centralized type
 
 interface EventData {
     id: string;
@@ -32,7 +22,7 @@ interface EventData {
 const ClubDetail: React.FC = () => {
     const { clubId } = useParams<{ clubId: string }>();
     const { userProfile } = useAuth(); // For check bookmarks
-    const [club, setClub] = useState<ClubData | null>(null);
+    const [club, setClub] = useState<Club | null>(null);
     const [upcomingEvents, setUpcomingEvents] = useState<EventData[]>([]);
     const [pastEvents, setPastEvents] = useState<EventData[]>([]);
     const [loading, setLoading] = useState(true);
@@ -44,24 +34,53 @@ const ClubDetail: React.FC = () => {
     useEffect(() => {
         const fetchData = async () => {
             if (!clubId) return;
+
+            // 1. Try Cache
+            const cacheKey = `club_detail_${clubId}`;
+            const cachedData = localStorage.getItem(cacheKey);
+            if (cachedData) {
+                try {
+                    const { club: cachedClub, upcoming: cachedUpcoming, past: cachedPast } = JSON.parse(cachedData);
+                    setClub(cachedClub);
+                    setUpcomingEvents(cachedUpcoming);
+                    setPastEvents(cachedPast);
+                    setLoading(false);
+                } catch (e) {
+                    console.error("Cache parse error", e);
+                }
+            }
+
             try {
-                // 1. Fetch Club Details
+                // 2. Fetch Fresh Data
+                // Fetch Club Details
                 const clubDoc = await getDoc(doc(db, "clubs", clubId));
+                let clubData = null;
                 if (clubDoc.exists()) {
-                    setClub({ id: clubDoc.id, ...clubDoc.data() } as ClubData);
+                    clubData = { id: clubDoc.id, ...clubDoc.data() } as Club;
+                    setClub(clubData);
                 }
 
-                // 2. Fetch Events
+                // Fetch Events
                 const q = query(collection(db, "events"), where("clubId", "==", clubId));
                 const snapshot = await getDocs(q);
                 const allEvents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as EventData[];
 
                 const now = new Date();
                 const upcoming = allEvents.filter(e => new Date(e.endDate) >= now).sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
-                const past = allEvents.filter(e => new Date(e.endDate) < now).sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()); // Latest past first
+                const past = allEvents.filter(e => new Date(e.endDate) < now).sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
 
                 setUpcomingEvents(upcoming);
                 setPastEvents(past);
+
+                // 3. Update Cache
+                if (clubData) {
+                    localStorage.setItem(cacheKey, JSON.stringify({
+                        club: clubData,
+                        upcoming,
+                        past,
+                        timestamp: Date.now()
+                    }));
+                }
 
             } catch (error) {
                 console.error("Error fetching club details:", error);
@@ -80,61 +99,98 @@ const ClubDetail: React.FC = () => {
         } else {
             setBookmarkedEvents(prev => [...prev, eventId]);
         }
-        // TODO: Persist to Firestore user profile
     };
 
-    if (loading) return <div className="min-h-screen bg-stone-50 pt-20 flex justify-center"><div className="animate-spin text-stone-400">Loading...</div></div>;
-    if (!club) return <div className="min-h-screen bg-stone-50 pt-20 text-center">Kulüp bulunamadı.</div>;
+    if (loading) return <div className="min-h-screen bg-stone-50 flex items-center justify-center"><Loader2 className="animate-spin text-stone-400" /></div>;
+    if (!club) return <div className="min-h-screen bg-stone-50 flex items-center justify-center text-stone-500">Kulüp bulunamadı.</div>;
 
     return (
-        <div className="min-h-screen bg-stone-50 pt-20 pb-20">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex flex-col lg:flex-row gap-8">
+        <div className="min-h-screen bg-stone-50 pb-20">
+            {/* 1. HERO & BANNER SECTION */}
+            <div className="relative w-full h-64 md:h-80 bg-stone-900 overflow-hidden">
+                {/* Banner Image */}
+                {club.bannerUrl ? (
+                    <img src={club.bannerUrl} className="w-full h-full object-cover opacity-90" alt="Club Banner" />
+                ) : (
+                    // Fallback Pattern
+                    <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]"></div>
+                )}
 
-                    {/* MAIN CONTENT */}
-                    <div className="flex-1 min-w-0">
+                {/* Gradient Overlay for Text Readability */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
 
-                        {/* BACK NAVIGATION */}
-                        <Link to="/forum/kulupler" className="inline-flex items-center gap-2 text-stone-500 hover:text-stone-900 mb-6 transition-colors font-medium">
-                            <ArrowLeft size={20} />
-                            Tüm Kulüpler
-                        </Link>
+                {/* Navbar Placeholder (Back Button) */}
+                <div className="absolute top-4 left-4 md:top-8 md:left-8 z-20">
+                    <Link to="/forum/kulupler" className="flex items-center gap-2 text-white/80 hover:text-white bg-black/20 hover:bg-black/40 backdrop-blur-md px-4 py-2 rounded-full transition-all text-sm font-bold border border-white/10">
+                        <ArrowLeft size={18} />
+                        <span className="hidden md:inline">Kulüplere Dön</span>
+                    </Link>
+                </div>
+            </div>
 
-                        {/* CLUB HERO HEADER */}
-                        <div className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-sm mb-6 relative z-10">
-                            <div className="h-32 bg-stone-900 relative">
-                                {/* Banner Pattern */}
-                                <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]"></div>
+            {/* 2. CLUB HEADER INFO (Overlapping) */}
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 relative -mt-20 z-10">
+                <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6 flex flex-col md:flex-row items-start md:items-end gap-6">
+                    {/* Logo */}
+                    <div className="relative -mt-16 md:-mt-20 shrink-0">
+                        <div className="w-28 h-28 md:w-36 md:h-36 bg-white p-1.5 rounded-2xl shadow-md border border-stone-100">
+                            <div className="w-full h-full bg-stone-50 rounded-xl overflow-hidden flex items-center justify-center border border-stone-100">
+                                {club.logoUrl ? (
+                                    <img src={club.logoUrl} className="w-full h-full object-cover" alt="Logo" />
+                                ) : (
+                                    <span className="text-2xl font-black text-stone-300">{club.shortName.substring(0, 2)}</span>
+                                )}
                             </div>
-                            <div className="px-8 pb-8 flex flex-col md:flex-row items-start md:items-end gap-6 -mt-12">
-                                <div className="w-24 h-24 bg-white rounded-2xl shadow-lg border-4 border-white flex items-center justify-center text-3xl font-bold text-stone-800 shrink-0">
-                                    {club.shortName.substring(0, 2)}
-                                </div>
-                                <div className="flex-1 pb-1">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <h1 className="text-3xl font-bold text-stone-900 font-serif">{club.name}</h1>
-                                        {club.website && (
-                                            <a href={club.website} target="_blank" rel="noopener noreferrer" className="text-stone-400 hover:text-boun-blue">
-                                                <Globe size={18} />
-                                            </a>
-                                        )}
-                                    </div>
-                                    <div className="flex flex-wrap gap-4 text-sm text-stone-600">
-                                        <span className="bg-stone-100 px-2 py-0.5 rounded text-stone-500 font-bold text-xs uppercase tracking-wider">{club.type}</span>
-                                        <span className="flex items-center gap-1"><Users size={16} className="text-stone-400" /> 150+ Üye</span>
-                                        <span className="flex items-center gap-1"><Calendar size={16} className="text-stone-400" /> {club.founded || '2000'}</span>
-                                    </div>
-                                </div>
-                                <div className="flex gap-2 w-full md:w-auto mt-4 md:mt-0">
-                                    <button className="flex-1 md:flex-none bg-stone-900 text-white px-6 py-2.5 rounded-lg font-bold text-sm hover:bg-stone-700 transition-colors shadow-lg shadow-stone-900/20">
-                                        Üye Ol / İletişime Geç
-                                    </button>
-                                </div>
+                        </div>
+                    </div>
+
+                    {/* Text Info */}
+                    <div className="flex-1 w-full">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-2">
+                            <div>
+                                <h1 className="text-2xl md:text-3xl font-bold font-serif text-stone-900 leading-tight">
+                                    {club.name}
+                                </h1>
+                                <p className="text-sm font-bold text-stone-400 mt-1">{club.description?.substring(0, 100) || club.name}...</p>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-2 w-full md:w-auto mt-4 md:mt-0">
+                                <button className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-boun-blue text-white px-6 py-2.5 rounded-full font-bold text-sm hover:bg-blue-700 transition-colors shadow-sm shadow-blue-200">
+                                    <Users size={18} /> Üye Ol
+                                </button>
+                                {club.website && (
+                                    <a href={club.website} target="_blank" rel="noreferrer" className="p-2.5 border border-stone-200 rounded-full text-stone-500 hover:text-stone-900 hover:bg-stone-50 transition-colors">
+                                        <Globe size={18} />
+                                    </a>
+                                )}
+                                <button className="p-2.5 border border-stone-200 rounded-full text-stone-500 hover:text-pink-600 hover:bg-pink-50 transition-colors">
+                                    <Instagram size={18} />
+                                </button>
                             </div>
                         </div>
 
-                        {/* TABS */}
-                        <div className="flex border-b border-stone-200 mb-6 space-x-6 px-2">
+                        {/* Meta Tags */}
+                        <div className="flex flex-wrap gap-3 mt-4">
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-stone-500 bg-stone-100 px-3 py-1.5 rounded-full">
+                                <Users size={14} /> {club.memberCount || "150+"} Üye
+                            </div>
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-stone-500 bg-stone-100 px-3 py-1.5 rounded-full">
+                                <Calendar size={14} /> {club.founded || "2000"}
+                            </div>
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-stone-500 bg-stone-100 px-3 py-1.5 rounded-full">
+                                <Star size={14} className="text-amber-400 fill-amber-400" /> {club.rating || "4.8"}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 3. TABS & CONTENT */}
+                <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* LEFT COLUMN (Content) */}
+                    <div className="lg:col-span-2 space-y-6">
+                        {/* Tabs Navigation */}
+                        <div className="flex border-b border-stone-200 space-x-6 px-2">
                             <button
                                 onClick={() => setActiveTab('overview')}
                                 className={`pb-3 text-sm font-bold transition-colors relative ${activeTab === 'overview' ? 'text-stone-900' : 'text-stone-400 hover:text-stone-600'}`}
@@ -149,131 +205,70 @@ const ClubDetail: React.FC = () => {
                                 Etkinlikler <span className="ml-1 bg-stone-100 text-stone-600 px-2 py-0.5 rounded-full text-xs">{upcomingEvents.length}</span>
                                 {activeTab === 'events' && <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-stone-900" />}
                             </button>
-                            <button
-                                onClick={() => setActiveTab('reviews')}
-                                className={`pb-3 text-sm font-bold transition-colors relative ${activeTab === 'reviews' ? 'text-stone-900' : 'text-stone-400 hover:text-stone-600'}`}
-                            >
-                                Değerlendirmeler
-                                {activeTab === 'reviews' && <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-stone-900" />}
-                            </button>
                         </div>
 
-                        {/* CONTENT AREA */}
-                        <div className="space-y-6">
-
+                        {/* Tab Content */}
+                        <div className="py-2">
                             {activeTab === 'overview' && (
                                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
                                     <div className="bg-white rounded-xl border border-stone-200 p-6 shadow-sm">
                                         <h3 className="font-bold text-lg text-stone-900 mb-4">Hakkında</h3>
-                                        <p className="text-stone-700 leading-relaxed whitespace-pre-wrap">
+                                        <p className="text-stone-700 leading-relaxed whitespace-pre-wrap text-sm md:text-base">
                                             {club.description || "Bu kulüp hakkında henüz detaylı bilgi girilmemiş."}
                                         </p>
-                                    </div>
-
-                                    {/* Recent Activity Snapshot */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div className="bg-amber-50 rounded-xl border border-amber-100 p-6">
-                                            <h4 className="font-bold text-amber-900 mb-2 flex items-center gap-2"><Star size={18} /> Topluluk Puanı</h4>
-                                            <div className="text-4xl font-bold text-amber-500 mb-1">4.8</div>
-                                            <div className="text-sm text-amber-700/60">24 değerlendirme üzerinden</div>
-                                        </div>
-                                        <div className="bg-blue-50 rounded-xl border border-blue-100 p-6">
-                                            <h4 className="font-bold text-blue-900 mb-2 flex items-center gap-2"><Calendar size={18} /> Son Etkinlik</h4>
-                                            {pastEvents.length > 0 ? (
-                                                <>
-                                                    <div className="font-bold text-blue-800">{pastEvents[0].title}</div>
-                                                    <div className="text-sm text-blue-600">{formatDate(pastEvents[0].startDate)}</div>
-                                                </>
-                                            ) : (
-                                                <div className="text-sm text-blue-400">Kayıtlı geçmiş etkinlik yok.</div>
-                                            )}
-                                        </div>
                                     </div>
                                 </motion.div>
                             )}
 
                             {activeTab === 'events' && (
-                                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
-
-                                    {/* UPCOMING */}
-                                    <div>
-                                        <h3 className="font-bold text-lg text-stone-900 mb-4 flex items-center gap-2">
-                                            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                                            Gelecek Etkinlikler
-                                        </h3>
-                                        {upcomingEvents.length > 0 ? (
-                                            <div className="grid gap-4">
-                                                {upcomingEvents.map(event => (
-                                                    <div key={event.id} className="bg-white rounded-xl border border-stone-200 p-4 shadow-sm flex gap-4 transition-all hover:border-boun-blue/50">
-                                                        <div className="w-16 h-16 bg-stone-100 rounded-lg flex flex-col items-center justify-center text-stone-600 border border-stone-200 shrink-0">
-                                                            <span className="text-xs font-bold uppercase">{new Date(event.startDate).toLocaleString('tr', { month: 'short' })}</span>
-                                                            <span className="text-xl font-bold">{new Date(event.startDate).getDate()}</span>
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <h4 className="font-bold text-stone-900 text-lg">{event.title}</h4>
-                                                            <div className="flex items-center gap-3 text-sm text-stone-500 mt-1">
-                                                                <span className="flex items-center gap-1"><MapPin size={14} /> {event.location}</span>
-                                                                <span className="flex items-center gap-1"><Calendar size={14} /> {new Date(event.startDate).toLocaleTimeString('tr', { hour: '2-digit', minute: '2-digit' })}</span>
-                                                            </div>
-                                                        </div>
-                                                        <button
-                                                            onClick={() => handleBookmark(event.id)}
-                                                            className={`self-start p-2 rounded-full transition-colors ${bookmarkedEvents.includes(event.id)
-                                                                ? 'bg-boun-blue text-white shadow-lg'
-                                                                : 'bg-stone-50 text-stone-400 hover:bg-stone-100 hover:text-stone-600'
-                                                                }`}
-                                                            title={bookmarkedEvents.includes(event.id) ? "Kaydedildi" : "Kaydet"}
-                                                        >
-                                                            <Bookmark size={20} fill={bookmarkedEvents.includes(event.id) ? "currentColor" : "none"} />
-                                                        </button>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <div className="text-center py-8 bg-white rounded-xl border border-stone-200 border-dashed text-stone-400">
-                                                Planlanmış gelecek etkinlik bulunmuyor.
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* PAST */}
-                                    <div>
-                                        <h3 className="font-bold text-lg text-stone-900 mb-4 opacity-60">Geçmiş Etkinlikler (Arşiv)</h3>
-                                        <div className="space-y-4">
-                                            {pastEvents.map(event => (
-                                                <div key={event.id} className="bg-stone-50 rounded-xl border border-stone-200 p-4 flex gap-4 opacity-75 hover:opacity-100 transition-opacity">
-                                                    <div className="w-12 h-12 bg-stone-200 rounded-lg flex flex-col items-center justify-center text-stone-500 shrink-0">
-                                                        <span className="text-[10px] font-bold uppercase">{new Date(event.startDate).toLocaleString('tr', { month: 'short' })}</span>
-                                                        <span className="text-sm font-bold">{new Date(event.startDate).getDate()}</span>
-                                                    </div>
-                                                    <div className="flex-1">
-                                                        <h4 className="font-bold text-stone-700">{event.title}</h4>
-                                                        <p className="text-xs text-stone-500 line-clamp-1">{event.shortDescription || 'Etkinlik detayı mevcut değil.'}</p>
-                                                    </div>
-                                                    <button className="text-stone-400 hover:text-stone-900 text-sm font-bold flex items-center gap-1">
-                                                        <MessageSquare size={16} /> Değerlendir
-                                                    </button>
+                                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+                                    {upcomingEvents.length > 0 ? (
+                                        upcomingEvents.map(event => (
+                                            <div key={event.id} className="bg-white rounded-xl border border-stone-200 p-4 shadow-sm flex gap-4">
+                                                <div className="w-14 h-14 bg-stone-100 rounded-lg flex flex-col items-center justify-center text-stone-600 shrink-0 font-bold border border-stone-200">
+                                                    <span className="text-[10px] uppercase text-stone-500">{new Date(event.startDate).toLocaleString('tr', { month: 'short' })}</span>
+                                                    <span className="text-xl leading-none">{new Date(event.startDate).getDate()}</span>
                                                 </div>
-                                            ))}
-                                            {pastEvents.length === 0 && (
-                                                <div className="text-sm text-stone-400 italic">Geçmiş etkinlik bulunamadı.</div>
-                                            )}
+                                                <div>
+                                                    <h4 className="font-bold text-stone-900">{event.title}</h4>
+                                                    <div className="flex items-center gap-2 text-xs text-stone-500 mt-1">
+                                                        <MapPin size={12} /> {event.location}
+                                                        <span>•</span>
+                                                        <Calendar size={12} /> {new Date(event.startDate).toLocaleTimeString('tr', { hour: '2-digit', minute: '2-digit' })}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="text-center py-10 bg-white border border-dashed border-stone-200 rounded-xl text-stone-400 text-sm">
+                                            Yaklaşan etkinlik bulunmuyor.
                                         </div>
-                                    </div>
-
+                                    )}
                                 </motion.div>
                             )}
-
-                            {activeTab === 'reviews' && (
-                                <div className="text-center py-12 text-stone-400">
-                                    <MessageSquare size={48} className="mx-auto mb-4 opacity-20" />
-                                    <p>Henüz değerlendirme yapılmamış.</p>
-                                    <button className="mt-4 text-boun-blue font-bold hover:underline">İlk yorumu sen yaz</button>
-                                </div>
-                            )}
-
                         </div>
                     </div>
+
+                    {/* RIGHT COLUMN (Sidebar Stats) */}
+                    <div className="space-y-4 hidden lg:block">
+                        <div className="bg-amber-50 rounded-xl border border-amber-100 p-6">
+                            <h4 className="font-bold text-amber-900 mb-2 flex items-center gap-2"><Star size={18} /> Topluluk Puanı</h4>
+                            <div className="text-4xl font-bold text-amber-500 mb-1">4.8</div>
+                            <div className="text-sm text-amber-700/60">24 değerlendirme</div>
+                        </div>
+                        <div className="bg-blue-50 rounded-xl border border-blue-100 p-6">
+                            <h4 className="font-bold text-blue-900 mb-2 flex items-center gap-2"><Calendar size={18} /> Son Etkinlik</h4>
+                            {pastEvents.length > 0 ? (
+                                <>
+                                    <div className="font-bold text-blue-800 line-clamp-1">{pastEvents[0].title}</div>
+                                    <div className="text-sm text-blue-600">{formatDate(pastEvents[0].startDate)}</div>
+                                </>
+                            ) : (
+                                <div className="text-sm text-blue-400">Arşivde etkinlik yok.</div>
+                            )}
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>

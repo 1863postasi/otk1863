@@ -16,6 +16,7 @@ export const ClubsPanel = ({ setSelectedItemId }: { setSelectedItemId?: (id: str
     const [clubs, setClubs] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [logoFile, setLogoFile] = useState<File | null>(null);
+    const [bannerFile, setBannerFile] = useState<File | null>(null);
     const [editingId, setEditingId] = useState<string | null>(null);
 
     // Content Upload State
@@ -60,6 +61,7 @@ export const ClubsPanel = ({ setSelectedItemId }: { setSelectedItemId?: (id: str
                     locX: club.location?.x || 50,
                     locY: club.location?.y || 50,
                     logoUrl: club.logoUrl,
+                    bannerUrl: club.bannerUrl,
                     contents: club.contents || []
                 });
             }
@@ -67,6 +69,7 @@ export const ClubsPanel = ({ setSelectedItemId }: { setSelectedItemId?: (id: str
         } else if (clubView === 'create') {
             setFormData({ contents: [] });
             setLogoFile(null);
+            setBannerFile(null);
             setEditingId(null);
             setActiveTab('info');
         }
@@ -251,11 +254,18 @@ export const ClubsPanel = ({ setSelectedItemId }: { setSelectedItemId?: (id: str
         setLoading(true);
         try {
             let logoUrl = formData.logoUrl || "";
+            let bannerUrl = formData.bannerUrl || "";
 
             if (logoFile) {
                 const path = `kulupler-arsivi/${formData.clubShort.toUpperCase()}`;
                 const uploadResult = await uploadFile(logoFile, path);
                 logoUrl = uploadResult.url;
+            }
+
+            if (bannerFile) {
+                const path = `kulupler-arsivi/${formData.clubShort.toUpperCase()}/banner`;
+                const uploadResult = await uploadFile(bannerFile, path);
+                bannerUrl = uploadResult.url;
             }
 
             const clubData = {
@@ -267,6 +277,7 @@ export const ClubsPanel = ({ setSelectedItemId }: { setSelectedItemId?: (id: str
                 description: formData.clubDesc,
                 website: formData.clubWeb || "",
                 logoUrl: logoUrl,
+                bannerUrl: bannerUrl,
                 location: {
                     x: Number(formData.locX) || 50,
                     y: Number(formData.locY) || 50
@@ -526,6 +537,19 @@ export const ClubsPanel = ({ setSelectedItemId }: { setSelectedItemId?: (id: str
                                         <img src={formData.logoUrl} className="h-20 w-auto object-contain" />
                                     </div>
                                 )}
+
+                                <div className="mt-6 pt-6 border-t border-stone-100">
+                                    <FileUploader
+                                        label="Kulüp Vitrin Görseli (Banner)"
+                                        onFileSelect={(f) => setBannerFile(f as File)}
+                                        selectedFileName={bannerFile?.name || (formData.bannerUrl ? "Mevcut Banner Yüklü" : "")}
+                                    />
+                                    {formData.bannerUrl && !bannerFile && (
+                                        <div className="mt-4 flex justify-center p-4 bg-stone-100 rounded">
+                                            <img src={formData.bannerUrl} className="h-24 w-full object-cover rounded-md" />
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
                             <div className="bg-white p-6 rounded-lg border border-stone-200">

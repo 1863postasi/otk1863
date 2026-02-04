@@ -75,6 +75,33 @@ export interface MarketplaceListing extends ForumThread {
     images: string[];
 }
 
+// NEW: Standalone Listing for 'listings' collection
+export interface Listing {
+    id: string;
+    title: string;
+    description: string;
+    price: number;
+    currency: '₺' | '$' | '€' | '£';
+    category: string;
+    condition: 'new' | 'like-new' | 'good' | 'fair';
+    images: string[];
+
+    // Seller
+    sellerId: string;
+    sellerName: string;
+    sellerPhotoUrl?: string;
+    contact: {
+        whatsapp?: string; // Full link
+        phone?: string;    // Display text
+    };
+
+    createdAt: any;
+    status: 'active' | 'sold' | 'archived';
+    tags: string[];
+    views: number;
+    likes: number;
+}
+
 export interface ForumComment {
     id: string;
     threadId: string;
@@ -84,4 +111,22 @@ export interface ForumComment {
     authorPhotoUrl?: string;
     createdAt: any;
     likes: number;
+}
+
+export interface Club {
+    id: string;
+    name: string;
+    shortName: string;
+    description: string;
+    website?: string;
+    logoUrl?: string;   // URL to image in R2
+    bannerUrl?: string; // URL to image in R2
+    type: string;       // e.g. "Kültür", "Spor", "Akademik"
+    founded?: string;
+    memberCount?: number;
+    rating?: number;
+
+    // Admin/Manager specific
+    clubRoles?: Record<string, string>; // userId -> role
+    contents?: any[]; // Archive contents
 }

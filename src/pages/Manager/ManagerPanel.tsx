@@ -9,22 +9,12 @@ import { Loader2, Users, Settings, LogOut, ArrowLeft, Info, Calendar, FolderOpen
 import { cn } from '../../lib/utils';
 import { useNavigate } from 'react-router-dom';
 
-interface ClubData {
-    id: string;
-    name: string;
-    shortName: string;
-    description: string;
-    website: string;
-    founded: string;
-    type: string;
-    location: { x: number, y: number };
-    contents?: any[];
-}
+import { Club } from '../Forum/types';
 
 export default function ManagerPanel() {
     const { userProfile, logout } = useAuth();
     const navigate = useNavigate();
-    const [authorizedClubs, setAuthorizedClubs] = useState<ClubData[]>([]);
+    const [authorizedClubs, setAuthorizedClubs] = useState<Club[]>([]);
     const [loading, setLoading] = useState(true);
 
     // Selection & Editing
@@ -40,6 +30,7 @@ export default function ManagerPanel() {
     const [contentTab, setContentTab] = useState<'file' | 'link'>('file');
     const [newContentData, setNewContentData] = useState({ title: '', date: '', desc: '', url: '' });
     const [pendingFiles, setPendingFiles] = useState<File | FileList | null>(null);
+    const [bannerFile, setBannerFile] = useState<File | null>(null);
 
     // Fetch Authorized Clubs
     useEffect(() => {
@@ -59,7 +50,7 @@ export default function ManagerPanel() {
                 // Assuming a student manages < 10 clubs.
                 const q = query(collection(db, "clubs"), where("__name__", "in", clubIds));
                 const snapshot = await getDocs(q);
-                const clubs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as ClubData[];
+                const clubs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Club[];
                 setAuthorizedClubs(clubs);
             } catch (error) {
                 console.error("Error fetching managed clubs:", error);
@@ -72,19 +63,20 @@ export default function ManagerPanel() {
     }, [userProfile]);
 
     // Handle Selection
-    const handleSelectClub = (club: ClubData) => {
+    const handleSelectClub = (club: Club) => {
         setSelectedClubId(club.id);
         setFormData({
             description: club.description || '',
             website: club.website || '',
-            // Read-only fields for display
             name: club.name,
             shortName: club.shortName,
             founded: club.founded,
-            type: club.type
+            type: club.type,
+            bannerUrl: club.bannerUrl
         });
         setActiveTab('info');
         setPendingFiles(null);
+        setBannerFile(null);
         setNewContentData({ title: '', date: '', desc: '', url: '' });
     };
 
@@ -92,9 +84,19 @@ export default function ManagerPanel() {
         if (!selectedClubId) return;
         setSaving(true);
         try {
+            let bannerUrl = formData.bannerUrl;
+
+            if (bannerFile) {
+                const activeClub = authorizedClubs.find(c => c.id === selectedClubId);
+                const path = `kulupler-arsivi/${activeClub?.shortName.toUpperCase()}/banner`;
+                const uploadResult = await uploadFile(bannerFile, path);
+                bannerUrl = uploadResult.url;
+            }
+
             await updateDoc(doc(db, "clubs", selectedClubId), {
                 description: formData.description,
-                website: formData.website
+                website: formData.website,
+                bannerUrl: bannerUrl
             });
             alert("Kulüp bilgileri güncellendi.");
         } catch (error) {
@@ -324,6 +326,17 @@ export default function ManagerPanel() {
                                     value={formData.website}
                                     onChange={(v: string) => setFormData({ ...formData, website: v })}
                                 />
+
+                                <div className="bg-white rounded-lg border border-stone-200 p-4">
+                                    <FileUploader
+                                        label="Kulüp Vitrin Görseli (Banner)"
+                                        onFileSelect={(f) => setBannerFile(f as File)}
+                                        selectedFileName={bannerFile?.name || (formData.bannerUrl ? "Mevcut Banner Yüklü" : "")}
+                                    />
+                                    {formData.bannerUrl && !bannerFile && (
+                                        <div className="mt-2 text-xs text-stone-500">Mevcut görsel sistemde kayıtlı.</div>
+                                    )}
+                                </div>
 
                                 <TextArea
                                     label="Tanıtım Yazısı"
