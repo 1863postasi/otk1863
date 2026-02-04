@@ -285,7 +285,7 @@ export default function Marketplace() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-    const categories = ["Tümü", "Kitap", "Elektronik", "Ev Eşyası", "Notlar", "Giyim", "Diğer"];
+    const categories = ["Tümü", "Kitap", "Elektronik", "Ev Eşyası", "Giyim", "Diğer"];
 
     // Fetch Listings with Cache Strategy
     useEffect(() => {
@@ -312,19 +312,37 @@ export default function Marketplace() {
 
             // 2. Fetch from Firestore if cache invalid/expired
             try {
+                // Firestore requires a Composite Index for queries with where() and orderBy() on different fields.
+                // If the fetch fails, check the browser console for a link to create the index.
                 const q = query(
                     collection(db, "listings"),
                     where("status", "==", "active"),
                     orderBy("createdAt", "desc"),
                     limit(50)
                 );
+
                 const snapshot = await getDocs(q);
-                const data = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data(),
-                    // Convert timestamps to serializable format for localStorage
-                    createdAt: { seconds: doc.data().createdAt?.seconds || Date.now() / 1000 }
-                } as Listing));
+
+                if (snapshot.empty) {
+                    console.warn("Marketplace: No active listings found in Firestore.");
+                }
+
+                const data = snapshot.docs.map(doc => {
+                    const docData = doc.data();
+                    // Handle timestamp: It might be a Firestore Timestamp object or already a number/string
+                    let seconds = Date.now() / 1000;
+                    if (docData.createdAt?.seconds) {
+                        seconds = docData.createdAt.seconds;
+                    } else if (docData.createdAt && typeof docData.createdAt.toDate === 'function') {
+                        seconds = docData.createdAt.toDate().getTime() / 1000;
+                    }
+
+                    return {
+                        id: doc.id,
+                        ...docData,
+                        createdAt: { seconds }
+                    } as Listing;
+                });
 
                 setItems(data);
 
@@ -332,8 +350,12 @@ export default function Marketplace() {
                 localStorage.setItem(CACHE_KEY, JSON.stringify(data));
                 localStorage.setItem(CACHE_TIME_KEY, now.toString());
 
-            } catch (error) {
-                console.error("Fetch error:", error);
+            } catch (error: any) {
+                console.error("Marketplace Fetch Error:", error);
+                if (error?.code === 'failed-precondition') {
+                    console.error("CRITICAL: Missing Firestore Index. Please open the link in the error message above to create it.");
+                    alert("Veritabanı indeksi eksik! Geliştirici konsoluna (F12) bakarak linke tıklayınız.");
+                }
             } finally {
                 setLoading(false);
             }
@@ -393,6 +415,11 @@ export default function Marketplace() {
             };
 
             await addDoc(collection(db, "listings"), newListing);
+
+            // Clear cache to force refetch on reload
+            localStorage.removeItem('marketplace_data');
+            localStorage.removeItem('marketplace_timestamp');
+
             alert("İlan yayınlandı!");
             window.location.reload();
         } catch (error) {

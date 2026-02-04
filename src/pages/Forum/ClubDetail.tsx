@@ -68,7 +68,31 @@ const ClubDetail: React.FC = () => {
                 // Fetch Events
                 const q = query(collection(db, "events"), where("clubId", "==", clubId));
                 const snapshot = await getDocs(q);
-                const allEvents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as EventData[];
+                const allEvents = snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    // Robust Date Conversion
+                    let startDate = new Date().toISOString();
+                    let endDate = new Date().toISOString();
+
+                    if (data.startDate && typeof data.startDate.toDate === 'function') {
+                        startDate = data.startDate.toDate().toISOString();
+                    } else if (data.startDate) {
+                        startDate = data.startDate; // Assume string
+                    }
+
+                    if (data.endDate && typeof data.endDate.toDate === 'function') {
+                        endDate = data.endDate.toDate().toISOString();
+                    } else if (data.endDate) {
+                        endDate = data.endDate; // Assume string
+                    }
+
+                    return {
+                        id: doc.id,
+                        ...data,
+                        startDate,
+                        endDate
+                    } as EventData;
+                });
 
                 const now = new Date();
                 const upcoming = allEvents.filter(e => new Date(e.endDate) >= now).sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
