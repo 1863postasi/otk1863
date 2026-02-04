@@ -212,72 +212,77 @@ const Campus: React.FC = () => {
             </div>
 
             {/* 2. RIGHT PANEL: INTERACTIVE MAP */}
-            <div className="flex-1 relative bg-[#e0ded8] overflow-hidden order-1 md:order-2 h-[60vh] md:h-full border-b md:border-b-0 md:border-l border-stone-300">
-                {/* Map Background */}
-                <div className="absolute inset-0">
-                    <img
-                        src="https://cdn.1863postasi.org/kulupler-arsivi/kroki.png"
-                        className="w-full h-full object-cover opacity-80 mix-blend-multiply"
-                        alt="Kampüs Krokisi"
-                    />
-                </div>
+            {/* 2. RIGHT PANEL: INTERACTIVE MAP */}
+            <div className="flex-1 relative bg-[#e0ded8] overflow-hidden order-1 md:order-2 h-[60vh] md:h-full border-b md:border-b-0 md:border-l border-stone-300 flex items-center justify-center p-0 md:p-8">
 
-                {/* Map UI Elements */}
-                <div className="absolute top-16 md:top-4 right-4 bg-white/90 backdrop-blur px-3 py-1.5 rounded text-xs font-bold text-stone-600 uppercase tracking-widest border border-stone-200 shadow-sm flex items-center gap-2 z-10">
+                {/* HUD Badge (Fixed to Panel) */}
+                <div className="absolute top-16 md:top-4 right-4 bg-white/90 backdrop-blur px-3 py-1.5 rounded text-xs font-bold text-stone-600 uppercase tracking-widest border border-stone-200 shadow-sm flex items-center gap-2 z-20 pointer-events-none">
                     <MapPin size={14} className="text-boun-red" /> Güney Kampüs
                 </div>
 
-                {/* PINS */}
-                {(clubs as Club[]).map((club) => {
-                    const isHovered = hoveredClubId === club.id;
-                    const isSelected = selectedClub?.id === club.id;
+                {/* Map Wrapper: Fits the image size exactly so pins align 100% correctly */}
+                <div className="relative inline-block shadow-lg rounded-xl overflow-hidden bg-stone-200 group cursor-grab active:cursor-grabbing">
+                    <img
+                        src="https://cdn.1863postasi.org/kulupler-arsivi/kroki.png"
+                        className="block max-h-[55vh] md:max-h-[85vh] w-auto max-w-full object-contain select-none pointer-events-none mix-blend-multiply opacity-90"
+                        alt="Kampüs Krokisi"
+                    />
 
-                    const posX = club.location?.x ?? 50;
-                    const posY = club.location?.y ?? 50;
+                    {/* Grid Overlay for debugging/aesthetics (Optional) */}
+                    <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.05)_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none opacity-30"></div>
 
-                    return (
-                        <div
-                            key={club.id}
-                            className="absolute transform -translate-x-1/2 -translate-y-1/2 z-10"
-                            style={{ top: `${posY}%`, left: `${posX}%` }}
-                        >
-                            <motion.button
-                                onClick={() => setSelectedClub(club)}
-                                onMouseEnter={() => setHoveredClubId(club.id)}
-                                onMouseLeave={() => setHoveredClubId(null)}
-                                whileHover={{ scale: 1.2 }}
-                                whileTap={{ scale: 0.9 }}
-                                className={cn(
-                                    "relative w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.3)] transition-all duration-300 border-2 overflow-hidden",
-                                    isSelected
-                                        ? "bg-stone-900 border-boun-gold z-50 scale-125"
-                                        : "bg-white border-white hover:border-boun-blue"
-                                )}
+                    {/* PINS */}
+                    {(clubs as Club[]).map((club) => {
+                        const isHovered = hoveredClubId === club.id;
+                        const isSelected = selectedClub?.id === club.id;
+
+                        const posX = club.location?.x ?? 50;
+                        const posY = club.location?.y ?? 50;
+
+                        return (
+                            <div
+                                key={club.id}
+                                className="absolute transform -translate-x-1/2 -translate-y-1/2 z-10"
+                                style={{ top: `${posY}%`, left: `${posX}%` }}
                             >
-                                {club.logoUrl ? (
-                                    <img src={club.logoUrl} className="w-full h-full object-cover" />
-                                ) : (
-                                    <span className="text-[10px] font-bold text-stone-600">{club.shortName.substring(0, 2)}</span>
-                                )}
-                            </motion.button>
+                                <motion.button
+                                    onClick={() => setSelectedClub(club)}
+                                    onMouseEnter={() => setHoveredClubId(club.id)}
+                                    onMouseLeave={() => setHoveredClubId(null)}
+                                    whileHover={{ scale: 1.25 }}
+                                    whileTap={{ scale: 0.9 }}
+                                    className={cn(
+                                        "relative w-6 h-6 md:w-10 md:h-10 flex items-center justify-center rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition-all duration-300 border-2 overflow-hidden",
+                                        isSelected
+                                            ? "bg-stone-900 border-boun-gold z-50 scale-125 ring-4 ring-black/10"
+                                            : "bg-white border-white hover:border-boun-blue"
+                                    )}
+                                >
+                                    {club.logoUrl ? (
+                                        <img src={club.logoUrl} className="w-full h-full object-cover" alt={club.shortName} />
+                                    ) : (
+                                        <span className="text-[8px] md:text-[10px] font-bold text-stone-600">{club.shortName.substring(0, 2)}</span>
+                                    )}
+                                </motion.button>
 
-                            {/* Tooltip */}
-                            <AnimatePresence>
-                                {(isHovered || isSelected) && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 10, scale: 0.9 }}
-                                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                                        exit={{ opacity: 0, y: 5, scale: 0.9 }}
-                                        className="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-stone-900 text-white text-xs px-3 py-1.5 rounded whitespace-nowrap z-20 pointer-events-none font-bold shadow-xl border border-stone-700"
-                                    >
-                                        {club.shortName}
-                                        <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-stone-900 rotate-45 border-l border-t border-stone-700"></div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
-                    );
-                })}
+                                {/* Tooltip */}
+                                <AnimatePresence>
+                                    {(isHovered || isSelected) && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            exit={{ opacity: 0, y: 5, scale: 0.9 }}
+                                            className="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-stone-900 text-white text-[10px] md:text-xs px-2 py-1 md:px-3 md:py-1.5 rounded whitespace-nowrap z-20 pointer-events-none font-bold shadow-xl border border-stone-700"
+                                        >
+                                            {club.shortName}
+                                            <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-stone-900 rotate-45 border-l border-t border-stone-700"></div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
 
             {/* 3. DETAIL MODAL (THE CARD) */}
