@@ -26,6 +26,7 @@ Proje, sunucusuz (serverless) mimari üzerine kuruludur. Aşağıdaki yapı taş
 *   Mevcut tasarım diline sahip çıkın ve onu yüceltin.
 *   **Dinamik ve Canlı Arayüz:** Arayüz "yaşıyor" gibi hissettirmelidir. Hover efektleri, mikro-animasyonlar ve yumuşak geçişler (transition-all) standarttır.
 *   **Animasyon Kütüphanesi:** Animasyonlar için varsayılan olarak `framer-motion` kullanın. `AnimatePresence` kullanırken unmount çakışmalarına (white screen) dikkat edin.
+*   **Yüksek Bilgi Yoğunluğu (High Density):** Kullanıcı, ekranın verimli kullanılmasını ve bir bakışta daha fazla içerik görmeyi sever. Mobil arayüzlerde tek büyük kartlar yerine, grid (2'li kolon), yatay sık listeler veya kompakt görünümler tercih edin. Font boyutlarını (özellikle mobilde) gereksiz büyük tutmayın.
 
 ## 2. Teknoloji Yığını ve Kodlama Standartları
 *   **Dil:** TypeScript (.tsx / .ts) zorunludur. `any` tipinden kaçının, interface ve type'ları açıkça tanımlayın.

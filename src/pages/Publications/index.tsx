@@ -70,14 +70,21 @@ const SecretDiaryButton = () => {
             <h2 className="text-3xl font-serif font-bold text-stone-900 mb-8 tracking-tight">Özel</h2>
 
             <motion.div
-                layout
                 onClick={handleClick}
                 initial={{ width: '60px' }}
                 animate={{
                     width: isUNLOCKED ? '320px' : '64px',
-                    backgroundColor: isUNLOCKED ? '#0c0a09' : '#1c1917', // stone-900 vs stone-950
+                    backgroundColor: isUNLOCKED ? '#0c0a09' : '#1c1917',
                 }}
-                transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                transition={{
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 30, // Smoother spring
+                    mass: 0.8
+                }}
+                // removed 'layout' prop to avoid heavy calculations unless necessary. 
+                // Since it's centered flex, width change is fine.
+                style={{ willChange: "width, background-color" }}
                 className={`h-16 rounded-full flex items-center justify-center cursor-pointer shadow-2xl relative overflow-hidden group ${isUNLOCKED ? 'hover:scale-105' : 'hover:scale-110'}`}
             >
                 {/* Background Animation on Unlocked */}
@@ -86,7 +93,9 @@ const SecretDiaryButton = () => {
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
-                            className="absolute inset-0 bg-gradient-to-r from-purple-900/40 to-boun-blue/40"
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.4 }}
+                            className="absolute inset-0 bg-gradient-to-r from-purple-900/40 to-boun-blue/40 pointer-events-none"
                         />
                     )}
                 </AnimatePresence>
@@ -97,21 +106,21 @@ const SecretDiaryButton = () => {
                             key="locked"
                             initial={{ opacity: 0, scale: 0.5 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.5 }}
-                            className="text-stone-400"
+                            exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
+                            className="text-stone-400 absolute"
                         >
                             <Lock size={24} />
                         </motion.div>
                     ) : (
                         <motion.div
                             key="unlocked"
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.2 }}
-                            className="flex items-center gap-3 text-stone-100 whitespace-nowrap z-10 px-6"
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.1, duration: 0.3 }}
+                            className="flex items-center gap-3 text-stone-100 whitespace-nowrap z-10 px-6 absolute"
                         >
                             <Unlock size={18} className="text-emerald-400" />
-                            <span className="font-serif italic text-lg">Kendimi Tanıma Günlükleri</span>
+                            <span className="font-serif italic text-lg">Kol Düğmeleri</span>
                             <ChevronRight size={18} className="opacity-50 animate-pulse" />
                         </motion.div>
                     )}

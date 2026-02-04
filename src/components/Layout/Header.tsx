@@ -184,15 +184,12 @@ const Header: React.FC = () => {
             <div className="md:hidden flex w-full justify-between mt-2 px-2 absolute top-0 left-0 z-50 pointer-events-none">
 
               {/* HOME BUTTON (Top Left - New) */}
-              {/* Hide on Archive pages to prevent overlap with 'Back to Lobby' */}
-              {!location.pathname.startsWith('/arsiv') && (
-                <Link
-                  to="/"
-                  className="pointer-events-auto bg-white/90 backdrop-blur text-stone-800 p-2.5 rounded-full shadow-lg border border-stone-200 hover:bg-stone-100 focus:outline-none active:scale-95 transition-all"
-                >
-                  <img src="https://cdn.1863postasi.org/bg/otk-logo.png" alt="Home" className="w-5 h-5 object-contain opacity-80" />
-                </Link>
-              )}
+              <Link
+                to="/"
+                className="pointer-events-auto bg-white/90 backdrop-blur text-stone-800 p-2.5 rounded-full shadow-lg border border-stone-200 hover:bg-stone-100 focus:outline-none active:scale-95 transition-all"
+              >
+                <img src="https://cdn.1863postasi.org/bg/otk-logo.png" alt="Home" className="w-5 h-5 object-contain opacity-80" />
+              </Link>
 
               {/* SETTINGS BUTTON (Top Right - Existing) */}
               <button

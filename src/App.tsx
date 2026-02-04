@@ -4,6 +4,10 @@ import { AnimatePresence } from 'framer-motion';
 import Header from './components/Layout/Header';
 import Home from './pages/Home';
 import Archive from './pages/Archive';
+import Roots from './pages/Archive/Roots';
+import Campus from './pages/Archive/Campus';
+import Resistance from './pages/Archive/Resistance';
+import Institutional from './pages/Archive/Institutional';
 import OTK from './pages/OTK';
 import AdminLogin from './pages/Admin/Login';
 import Dashboard from './pages/Admin/Dashboard';
@@ -95,6 +99,38 @@ const App: React.FC = () => {
             element={
               <ProtectedRoute requireAdmin={false}>
                 <Archive />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/arsiv/kokenler"
+            element={
+              <ProtectedRoute requireAdmin={false}>
+                <Roots />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/arsiv/kampus"
+            element={
+              <ProtectedRoute requireAdmin={false}>
+                <Campus />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/arsiv/direnis"
+            element={
+              <ProtectedRoute requireAdmin={false}>
+                <Resistance />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/arsiv/belgeler"
+            element={
+              <ProtectedRoute requireAdmin={false}>
+                <Institutional />
               </ProtectedRoute>
             }
           />

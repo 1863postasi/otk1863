@@ -2,9 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Search, Plus, MessageCircle, ArrowRight, Filter,
-    ThumbsUp, Flame, Clock, TrendingUp, BookOpen, GraduationCap, X,
-    MoreHorizontal, Share2, MessageSquare
+    Search, Plus, ArrowRight, X,
+    ThumbsUp, MoreHorizontal, Share2, MessageSquare
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { formatDistanceToNow } from 'date-fns';
@@ -25,20 +24,6 @@ interface ForumThread {
     replyCount: number;
     isPinned: boolean;
 }
-
-// --- MOCK DATA ---
-const MOCK_COURSES = [
-    { code: 'CMPE150', name: 'Intro to Computing', rating: 4.5 },
-    { code: 'PHYS101', name: 'Physics I', rating: 2.8 },
-    { code: 'HUM101', name: 'Cultural Encounters', rating: 4.2 },
-    { code: 'MATH201', name: 'Matrix Theory', rating: 3.5 },
-];
-
-const MOCK_INSTRUCTORS = [
-    { id: '1', name: 'Prof. Dr. Ali Veli', dept: 'CMPE', rating: 4.8 },
-    { id: '2', name: 'Dr. Ayşe Yılmaz', dept: 'PHYS', rating: 3.9 },
-    { id: '3', name: 'Mehmet Öz', dept: 'HUM', rating: 4.5 },
-];
 
 const generateMockThreads = (category: string): ForumThread[] => {
     return Array.from({ length: 8 }).map((_, i) => ({
@@ -156,8 +141,8 @@ const Community: React.FC = () => {
                     <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 pb-24">
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
-                            {/* --- LEFT COLUMN: DISCUSSION FEED (8 cols) --- */}
-                            <div className="lg:col-span-8 space-y-4">
+                            {/* --- FULL DATA COLUMN: DISCUSSION FEED --- */}
+                            <div className="lg:col-span-12 space-y-4">
                                 {isLoading ? (
                                     // SKELETONS
                                     Array.from({ length: 4 }).map((_, i) => (
@@ -249,82 +234,7 @@ const Community: React.FC = () => {
                                 )}
                             </div>
 
-                            {/* --- RIGHT COLUMN: SIDEBAR WIDGETS (4 cols) --- */}
-                            <div className="hidden lg:block lg:col-span-4 space-y-6">
 
-                                {/* Widget 1: Trending Courses */}
-                                <div className="bg-white rounded-2xl p-5 border border-stone-100 shadow-sm sticky top-0">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <h3 className="font-serif font-bold text-stone-800 flex items-center gap-2">
-                                            <BookOpen size={18} className="text-blue-500" />
-                                            Gündemdeki Dersler
-                                        </h3>
-                                        <Link to="/forum/akademik" className="text-[10px] font-bold text-stone-400 hover:text-stone-900 uppercase tracking-wider">Tümü</Link>
-                                    </div>
-                                    <div className="space-y-3">
-                                        {MOCK_COURSES.map((course, i) => (
-                                            <Link
-                                                key={i}
-                                                to={`/forum/ders/${course.code}`}
-                                                className="flex items-center justify-between p-3 rounded-xl bg-stone-50 hover:bg-blue-50 hover:scale-[1.02] transition-all group"
-                                            >
-                                                <div>
-                                                    <div className="text-xs font-bold text-stone-900 group-hover:text-blue-700">{course.code}</div>
-                                                    <div className="text-[10px] text-stone-500 truncate max-w-[120px]">{course.name}</div>
-                                                </div>
-                                                <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-md shadow-sm">
-                                                    <span className="text-[10px] font-bold text-stone-700">{course.rating}</span>
-                                                    <span className="text-amber-500 text-[10px]">★</span>
-                                                </div>
-                                            </Link>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Widget 2: Top Instructors */}
-                                <div className="bg-white rounded-2xl p-5 border border-stone-100 shadow-sm">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <h3 className="font-serif font-bold text-stone-800 flex items-center gap-2">
-                                            <GraduationCap size={18} className="text-purple-500" />
-                                            Popüler Hocalar
-                                        </h3>
-                                        <Link to="/forum/akademik?tab=instructors" className="text-[10px] font-bold text-stone-400 hover:text-stone-900 uppercase tracking-wider">Tümü</Link>
-                                    </div>
-                                    <div className="space-y-3">
-                                        {MOCK_INSTRUCTORS.map((inst, i) => (
-                                            <Link
-                                                key={i}
-                                                to={`/forum/hoca/${inst.id}`}
-                                                className="flex items-center gap-3 p-3 rounded-xl hover:bg-stone-50 transition-colors group"
-                                            >
-                                                <div className="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs font-bold">
-                                                    {inst.name.charAt(0)}
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="text-xs font-bold text-stone-900 group-hover:text-purple-700 truncate">{inst.name}</div>
-                                                    <div className="text-[10px] text-stone-500">{inst.dept} • {inst.rating} ★</div>
-                                                </div>
-                                                <ArrowRight size={14} className="text-stone-300 group-hover:text-stone-600" />
-                                            </Link>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Widget 3: Quick Stats or Tags */}
-                                <div className="p-5 rounded-2xl bg-gradient-to-br from-stone-900 to-stone-800 text-white shadow-lg">
-                                    <h3 className="font-serif font-bold text-lg mb-2">Tartışmaya Katıl</h3>
-                                    <p className="text-xs text-stone-400 mb-4 leading-relaxed">
-                                        Fikirlerin bizim için değerli. Kampüs gündemine yön ver.
-                                    </p>
-                                    <button
-                                        onClick={() => setIsCreateModalOpen(true)}
-                                        className="w-full py-2 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-lg text-xs font-bold transition-all border border-white/10"
-                                    >
-                                        Bir şeyler yaz...
-                                    </button>
-                                </div>
-
-                            </div>
                         </div>
                     </div>
                 </div>
