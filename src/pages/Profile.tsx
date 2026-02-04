@@ -16,7 +16,7 @@ import MyMarketplaceListings from './Profile/MyMarketplaceListings';
 import MessagesTab from './Profile/MessagesTab';
 import SavedEvents from './Profile/SavedEvents';
 import SettingsTab from './Profile/SettingsTab';
-import { Listing } from '../Forum/types';
+import { Listing } from './Forum/types';
 
 interface LostItem {
     id: string;
