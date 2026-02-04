@@ -33,18 +33,23 @@ const ClubDetail: React.FC = () => {
 
     useEffect(() => {
         const fetchData = async () => {
-            if (!clubId) return;
+            if (!clubId) {
+                setLoading(false);
+                return;
+            }
 
             // 1. Try Cache
             const cacheKey = `club_detail_${clubId}`;
             const cachedData = localStorage.getItem(cacheKey);
             if (cachedData) {
                 try {
-                    const { club: cachedClub, upcoming: cachedUpcoming, past: cachedPast } = JSON.parse(cachedData);
-                    setClub(cachedClub);
-                    setUpcomingEvents(cachedUpcoming);
-                    setPastEvents(cachedPast);
-                    setLoading(false);
+                    const parsed = JSON.parse(cachedData);
+                    if (parsed && parsed.club) {
+                        setClub(parsed.club);
+                        setUpcomingEvents(parsed.upcoming || []);
+                        setPastEvents(parsed.past || []);
+                        setLoading(false);
+                    }
                 } catch (e) {
                     console.error("Cache parse error", e);
                 }
@@ -104,6 +109,9 @@ const ClubDetail: React.FC = () => {
     if (loading) return <div className="min-h-screen bg-stone-50 flex items-center justify-center"><Loader2 className="animate-spin text-stone-400" /></div>;
     if (!club) return <div className="min-h-screen bg-stone-50 flex items-center justify-center text-stone-500">Kulüp bulunamadı.</div>;
 
+    // Safety check for shortName to prevent crash
+    const safeShortName = club.shortName || club.name?.substring(0, 2) || "??";
+
     return (
         <div className="min-h-screen bg-stone-50 pb-20">
             {/* 1. HERO & BANNER SECTION */}
@@ -138,7 +146,7 @@ const ClubDetail: React.FC = () => {
                                 {club.logoUrl ? (
                                     <img src={club.logoUrl} className="w-full h-full object-cover" alt="Logo" />
                                 ) : (
-                                    <span className="text-2xl font-black text-stone-300">{club.shortName.substring(0, 2)}</span>
+                                    <span className="text-2xl font-black text-stone-300">{safeShortName.substring(0, 2)}</span>
                                 )}
                             </div>
                         </div>
