@@ -11,12 +11,7 @@ interface LostItem {
     status: 'pending' | 'approved' | 'resolved';
     createdAt: any;
     imageURL?: string;
-    notes?: {
-        authorName: string;
-        authorContact: string;
-        content: string;
-        createdAt: string;
-    }[];
+
 }
 
 interface MyListingsProps {
@@ -63,23 +58,7 @@ const MyListings: React.FC<MyListingsProps> = ({ items, loading, onResolve }) =>
                                 </div>
                             </div>
 
-                            {/* Private Notes Display */}
-                            {item.notes && item.notes.length > 0 && (
-                                <div className="mt-4 bg-blue-50 border border-blue-100 rounded-lg p-3">
-                                    <h4 className="text-xs font-bold text-blue-800 mb-2 flex items-center gap-1"><MessageCircle size={12} /> Gelen Mesajlar (Sadece siz görebilirsiniz)</h4>
-                                    <div className="space-y-2">
-                                        {item.notes.map((note, idx) => (
-                                            <div key={idx} className="bg-white p-2 rounded border border-blue-100 text-xs text-stone-700">
-                                                <p className="mb-1">{note.content}</p>
-                                                <div className="text-[10px] text-stone-400 flex justify-between">
-                                                    <span>{note.authorName} ({note.authorContact})</span>
-                                                    <span>{formatDate(note.createdAt)}</span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
+
 
                             {item.status !== 'resolved' && (
                                 <div className="mt-4 flex justify-end">

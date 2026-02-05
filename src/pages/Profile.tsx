@@ -26,12 +26,7 @@ interface LostItem {
     status: 'pending' | 'approved' | 'resolved';
     createdAt: any;
     imageURL?: string;
-    notes?: {
-        authorName: string;
-        authorContact: string;
-        content: string;
-        createdAt: string;
-    }[];
+
 }
 
 interface SavedEvent {

@@ -1,13 +1,46 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, BookOpen, Download, Share2, Star } from 'lucide-react';
+import { ArrowLeft, BookOpen, Download, Share2, Star, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { PUBLICATIONS } from './data';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
+import { Publication } from './types';
 
 const PublicationDetail = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const publication = PUBLICATIONS.find(p => p.id === id);
+    const [publication, setPublication] = useState<Publication | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchPublication = async () => {
+            if (!id) return;
+            try {
+                const docRef = doc(db, 'publications', id);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    setPublication({ id: docSnap.id, ...docSnap.data() } as Publication);
+                } else {
+                    setPublication(null);
+                }
+            } catch (error) {
+                console.error("Yayın detayı çekilirken hata:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchPublication();
+    }, [id]);
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-[#f5f5f4]">
+                <Loader2 className="w-10 h-10 text-stone-900 animate-spin" />
+            </div>
+        );
+    }
 
     if (!publication) {
         return (
@@ -59,6 +92,9 @@ const PublicationDetail = () => {
                                     src={publication.coverImage}
                                     alt={publication.title}
                                     className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                        (e.target as HTMLImageElement).src = 'https://placehold.co/400x600/1c1917/FFF?text=Kapak+Yok';
+                                    }}
                                 />
                             </div>
                         </motion.div>
@@ -162,7 +198,7 @@ const PublicationDetail = () => {
                                             {issue.title}
                                         </h3>
                                         <div className="flex items-center text-xs text-stone-400 font-mono">
-                                            <span>NO. {publication.issues?.length ? publication.issues.length - index : 0}</span>
+                                            <span>NO. {publication.issues ? publication.issues.length - index : 0}</span>
                                             <span className="mx-2">•</span>
                                             <span>{issue.date}</span>
                                         </div>

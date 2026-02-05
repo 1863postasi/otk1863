@@ -30,9 +30,9 @@ const CategoryPill = ({ label, active, onClick }: { label: string, active: boole
     <button
         onClick={onClick}
         className={cn(
-            "px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all border shadow-sm",
+            "px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all border shadow-sm touch-manipulation",
             active
-                ? "bg-emerald-900 text-white border-emerald-900"
+                ? "bg-stone-900 text-white border-stone-900 shadow-md transform scale-105"
                 : "bg-white text-stone-600 border-stone-200 hover:border-emerald-200"
         )}
     >
@@ -40,9 +40,9 @@ const CategoryPill = ({ label, active, onClick }: { label: string, active: boole
     </button>
 );
 
-const ProductCard = React.memo(({ item, onClick }: { item: Listing, onClick: () => void }) => (
+const ProductCard = React.memo(({ item, onSelect }: { item: Listing, onSelect: (item: Listing) => void }) => (
     <motion.div
-        onClick={onClick}
+        onClick={() => onSelect(item)}
         className="group relative rounded-xl overflow-hidden cursor-pointer bg-white shadow-sm hover:shadow-md transition-shadow h-full flex flex-col border border-stone-100"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -79,7 +79,7 @@ const ProductCard = React.memo(({ item, onClick }: { item: Listing, onClick: () 
             )}
         </div>
 
-        <div className="p-3 flex flex-col flex-1">
+        <div className="p-2.5 md:p-3 flex flex-col flex-1">
             <h3 className="font-bold text-stone-800 text-sm leading-tight mb-1 line-clamp-2">{item.title}</h3>
             <div className="mt-auto flex items-center gap-1 text-[10px] text-stone-500">
                 <MapPin size={10} />
@@ -166,7 +166,8 @@ const ProductSheet = ({ item, onClose, onContact }: { item: Listing, onClose: ()
                 </div>
 
                 {/* Footer Actions */}
-                <div className="p-4 border-t border-stone-100 bg-white sticky bottom-0 z-10 flex flex-col gap-2">
+                {/* Footer Actions */}
+                <div className="p-4 border-t border-stone-100 bg-white sticky bottom-0 z-10 flex flex-col gap-2 pb-8 md:pb-4 safe-area-bottom">
                     {whatsappLink && (
                         <a
                             href={whatsappLink}
@@ -365,11 +366,16 @@ export default function Marketplace() {
     }, []);
 
     // Derived State for Filtering
-    const filteredItems = items.filter(item => {
+    const filteredItems = React.useMemo(() => items.filter(item => {
         if (activeCategory === "Tümü") return true;
         // Check if category matches or tags include category
         return item.category === activeCategory || item.tags?.includes(activeCategory);
-    });
+    }), [items, activeCategory]);
+
+    // Stable handler for product selection
+    const handleSelectItem = React.useCallback((item: Listing) => {
+        setSelectedItem(item);
+    }, []);
 
     const handleCreateSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -435,8 +441,9 @@ export default function Marketplace() {
         <div className="min-h-screen bg-stone-50 pb-20 relative">
 
             {/* Header */}
-            <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-stone-200 transition-all">
-                <div className="max-w-7xl mx-auto px-4 py-2 md:py-4">
+            {/* Header */}
+            <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-stone-200/50 transition-all supports-[backdrop-filter]:bg-white/60">
+                <div className="max-w-7xl mx-auto md:px-4 py-0 md:py-4">
 
                     {/* Desktop Header */}
                     <div className="hidden md:flex items-center justify-between mb-4">
@@ -445,21 +452,21 @@ export default function Marketplace() {
                     </div>
 
                     {/* Mobile Header (Centered Title) */}
-                    <div className="md:hidden h-12 flex items-center justify-center relative mb-2">
-                        <h1 className="text-lg font-bold font-serif text-stone-900">Kampüs Pazarı</h1>
+                    <div className="md:hidden h-14 flex items-center justify-center relative border-b border-stone-100/50">
+                        <h1 className="text-lg font-bold font-serif text-stone-900 tracking-tight">Kampüs Pazarı</h1>
+                        {/* Mobile Filter Button (Absolute Right) */}
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                            <button className="p-2 text-stone-500 hover:bg-stone-100 rounded-full transition-colors"><Filter size={18} /></button>
+                        </div>
                     </div>
 
-                    {/* Categories & Filter */}
-                    <div className="flex items-center gap-2">
-                        {/* Mobile Filter Button (Inline with categories) */}
-                        <div className="md:hidden shrink-0">
-                            <button className="p-2 bg-stone-100 rounded-full text-stone-600"><Filter size={16} /></button>
-                        </div>
-
-                        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide flex-1">
+                    {/* Categories */}
+                    <div className="flex items-center gap-2 md:mt-0 bg-stone-50/50 md:bg-transparent">
+                        <div className="flex gap-2 overflow-x-auto py-3 md:py-2 px-4 md:px-0 scrollbar-hide flex-1 mask-linear-fade touch-manipulation">
                             {categories.map(cat => (
                                 <CategoryPill key={cat} label={cat} active={activeCategory === cat} onClick={() => setActiveCategory(cat)} />
                             ))}
+                            <div className="w-4 shrink-0 md:hidden" />
                         </div>
                     </div>
                 </div>
@@ -472,7 +479,7 @@ export default function Marketplace() {
                 ) : (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         {filteredItems.map(item => (
-                            <ProductCard key={item.id} item={item} onClick={() => setSelectedItem(item)} />
+                            <ProductCard key={item.id} item={item} onSelect={handleSelectItem} />
                         ))}
                         {filteredItems.length === 0 && (
                             <div className="text-center py-20 text-stone-400 col-span-full w-full">İlan bulunamadı.</div>
@@ -483,17 +490,18 @@ export default function Marketplace() {
             </div >
 
             {/* Default FAB */}
-            < motion.button
+            {/* Default FAB - Lifted for Bottom Nav */}
+            <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => {
                     if (currentUser) setIsAddModalOpen(true);
                     else alert("Giriş yapmanız gerekiyor.");
                 }}
-                className="fixed bottom-6 right-6 z-40 bg-emerald-600 text-white rounded-full p-4 shadow-xl flex items-center gap-2 font-bold pr-6"
+                className="fixed bottom-24 right-5 z-40 bg-stone-900 text-white rounded-full p-4 shadow-xl shadow-stone-900/40 flex items-center gap-2 font-bold pr-6 border border-stone-800"
             >
-                <Plus size={24} /> İlan Ver
-            </motion.button >
+                <Plus size={24} /> <span className="text-sm">İlan Ver</span>
+            </motion.button>
 
             {/* Detail Sheet */}
             <AnimatePresence>

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     MessageSquare, Heart, Share2, MoreHorizontal, Plus,
     Search, Filter, Ghost, User as UserIcon, X, ChevronLeft,
-    Flame, CornerDownRight, Flag, Send
+    Flame, CornerDownRight, Flag, Send, ArrowUp
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -53,19 +53,22 @@ interface Thread {
     isHot?: boolean;
 }
 
-// Generate Mock Nested Comments
-const generateComments = (depth = 0): Comment[] => {
+// Generate Mock Nested Comments (Deterministic for stability)
+const generateComments = (depth = 0, prefix = 'root'): Comment[] => {
     if (depth > 3) return [];
-    return Array.from({ length: Math.random() > 0.5 ? 2 : 1 }).map((_, i) => ({
-        id: `c-${depth}-${i}-${Math.random()}`,
-        author: { name: `User ${Math.floor(Math.random() * 100)}`, isAnon: Math.random() > 0.8 },
+    return Array.from({ length: depth % 2 === 0 ? 2 : 1 }).map((_, i) => ({
+        id: `c-${prefix}-${depth}-${i}`,
+        author: { name: `User ${10 + depth * 10 + i}`, isAnon: i % 2 === 0 },
         content: "Bu konu hakkında kesinlikle katılıyorum. Detaylar çok önemli.",
         timestamp: "2s",
-        upvotes: Math.floor(Math.random() * 50),
+        upvotes: 45 - depth * 5,
         depth,
-        children: generateComments(depth + 1)
+        children: generateComments(depth + 1, `${prefix}-${i}`)
     }));
 };
+
+// Stable Mock Data
+const MOCK_COMMENTS = generateComments();
 
 const MOCK_THREADS: Thread[] = Array.from({ length: 20 }).map((_, i) => ({
     id: `t-${i}`,
@@ -79,59 +82,59 @@ const MOCK_THREADS: Thread[] = Array.from({ length: 20 }).map((_, i) => ({
 }));
 
 
+
 // --- SUB-COMPONENTS ---
 
 // 1. Thread Card (Feed Item)
 const ThreadCard = ({ thread, isActive, onClick }: { thread: Thread, isActive: boolean, onClick: () => void }) => {
     return (
         <motion.div
-            layout // Enable layout animation for list reordering
+            layout
             onClick={onClick}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             className={cn(
-                "group relative p-4 cursor-pointer border-b border-stone-200 hover:bg-stone-100 transition-colors",
-                isActive ? "bg-stone-100 border-l-2 border-l-stone-900" : "bg-transparent border-l-2 border-l-transparent"
+                "group relative p-3 md:p-4 cursor-pointer border-b border-stone-100 hover:bg-stone-50 transition-all",
+                isActive ? "bg-stone-50 border-l-2 border-l-stone-900" : "bg-transparent border-l-2 border-l-transparent"
             )}
         >
             {/* Hype Indicator */}
             {thread.isHot && (
-                <div className="absolute top-2 right-2 text-[10px] font-bold text-orange-600 flex items-center gap-1 animate-pulse">
+                <div className="absolute top-3 right-3 text-[10px] font-bold text-orange-600 flex items-center gap-1 animate-pulse bg-orange-50 px-1.5 py-0.5 rounded-full border border-orange-100">
                     <Flame size={10} /> HOT
                 </div>
             )}
 
             <div className="flex items-start gap-3">
-                {/* Avatar / Vote Sidebar (Combined for density) */}
-                <div className="flex flex-col items-center gap-1 min-w-[30px]">
-                    <div className={cn("w-8 h-8 rounded-full flex items-center justify-center bg-white border border-stone-200 shadow-sm", thread.author.isAnon && "border-purple-200 bg-purple-50")}>
+                {/* Avatar / Vote Sidebar */}
+                <div className="flex flex-col items-center gap-1 min-w-[32px] pt-1">
+                    <div className={cn("w-8 h-8 rounded-full flex items-center justify-center bg-white border border-stone-200 shadow-sm shrink-0", thread.author.isAnon && "border-purple-200 bg-purple-50")}>
                         {thread.author.isAnon ? <Ghost size={14} className="text-purple-500" /> : <UserIcon size={14} className="text-stone-400" />}
                     </div>
-                    <span className="text-[10px] font-bold text-stone-500 mt-1">{thread.stats.upvotes}</span>
                 </div>
 
                 <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                        <span className={cn("text-[10px] px-1.5 py-0.5 rounded border font-bold",
+                    <div className="flex items-center gap-2 mb-1.5 flex-wrap pr-12">
+                        <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider",
                             CATEGORIES.find(c => c.id === thread.category)?.color.replace('text-', 'bg-').replace('600', '100').replace('500', '100'),
-                            "border-transparent text-stone-600"
+                            "text-stone-700"
                         )}>
                             {CATEGORIES.find(c => c.id === thread.category)?.label}
                         </span>
-                        <span className="text-[10px] text-stone-400">• {thread.timestamp}</span>
+                        <span className="text-[10px] text-stone-400 font-medium">• {thread.timestamp}</span>
                     </div>
 
-                    <h3 className={cn("text-sm font-bold text-stone-900 mb-1 leading-snug line-clamp-2 group-hover:text-boun-blue transition-colors", isActive && "text-boun-blue")}>
+                    <h3 className={cn("text-sm font-bold text-stone-900 mb-1 leading-snug line-clamp-2 group-hover:text-boun-blue transition-colors font-serif", isActive && "text-boun-blue")}>
                         {thread.title}
                     </h3>
-                    <p className="text-xs text-stone-500 line-clamp-2 leading-relaxed">{thread.content}</p>
+                    <p className="text-xs text-stone-500 line-clamp-2 leading-relaxed mb-2.5">{thread.content}</p>
 
-                    <div className="flex items-center gap-4 mt-3 text-stone-400">
-                        <div className="flex items-center gap-1 text-xs hover:text-stone-600 transition-colors">
-                            <MessageSquare size={12} /> {thread.stats.comments}
+                    <div className="flex items-center gap-4 text-stone-400">
+                        <div className="flex items-center gap-1 text-[10px] font-bold hover:text-stone-600 transition-colors bg-stone-100 px-2 py-1 rounded-md">
+                            <ArrowUp size={12} className={thread.stats.upvotes > 50 ? "text-green-600" : ""} /> {thread.stats.upvotes}
                         </div>
-                        <div className="flex items-center gap-1 text-xs hover:text-stone-600 transition-colors">
-                            <Share2 size={12} /> Paylaş
+                        <div className="flex items-center gap-1 text-[10px] font-bold hover:text-stone-600 transition-colors">
+                            <MessageSquare size={12} /> {thread.stats.comments}
                         </div>
                     </div>
                 </div>
@@ -193,8 +196,10 @@ const Discussions: React.FC = () => {
     const [selectedThread, setSelectedThread] = useState<Thread | null>(null);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-    // Filter threads
-    const filteredThreads = MOCK_THREADS.filter(t => activeTab === 'all' || t.category === activeTab);
+    // Filter threads - Memoized for performance
+    const filteredThreads = React.useMemo(() =>
+        MOCK_THREADS.filter(t => activeTab === 'all' || t.category === activeTab),
+        [activeTab]);
 
     // Auto-select first thread on desktop if none selected
     useEffect(() => {
@@ -220,21 +225,26 @@ const Discussions: React.FC = () => {
                         <button className="p-2 bg-white border border-stone-200 rounded-full text-stone-400 hover:text-boun-blue shadow-sm cursor-pointer"><Search size={18} /></button>
                     </div>
 
-                    {/* MOBILE HEADER (Centered Title) */}
-                    <div className="md:hidden h-14 relative flex items-center justify-center border-b border-stone-200/50">
-                        <h1 className="text-lg font-bold font-serif text-stone-900">Topluluk</h1>
-                        <button className="absolute right-4 p-2 text-stone-500 hover:text-stone-900">
-                            <Search size={20} />
-                        </button>
+                    {/* MOBILE HEADER - Frosted & Centered */}
+                    <div className="md:hidden h-14 relative flex items-center justify-center border-b border-stone-200/50 bg-white/80 backdrop-blur-md sticky top-0 z-30">
+                        <h1 className="text-lg font-bold font-serif text-stone-900 tracking-tight">Topluluk</h1>
+                        {/* Right Actions */}
+                        <div className="absolute right-4 flex items-center gap-2">
+                            <button className="p-2 text-stone-500 hover:text-stone-900 hover:bg-stone-100 rounded-full transition-colors">
+                                <Search size={20} />
+                            </button>
+                        </div>
                     </div>
 
-                    {/* Category Chips (Scrollable) */}
-                    <div className="p-4 pt-4 md:pt-4">
-                        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
+                    {/* Category Chips (Edge-to-Edge Scroll) */}
+                    <div className="md:p-4 bg-stone-50 z-20">
+                        <div className="flex gap-2 overflow-x-auto scrollbar-hide py-3 md:py-0 px-4 md:px-0 mask-linear-fade">
                             <button
                                 onClick={() => setActiveTab('all')}
-                                className={cn("px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border shadow-sm",
-                                    activeTab === 'all' ? "bg-stone-900 text-white border-stone-900" : "bg-white text-stone-600 border-stone-200 hover:border-stone-300"
+                                className={cn("px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all border shadow-sm touch-manipulation",
+                                    activeTab === 'all'
+                                        ? "bg-stone-900 text-white border-stone-900 shadow-md transform scale-105"
+                                        : "bg-white text-stone-600 border-stone-200 hover:border-stone-300"
                                 )}
                             >
                                 Tümü
@@ -243,13 +253,17 @@ const Discussions: React.FC = () => {
                                 <button
                                     key={cat.id}
                                     onClick={() => setActiveTab(cat.id)}
-                                    className={cn("px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all border shadow-sm",
-                                        activeTab === cat.id ? `bg-stone-900 text-white border-stone-900` : "bg-white text-stone-600 border-stone-200 hover:border-stone-300"
+                                    className={cn("px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all border shadow-sm touch-manipulation",
+                                        activeTab === cat.id
+                                            ? "bg-stone-900 text-white border-stone-900 shadow-md transform scale-105"
+                                            : "bg-white text-stone-600 border-stone-200 hover:border-stone-300"
                                     )}
                                 >
                                     <cat.icon size={12} /> {cat.label}
                                 </button>
                             ))}
+                            {/* Spacer for right edge */}
+                            <div className="w-2 shrink-0 md:hidden" />
                         </div>
                     </div>
                 </div>
@@ -322,7 +336,7 @@ const Discussions: React.FC = () => {
                                     </div>
                                 </div>
 
-                                {generateComments().map(comment => (
+                                {MOCK_COMMENTS.map(comment => (
                                     <CommentNode key={comment.id} comment={comment} isRoot />
                                 ))}
 
@@ -355,13 +369,14 @@ const Discussions: React.FC = () => {
             </div>
 
             {/* CREATE POST FAB */}
+            {/* CREATE POST FAB - Lifted above bottom nav */}
             <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setIsCreateModalOpen(true)}
-                className="fixed bottom-6 right-6 md:bottom-8 md:right-8 w-14 h-14 bg-boun-blue rounded-full flex items-center justify-center text-white shadow-xl shadow-blue-900/20 z-50 hover:bg-blue-700 transition-colors"
+                className="fixed bottom-24 right-5 md:bottom-8 md:right-8 w-14 h-14 bg-stone-900 rounded-full flex items-center justify-center text-white shadow-xl shadow-stone-900/30 z-40 hover:bg-black transition-colors border border-stone-800"
             >
-                <Plus size={28} />
+                <Plus size={24} />
             </motion.button>
 
             {/* CREATE POST MODAL */}

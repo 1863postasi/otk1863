@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Scroll, Users, Building2, Megaphone, ArrowRight } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 
 const Archive: React.FC = () => {
   const navigate = useNavigate();
@@ -112,38 +112,41 @@ const Archive: React.FC = () => {
             {/* 2. GRID (Ghost Buttons) - Matched gap and sizing */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6 w-full">
               {categories.map((cat, idx) => (
-                <motion.button
+                <motion.div
                   key={cat.id}
-                  onClick={() => navigate(cat.path)}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.3 + (idx * 0.1) }}
-                  className={cn(
-                    "group relative flex items-center gap-4 p-3 md:p-5 rounded-xl transition-all duration-300",
-                    "hover:bg-stone-200/50 hover:border-stone-200/50 border border-transparent", // Ghost style with border consistency
-                    "text-left"
-                  )}
                 >
-                  {/* Icon */}
-                  <div className={cn(
-                    "p-2.5 md:p-3 rounded-full bg-stone-200/50 group-hover:bg-white transition-colors shrink-0 text-stone-700 group-hover:text-black shadow-none group-hover:shadow-sm",
-                    cat.color
-                  )}>
-                    <cat.icon size={20} className="md:w-6 md:h-6" strokeWidth={1.5} />
-                  </div>
+                  <Link
+                    to={cat.path}
+                    className={cn(
+                      "group relative flex items-center gap-4 p-3 md:p-5 rounded-xl transition-all duration-300",
+                      "hover:bg-stone-200/50 hover:border-stone-200/50 border border-transparent", // Ghost style with border consistency
+                      "text-left block w-full"
+                    )}
+                  >
+                    {/* Icon */}
+                    <div className={cn(
+                      "p-2.5 md:p-3 rounded-full bg-stone-200/50 group-hover:bg-white transition-colors shrink-0 text-stone-700 group-hover:text-black shadow-none group-hover:shadow-sm",
+                      cat.color
+                    )}>
+                      <cat.icon size={20} className="md:w-6 md:h-6" strokeWidth={1.5} />
+                    </div>
 
-                  {/* Text */}
-                  <div className="flex-1">
-                    <h3 className="font-serif text-sm md:text-base font-bold text-stone-700 group-hover:text-black uppercase tracking-wide transition-colors">
-                      {cat.title}
-                    </h3>
-                  </div>
+                    {/* Text */}
+                    <div className="flex-1">
+                      <h3 className="font-serif text-sm md:text-base font-bold text-stone-700 group-hover:text-black uppercase tracking-wide transition-colors">
+                        {cat.title}
+                      </h3>
+                    </div>
 
-                  {/* Hover Arrow */}
-                  <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 transform -translate-x-2 group-hover:translate-x-0 text-stone-400">
-                    <ArrowRight size={16} className="md:w-5 md:h-5" />
-                  </div>
-                </motion.button>
+                    {/* Hover Arrow */}
+                    <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 transform -translate-x-2 group-hover:translate-x-0 text-stone-400">
+                      <ArrowRight size={16} className="md:w-5 md:h-5" />
+                    </div>
+                  </Link>
+                </motion.div>
               ))}
             </div>
 

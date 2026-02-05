@@ -24,6 +24,8 @@ import Forum from './pages/Forum/index';
 import AcademicReviews from './pages/Forum/Courses';
 import CourseDetail from './pages/Forum/CourseDetail';
 import InstructorDetail from './pages/Forum/InstructorDetail';
+// Import the Course-Instructor Pairing Detail Page directly
+import CourseInstructorDetail from './pages/Forum/CourseInstructorDetail';
 import ClubReviews from './pages/Forum/Clubs';
 import ClubDetail from './pages/Forum/ClubDetail';
 import Community from './pages/Forum/Discussions';
@@ -181,6 +183,15 @@ const App: React.FC = () => {
             element={
               <ProtectedRoute requireAdmin={false}>
                 <InstructorDetail />
+              </ProtectedRoute>
+            }
+          />
+          {/* NEW: Course-Instructor Pairing Route */}
+          <Route
+            path="/forum/degerlendirme/:courseCode/:instructorId"
+            element={
+              <ProtectedRoute requireAdmin={false}>
+                <CourseInstructorDetail />
               </ProtectedRoute>
             }
           />

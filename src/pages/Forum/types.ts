@@ -30,7 +30,7 @@ export interface CourseOffering {
 
 export interface Review {
     id: string;
-    type: 'course' | 'instructor' | 'club' | 'event';
+    type: 'course' | 'instructor' | 'course-instructor' | 'club' | 'event';
     targetId: string; // ID of the course/instructor/club being reviewed
     secondaryTargetId?: string; // For course reviews, this could be the instructor ID
     userId: string;
@@ -42,6 +42,11 @@ export interface Review {
     timestamp: any; // Firestore Timestamp
     likes: number;
     isAnonymous?: boolean;
+    // Academic Specifc
+    courseId?: string; // If type is 'course-instructor'
+    courseCode?: string;
+    instructorId?: string;
+    instructorName?: string;
 }
 
 export interface ForumThread {

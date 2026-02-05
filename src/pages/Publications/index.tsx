@@ -1,17 +1,19 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Lock, Unlock, Feather, Sparkles, ChevronRight, BookOpen } from 'lucide-react';
-import { PUBLICATIONS } from './data';
+import { ArrowRight, Lock, Unlock, Feather, Sparkles, ChevronRight, BookOpen, Loader2 } from 'lucide-react';
+import { collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
+import { Publication } from './types';
 
-// --- TYPES & DATA HELPERS ---
-const periodicals = PUBLICATIONS.filter(p => p.type === 'Dergi' || p.type === 'Süreli (ÖTK)');
-const fanzines = PUBLICATIONS.filter(p => p.type === 'Fanzin');
+// R2 Base URL
+const R2_DOMAIN = import.meta.env.VITE_R2_PUBLIC_DOMAIN;
+const BG_IMAGE = `${R2_DOMAIN}/bg/library-hero.jpg`; // Varsayılan R2 görseli
 
 // --- COMPONENTS ---
 
 // 1. Publication Card (Film Poster Style)
-const PublicationCard = ({ item }: { item: typeof PUBLICATIONS[0] }) => {
+const PublicationCard = ({ item }: { item: Publication }) => {
     return (
         <Link to={`/yayinlar/${item.id}`} className="block group select-none">
             <motion.div
@@ -25,6 +27,9 @@ const PublicationCard = ({ item }: { item: typeof PUBLICATIONS[0] }) => {
                     alt={item.title}
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-90 group-hover:opacity-100"
                     loading="lazy"
+                    onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'https://placehold.co/400x600/1c1917/FFF?text=Kapak+Yok';
+                    }}
                 />
 
                 {/* Dark Gradient Overlay (Bottom) */}
@@ -33,7 +38,7 @@ const PublicationCard = ({ item }: { item: typeof PUBLICATIONS[0] }) => {
                 {/* Content Overlay */}
                 <div className="absolute bottom-0 left-0 w-full p-4 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
                     <span className="text-[10px] uppercase tracking-widest text-stone-400 font-bold mb-1 block">
-                        {item.frequency || 'Yayın'}
+                        {item.frequency || item.type}
                     </span>
                     <h3 className="text-xl font-serif font-bold text-stone-50 leading-tight mb-1 group-hover:text-white">
                         {item.title}
@@ -43,7 +48,7 @@ const PublicationCard = ({ item }: { item: typeof PUBLICATIONS[0] }) => {
                     </div>
                 </div>
 
-                {/* Top Badge (Hidden by default, shown on hover maybe?) */}
+                {/* Top Badge */}
                 <div className="absolute top-3 right-3 bg-white/10 backdrop-blur-md border border-white/20 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     OKU
                 </div>
@@ -82,8 +87,6 @@ const SecretDiaryButton = () => {
                     damping: 30, // Smoother spring
                     mass: 0.8
                 }}
-                // removed 'layout' prop to avoid heavy calculations unless necessary. 
-                // Since it's centered flex, width change is fine.
                 style={{ willChange: "width, background-color" }}
                 className={`h-16 rounded-full flex items-center justify-center cursor-pointer shadow-2xl relative overflow-hidden group ${isUNLOCKED ? 'hover:scale-105' : 'hover:scale-110'}`}
             >
@@ -131,14 +134,48 @@ const SecretDiaryButton = () => {
                     <div className="absolute inset-0 border-2 border-stone-800 rounded-full animate-ping opacity-20 pointer-events-none" />
                 )}
             </motion.div>
-
-
         </div>
     );
 };
 
 // --- MAIN PAGE COMPONENT ---
 const PublicationsPage: React.FC = () => {
+    const [publications, setPublications] = useState<Publication[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchPublications = async () => {
+            try {
+                const q = query(collection(db, 'publications'), orderBy('createdAt', 'desc'));
+                // orderBy ekledik ama index hatası verirse diye try-catch önemli ya da client side sort.
+                // Şimdilik basit query. Index gerekirse console'dan oluşturulur.
+                const querySnapshot = await getDocs(q);
+                const pubs: Publication[] = [];
+                querySnapshot.forEach((doc) => {
+                    pubs.push({ id: doc.id, ...doc.data() } as Publication);
+                });
+                setPublications(pubs);
+            } catch (error) {
+                console.error("Yayınlar çekilirken hata:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchPublications();
+    }, []);
+
+    const periodicals = publications.filter(p => p.type === 'Dergi' || p.type === 'Süreli (ÖTK)' || p.type === 'Bülten');
+    const fanzines = publications.filter(p => p.type === 'Fanzin');
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+                <Loader2 className="w-10 h-10 text-stone-900 animate-spin" />
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-stone-50 pb-24 overflow-x-hidden">
 
@@ -147,17 +184,19 @@ const PublicationsPage: React.FC = () => {
                 {/* Background Image */}
                 <div className="absolute inset-0 opacity-60">
                     <img
-                        src="https://images.unsplash.com/photo-1507842217121-9e871e7e8424?q=80&w=2483&auto=format&fit=crop"
+                        src={BG_IMAGE}
                         alt="Library"
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                            // Fallback if R2 image fails
+                            (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1507842217121-9e871e7e8424?q=80&w=2483&auto=format&fit=crop";
+                        }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-b from-stone-900/30 via-stone-900/50 to-stone-900" />
                 </div>
 
                 {/* Hero Content */}
                 <div className="absolute inset-0 flex flex-col items-center pt-24 md:pt-32 z-10 text-center px-4">
-
-
                     <motion.h1
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -181,9 +220,17 @@ const PublicationsPage: React.FC = () => {
                         transition={{ delay: 0.6, duration: 0.8 }}
                         className="flex gap-6 md:gap-10 w-max mx-auto md:mx-0 md:px-20"
                     >
-                        {periodicals.map((pub, index) => (
-                            <PublicationCard key={pub.id} item={pub} />
-                        ))}
+                        {periodicals.length > 0 ? (
+                            periodicals.map((pub) => (
+                                <PublicationCard key={pub.id} item={pub} />
+                            ))
+                        ) : (
+                            // Empty State
+                            <div className="w-64 h-96 bg-white/5 backdrop-blur-sm border-2 border-dashed border-white/10 rounded-xl flex flex-col items-center justify-center text-white/50">
+                                <BookOpen size={48} className="mb-4 opacity-50" />
+                                <span className="text-sm font-bold uppercase tracking-widest">Henüz Yayın Yok</span>
+                            </div>
+                        )}
 
                         {/* 'More Coming' Placeholder */}
                         <div className="w-48 md:w-64 aspect-[2/3] rounded-xl border-2 border-dashed border-white/20 bg-white/5 backdrop-blur-sm flex flex-col items-center justify-center text-stone-400 group cursor-pointer hover:bg-white/10 transition-colors">

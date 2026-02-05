@@ -49,7 +49,8 @@ const CommissionsCarousel: React.FC = () => {
             try {
                 const q = query(collection(db, "otk_commissions"), orderBy("createdAt", "asc"));
                 const snapshot = await getDocs(q);
-                const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Commission[];
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as any })) as Commission[];
 
                 setCommissions(data);
                 cache.set(CACHE_KEYS.OTK_COMMISSIONS, data, CACHE_TTL.VERY_LONG);
@@ -64,6 +65,7 @@ const CommissionsCarousel: React.FC = () => {
     }, []);
 
     const getIcon = (iconName: string, size = 24) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const icons: any = { BookOpen, Camera, MapPin, Scale, AlertTriangle, Clock, Users, Star };
         const IconComponent = icons[iconName] || BookOpen;
         return <IconComponent size={size} />;
@@ -73,6 +75,32 @@ const CommissionsCarousel: React.FC = () => {
         if (!url) return '';
         if (url.startsWith('http://') || url.startsWith('https://')) return url;
         return `https://${url}`;
+    };
+
+    // Staggered Animation Variants
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.1,
+                delayChildren: 0.2
+            }
+        },
+        exit: { opacity: 0 }
+    };
+
+    const itemVariants = {
+        hidden: { opacity: 0, y: 20 },
+        visible: {
+            opacity: 1,
+            y: 0,
+            transition: {
+                type: "spring",
+                stiffness: 400,
+                damping: 30
+            }
+        }
     };
 
     return (
@@ -99,7 +127,7 @@ const CommissionsCarousel: React.FC = () => {
                 {!loading && (
                     <LayoutGroup>
                         {/* DESKTOP ACCORDION */}
-                        <div className="hidden lg:flex gap-4 h-[650px] w-full">
+                        <div className="hidden lg:flex gap-4 h-[700px] w-full items-stretch">
                             {commissions.map((comm, index) => {
                                 const isActive = index === activeIndex;
                                 const isDisabled = comm.status === 'coming_soon';
@@ -109,9 +137,14 @@ const CommissionsCarousel: React.FC = () => {
                                         key={comm.id}
                                         layout
                                         onClick={() => !isDisabled && setActiveIndex(index)}
+                                        transition={{
+                                            type: "spring",
+                                            stiffness: 280,
+                                            damping: 30
+                                        }}
                                         className={cn(
-                                            "relative rounded-3xl overflow-hidden cursor-pointer transition-all duration-700 ease-[0.16,1,0.3,1] border border-stone-800",
-                                            isActive ? "flex-[4] bg-stone-800/80 border-boun-gold/30 shadow-2xl" : "flex-[1] bg-stone-900/50 hover:bg-stone-800",
+                                            "relative rounded-3xl overflow-hidden cursor-pointer border border-stone-800",
+                                            isActive ? "flex-[5] bg-stone-800/80 border-boun-gold/30 shadow-2xl" : "flex-[1] bg-stone-900/50 hover:bg-stone-800",
                                             isDisabled && "opacity-40 cursor-not-allowed grayscale"
                                         )}
                                     >
@@ -124,8 +157,13 @@ const CommissionsCarousel: React.FC = () => {
                                             <div className="flex items-start justify-between mb-8">
                                                 <motion.div
                                                     layout="position"
+                                                    transition={{
+                                                        type: "spring",
+                                                        stiffness: 300,
+                                                        damping: 30
+                                                    }}
                                                     className={cn(
-                                                        "p-4 rounded-2xl transition-all duration-500",
+                                                        "p-4 rounded-2xl",
                                                         isActive ? "bg-boun-gold text-stone-900 shadow-lg shadow-boun-gold/20" : "bg-stone-800 text-stone-400 group-hover:text-stone-200"
                                                     )}
                                                 >
@@ -134,46 +172,59 @@ const CommissionsCarousel: React.FC = () => {
 
                                                 {/* Vertical Text for Inactive State */}
                                                 {!isActive && (
-                                                    <div className="absolute bottom-12 left-0 w-full text-center">
-                                                        <span className="block -rotate-90 whitespace-nowrap text-stone-400 font-serif font-bold text-xl tracking-wider origin-center">
-                                                            {comm.name}
-                                                        </span>
-                                                    </div>
+                                                    <motion.div
+                                                        initial={{ opacity: 0 }}
+                                                        animate={{ opacity: 1 }}
+                                                        exit={{ opacity: 0 }}
+                                                        transition={{ duration: 0.2 }}
+                                                        className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                                                    >
+                                                        <div className="rotate-[-90deg] whitespace-nowrap">
+                                                            <span className="text-stone-400 font-serif font-bold text-xl tracking-wider">
+                                                                {comm.name}
+                                                            </span>
+                                                        </div>
+                                                    </motion.div>
                                                 )}
                                             </div>
 
                                             {/* Active Content */}
-                                            <AnimatePresence mode="wait">
+                                            <AnimatePresence mode="popLayout" custom={index}>
                                                 {isActive && (
                                                     <motion.div
-                                                        initial={{ opacity: 0, scale: 0.95 }}
-                                                        animate={{ opacity: 1, scale: 1 }}
-                                                        exit={{ opacity: 0 }}
-                                                        transition={{ duration: 0.4, delay: 0.1 }}
-                                                        className="flex flex-col h-full"
+                                                        variants={containerVariants}
+                                                        initial="hidden"
+                                                        animate="visible"
+                                                        exit="exit"
+                                                        className="flex flex-col h-full overflow-hidden"
                                                     >
-                                                        <h3 className="font-serif text-4xl text-white font-bold mb-6 leading-tight">
+                                                        <motion.h3
+                                                            variants={itemVariants}
+                                                            className="font-serif text-4xl text-white font-bold mb-6 leading-tight"
+                                                        >
                                                             {comm.name}
-                                                        </h3>
+                                                        </motion.h3>
 
-                                                        <p className="text-stone-300 text-lg leading-relaxed mb-8 max-w-2xl border-l-2 border-stone-700 pl-4">
-                                                            {comm.description}
-                                                        </p>
+                                                        <motion.div variants={itemVariants} className="overflow-y-auto pr-4 custom-scrollbar mb-6 flex-grow">
+                                                            <p className="text-stone-300 text-lg leading-relaxed border-l-2 border-stone-700 pl-4">
+                                                                {comm.description}
+                                                            </p>
+                                                        </motion.div>
 
                                                         {/* Sub-groups Grid */}
                                                         {comm.subUnits && comm.subUnits.length > 0 && (
-                                                            <div className="grid grid-cols-2 gap-4 mb-auto">
+                                                            <motion.div variants={itemVariants} className="grid grid-cols-2 gap-4 mb-8">
                                                                 {comm.subUnits.map((unit, idx) => (
                                                                     <div key={idx} className="bg-stone-900/50 p-4 rounded-xl border border-stone-800">
                                                                         <h4 className="text-boun-gold text-xs font-bold uppercase tracking-wider mb-2">{unit.title}</h4>
                                                                         <p className="text-stone-400 text-sm">{unit.members}</p>
                                                                     </div>
                                                                 ))}
-                                                            </div>
+                                                            </motion.div>
                                                         )}
 
                                                         {/* Footer Actions */}
-                                                        <div className="mt-8 flex gap-4 pt-8 border-t border-stone-800">
+                                                        <motion.div variants={itemVariants} className="mt-auto flex gap-4 pt-6 border-t border-stone-800">
                                                             {comm.externalLinks?.map((link, lIdx) => (
                                                                 <a
                                                                     key={lIdx}
@@ -194,7 +245,7 @@ const CommissionsCarousel: React.FC = () => {
                                                                     <FolderOpen size={16} /> Arşiv
                                                                 </Link>
                                                             )}
-                                                        </div>
+                                                        </motion.div>
                                                     </motion.div>
                                                 )}
                                             </AnimatePresence>
@@ -258,7 +309,7 @@ const CommissionsCarousel: React.FC = () => {
                                                             <div className="space-y-3 mb-6">
                                                                 {comm.subUnits.map((unit, idx) => (
                                                                     <div key={idx} className="bg-stone-950/30 p-3 rounded-lg border border-stone-800/50">
-                                                                        <h5 className="text-boun-gold text-[10px] font-bold uppercase tracking-wider mb-1">{unit.title}</h5>
+                                                                        <h5 className="text-boun-gold text-xs font-bold uppercase tracking-wider mb-1">{unit.title}</h5>
                                                                         <p className="text-stone-400 text-xs">{unit.members}</p>
                                                                     </div>
                                                                 ))}

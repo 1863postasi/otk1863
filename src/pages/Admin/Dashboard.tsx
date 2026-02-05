@@ -16,7 +16,8 @@ import {
   ChevronRight,
   UserCog,
   Menu,
-  X
+  X,
+  Book
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { auth } from '../../lib/firebase';
@@ -47,7 +48,8 @@ type CategoryId =
   | 'roots'
   | 'reps'
   | 'commissions'
-  | 'users';
+  | 'users'
+  | 'publications';
 
 const CATEGORIES = [
   { id: 'announcement', label: 'Genel Duyuru', icon: Megaphone },
@@ -59,7 +61,9 @@ const CATEGORIES = [
   { id: 'roots', label: 'Kökenler (Hikaye)', icon: FileText },
   { id: 'reps', label: 'ÖTK Temsilci', icon: UserCircle },
   { id: 'commissions', label: 'ÖTK Komisyon', icon: Briefcase },
-  { id: 'users', label: 'Kullanıcılar', icon: UserCog }, // New Panel
+  { id: 'commissions', label: 'ÖTK Komisyon', icon: Briefcase },
+  { id: 'users', label: 'Kullanıcılar', icon: UserCog },
+  { id: 'publications', label: 'Yayınlar', icon: Book }, // New Panel Placeholder
 ];
 
 // --- MAIN DASHBOARD COMPONENT ---
@@ -108,6 +112,14 @@ const Dashboard: React.FC = () => {
         return <OTKCommissionsPanel />;
       case 'users':
         return <UsersPanel />;
+      case 'publications':
+        return (
+          <div className="flex flex-col items-center justify-center p-12 text-center border-2 border-dashed border-stone-300 rounded-lg bg-stone-50">
+            <Book className="w-16 h-16 text-stone-300 mb-4" />
+            <h3 className="text-xl font-bold text-stone-500">Yayınlar Paneli Hazırlanıyor</h3>
+            <p className="text-stone-400 mt-2">Dergiler ve fanzinler yakında buradan yönetilecek.</p>
+          </div>
+        );
       default: return <div className="p-8">Seçim Yapınız</div>;
     }
   };

@@ -194,7 +194,7 @@ const AnnouncementsSection: React.FC<AnnouncementsSectionProps> = ({ onBack }) =
     const getCardStyle = (category: string) => CATEGORY_STYLES[category] || CATEGORY_STYLES["default"];
     const getBadgeStyle = (category: string) => CATEGORY_BADGES[category] || CATEGORY_BADGES["default"];
 
-    const filteredAnnouncements = announcements.filter(item => {
+    const filteredAnnouncements = React.useMemo(() => announcements.filter(item => {
         const matchesFilter = announcementFilter === 'Tümü' || item.category === announcementFilter;
         const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             item.summary.toLowerCase().includes(searchQuery.toLowerCase());
@@ -203,9 +203,9 @@ const AnnouncementsSection: React.FC<AnnouncementsSectionProps> = ({ onBack }) =
         if (a.isPinned && !b.isPinned) return -1;
         if (!a.isPinned && b.isPinned) return 1;
         return new Date(b.date).getTime() - new Date(a.date).getTime();
-    });
+    }), [announcements, announcementFilter, searchQuery]);
 
-    const filteredLostItems = lostItems.filter(item => {
+    const filteredLostItems = React.useMemo(() => lostItems.filter(item => {
         const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             (item.description || "").toLowerCase().includes(searchQuery.toLowerCase());
         if (!matchesSearch) return false;
@@ -223,7 +223,7 @@ const AnnouncementsSection: React.FC<AnnouncementsSectionProps> = ({ onBack }) =
         const dateA = a.createdAt?.seconds || 0;
         const dateB = b.createdAt?.seconds || 0;
         return dateB - dateA;
-    });
+    }), [lostItems, lostFilter, searchQuery]);
 
     const handleCreateSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -260,7 +260,7 @@ const AnnouncementsSection: React.FC<AnnouncementsSectionProps> = ({ onBack }) =
                 imageURL: imageURL,
                 status: 'pending', // Always pending initially
                 isPinned: false,
-                notes: [], // Initialize empty notes array
+
                 createdAt: serverTimestamp()
             });
 
@@ -276,27 +276,29 @@ const AnnouncementsSection: React.FC<AnnouncementsSectionProps> = ({ onBack }) =
         }
     };
 
+    const [contact, setContact] = useState("");
+
     const handleSendNote = async () => {
         if (!noteModalItem || !currentUser || !noteText.trim()) return;
 
         setNoteSending(true);
         try {
-            const noteData = {
-                authorId: currentUser.uid,
-                authorName: userProfile?.username || 'Gizli Kullanıcı',
-                authorContact: userProfile?.email || '',
+            await addDoc(collection(db, "messages"), {
+                fromId: currentUser.uid,
+                fromName: userProfile?.username || 'Gizli Kullanıcı',
+                toId: noteModalItem.ownerId,
+                listingId: noteModalItem.id,
+                listingTitle: noteModalItem.title,
                 content: noteText,
-                createdAt: new Date().toISOString()
-            };
-
-            const ref = doc(db, "lost-items", noteModalItem.id);
-            await updateDoc(ref, {
-                notes: arrayUnion(noteData)
+                contactInfo: contact,
+                createdAt: serverTimestamp(),
+                read: false
             });
 
             setNoteModalItem(null);
             setNoteText('');
-            showToast("Notunuz ilan sahibine iletildi.", 'success');
+            setContact('');
+            showToast("Mesajınız ilan sahibine iletildi.", 'success');
         } catch (e) {
             console.error(e);
             showToast("Mesaj gönderilemedi.", 'info');
@@ -772,6 +774,13 @@ const AnnouncementsSection: React.FC<AnnouncementsSectionProps> = ({ onBack }) =
                                     placeholder="Örn: Kimliği kütüphane güvenliğine bıraktım..."
                                     value={noteText}
                                     onChange={(e) => setNoteText(e.target.value)}
+                                />
+                                <input
+                                    type="text"
+                                    className="w-full p-3 border border-stone-300 rounded text-sm mb-4 focus:ring-1 focus:ring-stone-500 outline-none"
+                                    placeholder="Size ulaşabileceği iletişim bilgisi (Tel/Insta)"
+                                    value={contact}
+                                    onChange={e => setContact(e.target.value)}
                                 />
                                 <div className="flex gap-3">
                                     <button onClick={() => setNoteModalItem(null)} className="flex-1 py-2 border border-stone-300 rounded text-stone-600 font-bold text-sm hover:bg-stone-50">Vazgeç</button>

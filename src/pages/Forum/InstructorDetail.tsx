@@ -169,14 +169,15 @@ const InstructorDetail: React.FC = () => {
                             {courses.map(course => (
                                 <Link
                                     key={course.id}
-                                    to={`/forum/ders/${course.code}`}
-                                    className="block group bg-white p-4 rounded-xl border border-stone-200 hover:border-purple-200 hover:shadow-sm transition-all text-left"
+                                    to={`/forum/degerlendirme/${course.code}/${instructor.id}`}
+                                    className="block group bg-white p-4 rounded-xl border border-stone-200 hover:border-purple-300 hover:shadow-md transition-all text-left relative overflow-hidden"
                                 >
-                                    <div className="flex items-center justify-between mb-1">
+                                    <div className="absolute top-0 left-0 w-1 h-full bg-purple-500 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300" />
+                                    <div className="flex items-center justify-between mb-1 pl-2 group-hover:pl-3 transition-all">
                                         <span className="font-mono font-bold text-stone-900 group-hover:text-purple-700 transition-colors">{course.code}</span>
-                                        <ArrowLeft size={14} className="rotate-180 text-stone-300 group-hover:text-purple-400 opacity-0 group-hover:opacity-100 transition-all transform -translate-x-2 group-hover:translate-x-0" />
+                                        <ArrowLeft size={16} className="rotate-180 text-stone-300 group-hover:text-purple-500 opacity-0 group-hover:opacity-100 transition-all transform -translate-x-2 group-hover:translate-x-0" />
                                     </div>
-                                    <div className="text-xs text-stone-500 line-clamp-1">{course.name}</div>
+                                    <div className="text-xs text-stone-500 line-clamp-1 pl-2 group-hover:pl-3 transition-all">{course.name}</div>
                                 </Link>
                             ))}
                             {courses.length === 0 && (
@@ -189,54 +190,14 @@ const InstructorDetail: React.FC = () => {
 
                     {/* RIGHT COL: REVIEWS */}
                     <div className="md:col-span-2 space-y-6">
-                        <div className="flex items-center justify-between pl-1">
-                            <h3 className="text-sm font-bold text-stone-400 uppercase tracking-widest">Öğrenci Yorumları</h3>
-                            {/* Filter/Sort could go here */}
-                        </div>
-
-                        <div className="space-y-4">
-                            {reviews.map(review => (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    key={review.id}
-                                    className="bg-white p-5 md:p-6 rounded-xl border border-stone-200 shadow-sm"
-                                >
-                                    <div className="flex justify-between items-start mb-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className={cn(
-                                                "w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs select-none",
-                                                review.isAnonymous ? "bg-stone-100 text-stone-400" : "bg-purple-50 text-purple-600"
-                                            )}>
-                                                {review.isAnonymous ? '?' : (review.userDisplayName?.[0] || 'U')}
-                                            </div>
-                                            <div>
-                                                <div className="font-bold text-stone-900 text-sm flex items-center gap-2">
-                                                    {review.userDisplayName}
-                                                </div>
-                                                <div className="text-[10px] text-stone-400 font-medium">
-                                                    {review.timestamp?.seconds ? new Date(review.timestamp.seconds * 1000).toLocaleDateString("tr-TR", { month: 'long', year: 'numeric' }) : 'Bugün'}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-0.5">
-                                            {[...Array(5)].map((_, i) => (
-                                                <Star key={i} size={14} className={i < review.rating ? "fill-amber-400 text-amber-400" : "fill-stone-100 text-stone-200"} />
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <p className="text-stone-700 text-sm leading-relaxed whitespace-pre-line">
-                                        {review.comment}
-                                    </p>
-
-                                    <div className="mt-4 pt-4 border-t border-stone-50 flex items-center justify-end">
-                                        <button className="flex items-center gap-1.5 text-xs font-bold text-stone-400 hover:text-stone-600 transition-colors">
-                                            <ThumbsUp size={14} /> Faydalı ({review.likes})
-                                        </button>
-                                    </div>
-                                </motion.div>
-                            ))}
+                        <div className="bg-white rounded-2xl p-10 text-center border border-dashed border-stone-300">
+                            <div className="w-16 h-16 bg-stone-100 rounded-full flex items-center justify-center mx-auto mb-4 text-stone-400">
+                                <MessageSquare size={24} />
+                            </div>
+                            <h3 className="font-serif font-bold text-xl text-stone-700 mb-2">Yorumları Görüntüle</h3>
+                            <p className="text-stone-500 text-sm max-w-md mx-auto mb-6 leading-relaxed">
+                                {instructor.name} hocanın değerlendirmelerini görmek için lütfen soldaki listeden <strong>verdiği dersi</strong> seçin.
+                            </p>
                         </div>
                     </div>
 

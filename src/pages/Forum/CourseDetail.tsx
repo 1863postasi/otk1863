@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, BookOpen, Star, User, MessageSquare, Plus, ThumbsUp, ShieldCheck, Loader2, X } from 'lucide-react';
+import { ArrowLeft, BookOpen, Star, User, MessageSquare, Plus, ThumbsUp, ShieldCheck, Loader2, X, AlertCircle } from 'lucide-react';
 import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
@@ -176,16 +176,19 @@ const CourseDetail: React.FC = () => {
                             {instructors.map(inst => (
                                 <Link
                                     key={inst.id}
-                                    to={`/forum/hoca/${inst.id}`}
-                                    className="flex items-center justify-between p-3 rounded-xl bg-white border border-stone-200 hover:border-blue-300 hover:shadow-sm transition-all group"
+                                    to={`/forum/degerlendirme/${course.code}/${inst.id}`}
+                                    className="flex items-center justify-between p-3 rounded-xl bg-white border border-stone-200 hover:border-blue-300 hover:shadow-md transition-all group"
                                 >
                                     <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-xs">
+                                        <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs group-hover:scale-110 transition-transform">
                                             {inst.name.substring(0, 2)}
                                         </div>
-                                        <div className="text-sm font-bold text-stone-700 group-hover:text-stone-900">{inst.name}</div>
+                                        <div>
+                                            <div className="text-sm font-bold text-stone-700 group-hover:text-stone-900">{inst.name}</div>
+                                            <div className="text-[10px] text-stone-400">Detaylı İncele →</div>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-1 text-xs font-bold text-amber-500 bg-amber-50 px-1.5 py-0.5 rounded">
+                                    <div className="flex items-center gap-1 text-xs font-bold text-amber-500 bg-amber-50 px-2 py-1 rounded">
                                         <Star size={10} fill="currentColor" /> {inst.rating}
                                     </div>
                                 </Link>
@@ -205,56 +208,21 @@ const CourseDetail: React.FC = () => {
 
                     {/* RIGHT COL: REVIEWS */}
                     <div className="md:col-span-2 space-y-6">
-                        <div className="flex items-center justify-between pl-1">
-                            <h3 className="text-sm font-bold text-stone-400 uppercase tracking-widest">Öğrenci Yorumları</h3>
+                        <div className="bg-white rounded-2xl p-10 text-center border border-dashed border-stone-300">
+                            <div className="w-16 h-16 bg-stone-100 rounded-full flex items-center justify-center mx-auto mb-4 text-stone-400">
+                                <MessageSquare size={24} />
+                            </div>
+                            <h3 className="font-serif font-bold text-xl text-stone-700 mb-2">Değerlendirmeleri Görüntüle</h3>
+                            <p className="text-stone-500 text-sm max-w-md mx-auto mb-6 leading-relaxed">
+                                Bu dersin yorumlarını ve not dağılımlarını görmek için lütfen soldaki listeden <strong>dersi aldığınız hocayı</strong> seçin.
+                            </p>
+                            <div className="inline-flex items-center gap-2 px-4 py-2 bg-stone-50 rounded-full text-xs font-bold text-stone-400">
+                                <AlertCircle size={14} />
+                                <span>Doğru hoca seçimi, doğru bilgi demektir.</span>
+                            </div>
                         </div>
 
-                        <div className="space-y-4">
-                            {reviews.map((review, idx) => (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: idx * 0.1 }}
-                                    key={review.id}
-                                    className="bg-white p-5 md:p-6 rounded-xl border border-stone-200 shadow-sm"
-                                >
-                                    <div className="flex justify-between items-start mb-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className={cn(
-                                                "w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs select-none",
-                                                review.isAnonymous ? "bg-stone-100 text-stone-400" : "bg-blue-50 text-blue-600"
-                                            )}>
-                                                {review.isAnonymous ? '?' : (review.userDisplayName?.[0] || 'U')}
-                                            </div>
-                                            <div>
-                                                <div className="font-bold text-stone-900 text-sm flex items-center gap-2">
-                                                    {review.userDisplayName}
-                                                    {review.userBadge && <span className="text-[10px] bg-stone-100 text-stone-500 px-1.5 rounded">{review.userBadge}</span>}
-                                                </div>
-                                                <div className="text-[10px] text-stone-400 font-medium">
-                                                    {review.timestamp?.seconds ? new Date(review.timestamp.seconds * 1000).toLocaleDateString("tr-TR", { month: 'long', year: 'numeric' }) : 'Bugün'}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-0.5">
-                                            {[...Array(5)].map((_, i) => (
-                                                <Star key={i} size={14} className={i < review.rating ? "fill-amber-400 text-amber-400" : "fill-stone-100 text-stone-200"} />
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <p className="text-stone-700 text-sm leading-relaxed whitespace-pre-line">
-                                        {review.comment}
-                                    </p>
-
-                                    <div className="mt-4 pt-4 border-t border-stone-50 flex items-center justify-end">
-                                        <button className="flex items-center gap-1.5 text-xs font-bold text-stone-400 hover:text-stone-600 transition-colors">
-                                            <ThumbsUp size={14} /> Faydalı ({review.likes})
-                                        </button>
-                                    </div>
-                                </motion.div>
-                            ))}
-                        </div>
+                        {/* Legacy Reviews (Optional - Hidden for now or "Genel Yorumlar" if needed) */}
                     </div>
 
                 </div>
