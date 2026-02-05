@@ -1,314 +1,420 @@
-
-import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { ArrowLeft, Calendar, MapPin, Globe, Bookmark, Star, Users, MessageSquare, Loader2, Instagram } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+    ArrowLeft, Calendar, MapPin, Globe, Users,
+    Instagram, Mail, ExternalLink, ChevronRight,
+    Clock, Heart, Share2, Info, AlertTriangle
+} from 'lucide-react';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { formatDate } from '../../lib/utils';
-import { useAuth } from '../../context/AuthContext';
-import { Club } from './types'; // Use centralized type
+import { formatDate, cn } from '../../lib/utils';
+import { Club } from './types';
 
+// --- TYPES ---
 interface EventData {
     id: string;
     title: string;
-    startDate: string; // ISO
+    startDate: string;
     endDate: string;
     location: string;
     posterUrl?: string;
     shortDescription?: string;
 }
 
-const ClubDetail: React.FC = () => {
-    const { clubId } = useParams<{ clubId: string }>();
-    const { userProfile } = useAuth(); // For check bookmarks
+// --- ANIMATIONS ---
+const fadeInUp = {
+    initial: { opacity: 0, y: 20 },
+    animate: { opacity: 1, y: 0 },
+    exit: { opacity: 0, y: -20 },
+    transition: { duration: 0.3 }
+};
+
+// --- COMPONENT ---
+export default function ClubDetail() {
+    const params = useParams();
+    const navigate = useNavigate();
+
+    // Robust Param Extraction (Handle :id or :clubId)
+    const id = params.clubId || params.id;
+
+    // State
     const [club, setClub] = useState<Club | null>(null);
-    const [upcomingEvents, setUpcomingEvents] = useState<EventData[]>([]);
-    const [pastEvents, setPastEvents] = useState<EventData[]>([]);
+    const [events, setEvents] = useState<EventData[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'overview' | 'events' | 'reviews'>('overview');
+    const [error, setError] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState<'about' | 'events' | 'board'>('about');
 
-    // Mock Bookmarked IDs (Ideally fetch from user profile)
-    const [bookmarkedEvents, setBookmarkedEvents] = useState<string[]>([]);
-
+    // Fetch Logic
     useEffect(() => {
-        const fetchData = async () => {
-            if (!clubId) {
-                setLoading(false);
-                return;
-            }
+        if (!id) {
+            setError("Geçersiz kulüp ID'si.");
+            setLoading(false);
+            return;
+        }
 
-            // 1. Try Cache
-            const cacheKey = `club_detail_${clubId}`;
-            const cachedData = localStorage.getItem(cacheKey);
-            if (cachedData) {
-                try {
-                    const parsed = JSON.parse(cachedData);
-                    if (parsed && parsed.club) {
-                        setClub(parsed.club);
-                        setUpcomingEvents(parsed.upcoming || []);
-                        setPastEvents(parsed.past || []);
-                        setLoading(false);
-                    }
-                } catch (e) {
-                    console.error("Cache parse error", e);
-                }
-            }
-
+        const loadData = async () => {
             try {
-                // 2. Fetch Fresh Data
-                // Fetch Club Details
-                const clubDoc = await getDoc(doc(db, "clubs", clubId));
-                let clubData = null;
-                if (clubDoc.exists()) {
-                    clubData = { id: clubDoc.id, ...clubDoc.data() } as Club;
-                    setClub(clubData);
+                setLoading(true);
+                // 1. Fetch Club
+                const clubRef = doc(db, "clubs", id);
+                const clubSnap = await getDoc(clubRef);
+
+                if (!clubSnap.exists()) {
+                    setError("Kulüp bulunamadı.");
+                    setLoading(false);
+                    return;
                 }
 
-                // Fetch Events
-                const q = query(collection(db, "events"), where("clubId", "==", clubId));
-                const snapshot = await getDocs(q);
-                const allEvents = snapshot.docs.map(doc => {
-                    const data = doc.data();
-                    // Robust Date Conversion
-                    let startDate = new Date().toISOString();
-                    let endDate = new Date().toISOString();
+                const clubData = { id: clubSnap.id, ...clubSnap.data() } as Club;
+                setClub(clubData);
 
-                    if (data.startDate && typeof data.startDate.toDate === 'function') {
-                        startDate = data.startDate.toDate().toISOString();
-                    } else if (data.startDate) {
-                        startDate = data.startDate; // Assume string
-                    }
+                // 2. Fetch Events (Non-blocking UI, but fetching same time is fine)
+                try {
+                    const q = query(collection(db, "events"), where("clubId", "==", id));
+                    const eventSnaps = await getDocs(q);
+                    const loadedEvents = eventSnaps.docs.map(d => {
+                        const data = d.data();
+                        // Safe Date Conversion
+                        const toISO = (val: any) => {
+                            if (!val) return new Date().toISOString();
+                            if (val.toDate) return val.toDate().toISOString(); // Firestore Timestamp
+                            return val.includes('T') ? val : new Date().toISOString();
+                        };
+                        return {
+                            id: d.id,
+                            ...data,
+                            startDate: toISO(data.startDate),
+                            endDate: toISO(data.endDate)
+                        } as EventData;
+                    });
 
-                    if (data.endDate && typeof data.endDate.toDate === 'function') {
-                        endDate = data.endDate.toDate().toISOString();
-                    } else if (data.endDate) {
-                        endDate = data.endDate; // Assume string
-                    }
+                    // Sort: Upcoming first
+                    const now = new Date();
+                    loadedEvents.sort((a, b) => {
+                        const dateA = new Date(a.startDate).getTime();
+                        const dateB = new Date(b.startDate).getTime();
+                        // If both future, closest first. If both past, closest first (desc).
+                        // Simplify: Just sort descending date for now? Or upcoming?
+                        // Let's Sort by Date Ascending
+                        return dateA - dateB;
+                    });
 
-                    return {
-                        id: doc.id,
-                        ...data,
-                        startDate,
-                        endDate
-                    } as EventData;
-                });
-
-                const now = new Date();
-                const upcoming = allEvents.filter(e => new Date(e.endDate) >= now).sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
-                const past = allEvents.filter(e => new Date(e.endDate) < now).sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
-
-                setUpcomingEvents(upcoming);
-                setPastEvents(past);
-
-                // 3. Update Cache
-                if (clubData) {
-                    localStorage.setItem(cacheKey, JSON.stringify({
-                        club: clubData,
-                        upcoming,
-                        past,
-                        timestamp: Date.now()
-                    }));
+                    setEvents(loadedEvents);
+                } catch (err) {
+                    console.warn("Event fetch failed (non-critical):", err);
                 }
 
-            } catch (error) {
-                console.error("Error fetching club details:", error);
+            } catch (err) {
+                console.error("Critical Fetch Error:", err);
+                setError("Veri yüklenirken bir hata oluştu.");
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchData();
-    }, [clubId]);
+        loadData();
+    }, [id]);
 
-    const handleBookmark = (eventId: string) => {
-        // Toggle bookmark logic (Mock)
-        if (bookmarkedEvents.includes(eventId)) {
-            setBookmarkedEvents(prev => prev.filter(id => id !== eventId));
-        } else {
-            setBookmarkedEvents(prev => [...prev, eventId]);
-        }
-    };
+    // Safety checks
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center p-4">
+                <div className="w-12 h-12 border-4 border-stone-200 border-t-stone-900 rounded-full animate-spin mb-4" />
+                <p className="text-stone-500 font-bold animate-pulse">Kulüp verileri yükleniyor...</p>
+            </div>
+        );
+    }
 
-    if (loading) return <div className="min-h-screen bg-stone-50 flex items-center justify-center"><Loader2 className="animate-spin text-stone-400" /></div>;
-    if (!club) return <div className="min-h-screen bg-stone-50 flex items-center justify-center text-stone-500">Kulüp bulunamadı.</div>;
+    if (error || !club) {
+        return (
+            <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center p-6 text-center">
+                <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
+                    <AlertTriangle size={32} />
+                </div>
+                <h2 className="text-xl font-bold text-stone-900 mb-2">Bir Sorun Oluştu</h2>
+                <p className="text-stone-600 mb-6 max-w-xs">{error || "Kulüp bilgisi alınamadı."}</p>
+                <button
+                    onClick={() => navigate('/forum/kulupler')}
+                    className="bg-stone-900 text-white px-6 py-3 rounded-full font-bold shadow-lg hover:bg-stone-700 transition-transform active:scale-95"
+                >
+                    Kulüplere Dön
+                </button>
+            </div>
+        );
+    }
 
-    // Safety check for shortName to prevent crash
-    const safeShortName = club.shortName || club.name?.substring(0, 2) || "??";
+    // --- RENDER SUCCESS ---
+    // Extract Colors / Fallbacks
+    const safeShortName = club.shortName || club.name.substring(0, 2).toUpperCase();
 
     return (
-        <div className="min-h-screen bg-stone-50 pb-20">
-            {/* 1. HERO & BANNER SECTION */}
-            <div className="relative w-full h-64 md:h-80 bg-stone-900 overflow-hidden">
-                {/* Banner Image */}
+        <div className="min-h-screen bg-[#fdfbf7] pb-20 overflow-x-hidden font-sans">
+
+            {/* 1. IMMERSIVE HERO */}
+            <header className="relative w-full h-[40vh] md:h-[50vh] bg-stone-900 overflow-hidden">
+                {/* Background Image */}
                 {club.bannerUrl ? (
-                    <img src={club.bannerUrl} className="w-full h-full object-cover opacity-90" alt="Club Banner" />
+                    <motion.div
+                        initial={{ scale: 1.1 }}
+                        animate={{ scale: 1 }}
+                        transition={{ duration: 10, ease: "linear" }}
+                        className="absolute inset-0 z-0"
+                    >
+                        <div className="absolute inset-0 bg-black/40 z-10" /> {/* Overlay */}
+                        <img
+                            src={club.bannerUrl}
+                            alt="Cover"
+                            className="w-full h-full object-cover opacity-80"
+                        />
+                    </motion.div>
                 ) : (
-                    // Fallback Pattern
-                    <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]"></div>
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-stone-800 to-stone-950 opacity-100" />
                 )}
 
-                {/* Gradient Overlay for Text Readability */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+                {/* Navbar (Absolute) */}
+                <div className="absolute top-0 left-0 right-0 z-50 p-4 pt-safe-top flex justify-between items-start">
+                    <button
+                        onClick={() => navigate(-1)}
+                        className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all active:scale-90"
+                    >
+                        <ArrowLeft size={20} />
+                    </button>
 
-                {/* Navbar Placeholder (Back Button - Lowered for Global Button Safety) */}
-                <div className="absolute top-14 left-4 md:top-8 md:left-8 z-20">
-                    <Link to="/forum/kulupler" className="flex items-center gap-2 text-white/80 hover:text-white bg-black/20 hover:bg-black/40 backdrop-blur-md px-4 py-2 rounded-full transition-all text-sm font-bold border border-white/10">
-                        <ArrowLeft size={18} />
-                        <span className="hidden md:inline">Kulüplere Dön</span>
-                    </Link>
+                    <div className="flex gap-2">
+                        <button className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all active:scale-90">
+                            <Share2 size={18} />
+                        </button>
+                    </div>
                 </div>
-            </div>
 
-            {/* 2. CLUB HEADER INFO (Overlapping) */}
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 relative -mt-20 z-10">
-                <div className="bg-white rounded-2xl shadow-sm border border-stone-200 p-6 flex flex-col md:flex-row items-start md:items-end gap-6">
-                    {/* Logo */}
-                    <div className="relative -mt-16 md:-mt-20 shrink-0">
-                        <div className="w-28 h-28 md:w-36 md:h-36 bg-white p-1.5 rounded-2xl shadow-md border border-stone-100">
+                {/* Hero Content (Bottom Left) */}
+                <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10 z-20 bg-gradient-to-t from-black/90 via-black/50 to-transparent pt-32">
+                    <div className="max-w-4xl mx-auto w-full flex items-end gap-6">
+                        {/* Logo Card (Floating) */}
+                        <motion.div
+                            initial={{ y: 50, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ delay: 0.1 }}
+                            className="hidden md:block w-32 h-32 bg-white rounded-2xl p-1 shadow-2xl rotate-3"
+                        >
                             <div className="w-full h-full bg-stone-50 rounded-xl overflow-hidden flex items-center justify-center border border-stone-100">
                                 {club.logoUrl ? (
-                                    <img src={club.logoUrl} className="w-full h-full object-cover" alt="Logo" />
+                                    <img src={club.logoUrl} alt="Logo" className="w-full h-full object-cover" />
                                 ) : (
-                                    <span className="text-2xl font-black text-stone-300">{safeShortName.substring(0, 2)}</span>
+                                    <span className="text-3xl font-black text-stone-200">{safeShortName}</span>
                                 )}
                             </div>
-                        </div>
-                    </div>
+                        </motion.div>
 
-                    {/* Text Info */}
-                    <div className="flex-1 w-full">
-                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-2">
-                            <div>
-                                <h1 className="text-2xl md:text-3xl font-bold font-serif text-stone-900 leading-tight">
-                                    {club.name}
-                                </h1>
-                                <p className="text-sm font-bold text-stone-400 mt-1">{(club.description || "").substring(0, 100) || club.name}...</p>
-                            </div>
-
-                            {/* Action Buttons */}
-                            <div className="flex gap-2 w-full md:w-auto mt-4 md:mt-0">
-                                <button className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-boun-blue text-white px-6 py-2.5 rounded-full font-bold text-sm hover:bg-blue-700 transition-colors shadow-sm shadow-blue-200">
-                                    <Users size={18} /> Üye Ol
-                                </button>
-                                {club.website && (
-                                    <a href={club.website} target="_blank" rel="noreferrer" className="p-2.5 border border-stone-200 rounded-full text-stone-500 hover:text-stone-900 hover:bg-stone-50 transition-colors">
-                                        <Globe size={18} />
-                                    </a>
+                        <div className="flex-1 text-white pb-2">
+                            {/* Mobile Logo (Inline) */}
+                            <div className="md:hidden w-16 h-16 bg-white rounded-xl mb-4 overflow-hidden border-2 border-white/20 shadow-lg">
+                                {club.logoUrl ? (
+                                    <img src={club.logoUrl} alt="Logo" className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full bg-stone-800 flex items-center justify-center text-stone-500 font-bold">{safeShortName}</div>
                                 )}
-                                <button className="p-2.5 border border-stone-200 rounded-full text-stone-500 hover:text-pink-600 hover:bg-pink-50 transition-colors">
-                                    <Instagram size={18} />
-                                </button>
                             </div>
-                        </div>
 
-                        {/* Meta Tags */}
-                        <div className="flex flex-wrap gap-3 mt-4">
-                            <div className="flex items-center gap-1.5 text-xs font-bold text-stone-500 bg-stone-100 px-3 py-1.5 rounded-full">
-                                <Users size={14} /> {club.memberCount || "150+"} Üye
-                            </div>
-                            <div className="flex items-center gap-1.5 text-xs font-bold text-stone-500 bg-stone-100 px-3 py-1.5 rounded-full">
-                                <Calendar size={14} /> {club.founded || "2000"}
-                            </div>
-                            <div className="flex items-center gap-1.5 text-xs font-bold text-stone-500 bg-stone-100 px-3 py-1.5 rounded-full">
-                                <Star size={14} className="text-amber-400 fill-amber-400" /> {club.rating || "4.8"}
-                            </div>
+                            <motion.span
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                className="inline-block px-3 py-1 rounded-full bg-white/20 backdrop-blur-md border border-white/10 text-[10px] font-bold uppercase tracking-wider mb-2"
+                            >
+                                {club.type || "Öğrenci Kulübü"}
+                            </motion.span>
+                            <motion.h1
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="text-3xl md:text-5xl font-serif font-bold leading-tight mb-2"
+                            >
+                                {club.name}
+                            </motion.h1>
+                            <p className="text-white/80 font-medium text-sm md:text-base max-w-xl line-clamp-2">
+                                {club.description || "Boğaziçi Üniversitesi Öğrenci Kulübü"}
+                            </p>
                         </div>
                     </div>
                 </div>
+            </header>
 
-                {/* 3. TABS & CONTENT */}
-                <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* LEFT COLUMN (Content) */}
-                    <div className="lg:col-span-2 space-y-6">
-                        {/* Tabs Navigation */}
-                        <div className="flex border-b border-stone-200 space-x-6 px-2">
-                            <button
-                                onClick={() => setActiveTab('overview')}
-                                className={`pb-3 text-sm font-bold transition-colors relative ${activeTab === 'overview' ? 'text-stone-900' : 'text-stone-400 hover:text-stone-600'}`}
-                            >
-                                Genel Bakış
-                                {activeTab === 'overview' && <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-stone-900" />}
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('events')}
-                                className={`pb-3 text-sm font-bold transition-colors relative ${activeTab === 'events' ? 'text-stone-900' : 'text-stone-400 hover:text-stone-600'}`}
-                            >
-                                Etkinlikler <span className="ml-1 bg-stone-100 text-stone-600 px-2 py-0.5 rounded-full text-xs">{upcomingEvents.length}</span>
-                                {activeTab === 'events' && <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-stone-900" />}
-                            </button>
+            {/* 2. STATS & ACTIONS BAR */}
+            <div className="bg-white border-b border-stone-200 sticky top-0 z-40 shadow-sm">
+                <div className="max-w-4xl mx-auto px-4 md:px-0 py-3 flex items-center justify-between gap-4 overflow-x-auto no-scrollbar">
+                    {/* Stats */}
+                    <div className="flex items-center gap-6 shrink-0">
+                        <div className="flex items-center gap-2 text-stone-600">
+                            <Users size={16} className="text-stone-400" />
+                            <span className="text-sm font-bold">{club.memberCount || "150+"} Üye</span>
                         </div>
-
-                        {/* Tab Content */}
-                        <div className="py-2">
-                            {activeTab === 'overview' && (
-                                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-                                    <div className="bg-white rounded-xl border border-stone-200 p-6 shadow-sm">
-                                        <h3 className="font-bold text-lg text-stone-900 mb-4">Hakkında</h3>
-                                        <p className="text-stone-700 leading-relaxed whitespace-pre-wrap text-sm md:text-base">
-                                            {club.description || "Bu kulüp hakkında henüz detaylı bilgi girilmemiş."}
-                                        </p>
-                                    </div>
-                                </motion.div>
-                            )}
-
-                            {activeTab === 'events' && (
-                                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-                                    {upcomingEvents.length > 0 ? (
-                                        upcomingEvents.map(event => {
-                                            // Extra safety for date parsing in render
-                                            const start = event.startDate ? new Date(event.startDate) : new Date();
-                                            return (
-                                                <div key={event.id} className="bg-white rounded-xl border border-stone-200 p-4 shadow-sm flex gap-4">
-                                                    <div className="w-14 h-14 bg-stone-100 rounded-lg flex flex-col items-center justify-center text-stone-600 shrink-0 font-bold border border-stone-200">
-                                                        <span className="text-[10px] uppercase text-stone-500">{start.toLocaleString('tr', { month: 'short' })}</span>
-                                                        <span className="text-xl leading-none">{start.getDate()}</span>
-                                                    </div>
-                                                    <div>
-                                                        <h4 className="font-bold text-stone-900">{event.title}</h4>
-                                                        <div className="flex items-center gap-2 text-xs text-stone-500 mt-1">
-                                                            <MapPin size={12} /> {event.location || 'Kampüs'}
-                                                            <span>•</span>
-                                                            <Calendar size={12} /> {start.toLocaleTimeString('tr', { hour: '2-digit', minute: '2-digit' })}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })
-                                    ) : (
-                                        <div className="text-center py-10 bg-white border border-dashed border-stone-200 rounded-xl text-stone-400 text-sm">
-                                            Yaklaşan etkinlik bulunmuyor.
-                                        </div>
-                                    )}
-                                </motion.div>
-                            )}
+                        <div className="w-px h-4 bg-stone-200" />
+                        <div className="flex items-center gap-2 text-stone-600">
+                            <Calendar size={16} className="text-stone-400" />
+                            <span className="text-sm font-bold">Est. {club.founded || "2000"}</span>
                         </div>
                     </div>
 
-                    {/* RIGHT COLUMN (Sidebar Stats) */}
-                    <div className="space-y-4 hidden lg:block">
-                        <div className="bg-amber-50 rounded-xl border border-amber-100 p-6">
-                            <h4 className="font-bold text-amber-900 mb-2 flex items-center gap-2"><Star size={18} /> Topluluk Puanı</h4>
-                            <div className="text-4xl font-bold text-amber-500 mb-1">4.8</div>
-                            <div className="text-sm text-amber-700/60">24 değerlendirme</div>
-                        </div>
-                        <div className="bg-blue-50 rounded-xl border border-blue-100 p-6">
-                            <h4 className="font-bold text-blue-900 mb-2 flex items-center gap-2"><Calendar size={18} /> Son Etkinlik</h4>
-                            {pastEvents.length > 0 ? (
-                                <>
-                                    <div className="font-bold text-blue-800 line-clamp-1">{pastEvents[0].title}</div>
-                                    <div className="text-sm text-blue-600">{formatDate(pastEvents[0].startDate)}</div>
-                                </>
-                            ) : (
-                                <div className="text-sm text-blue-400">Arşivde etkinlik yok.</div>
-                            )}
-                        </div>
-                    </div>
-
+                    {/* Action Button */}
+                    <button className="flex items-center gap-2 bg-boun-blue text-white px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wide hover:bg-blue-800 transition-colors shadow-blue-200 shadow-md shrink-0">
+                        <Users size={14} /> Üye Ol
+                    </button>
                 </div>
             </div>
+
+            {/* 3. MAIN CONTENT LAYOUT */}
+            <main className="max-w-4xl mx-auto px-4 md:px-0 py-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+
+                {/* LEFT: CONTENT (2/3) */}
+                <div className="md:col-span-2 space-y-8">
+
+                    {/* TABS */}
+                    <div className="flex w-full bg-stone-100 p-1 rounded-xl">
+                        {(['about', 'events', 'board'] as const).map(tab => (
+                            <button
+                                key={tab}
+                                onClick={() => setActiveTab(tab)}
+                                className={cn(
+                                    "flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all",
+                                    activeTab === tab
+                                        ? "bg-white text-stone-900 shadow-sm"
+                                        : "text-stone-400 hover:text-stone-600"
+                                )}
+                            >
+                                {{ about: 'Hakkında', events: 'Etkinlikler', board: 'Yönetim' }[tab]}
+                            </button>
+                        ))}
+                    </div>
+
+                    <AnimatePresence mode="wait">
+                        {activeTab === 'about' && (
+                            <motion.div key="about" {...fadeInUp} className="space-y-6">
+                                <section className="prose prose-stone max-w-none">
+                                    <p className="text-stone-700 text-base leading-relaxed whitespace-pre-line">
+                                        {club.description || "Detaylı açıklama bulunmuyor."}
+                                    </p>
+                                </section>
+
+                                {club.website && (
+                                    <a href={club.website} target="_blank" rel="noreferrer" className="flex items-center justify-between p-4 bg-white border border-stone-200 rounded-xl hover:border-boun-blue/50 group transition-all">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-boun-blue">
+                                                <Globe size={20} />
+                                            </div>
+                                            <div>
+                                                <div className="font-bold text-stone-900 text-sm">Resmi Web Sitesi</div>
+                                                <div className="text-xs text-stone-500">{club.website.replace(/^https?:\/\//, '')}</div>
+                                            </div>
+                                        </div>
+                                        <ExternalLink size={16} className="text-stone-300 group-hover:text-boun-blue" />
+                                    </a>
+                                )}
+                            </motion.div>
+                        )}
+
+                        {activeTab === 'events' && (
+                            <motion.div key="events" {...fadeInUp} className="space-y-4">
+                                {events.length > 0 ? (
+                                    events.map(event => {
+                                        const date = new Date(event.startDate);
+                                        const isPast = new Date(event.endDate) < new Date();
+
+                                        return (
+                                            <div key={event.id} className={cn(
+                                                "relative bg-white border rounded-xl p-4 transition-all flex gap-4 overflow-hidden group",
+                                                isPast ? "border-stone-100 opacity-60 grayscale hover:grayscale-0 hover:opacity-100" : "border-stone-200 shadow-sm hover:shadow-md hover:border-stone-300"
+                                            )}>
+                                                {/* Date Box */}
+                                                <div className={cn(
+                                                    "w-16 h-16 rounded-lg flex flex-col items-center justify-center shrink-0 border",
+                                                    isPast ? "bg-stone-50 border-stone-100 text-stone-400" : "bg-stone-50 border-stone-200 text-stone-900"
+                                                )}>
+                                                    <span className="text-[10px] font-bold uppercase">{date.toLocaleString('tr', { month: 'short' })}</span>
+                                                    <span className="text-2xl font-black">{date.getDate()}</span>
+                                                </div>
+
+                                                <div className="flex-1 min-w-0">
+                                                    <h4 className="font-bold text-stone-900 truncate">{event.title}</h4>
+                                                    <div className="flex items-center gap-2 text-xs text-stone-500 mt-1 mb-2">
+                                                        <Clock size={12} />
+                                                        <span>{date.toLocaleTimeString('tr', { hour: '2-digit', minute: '2-digit' })}</span>
+                                                        <span>•</span>
+                                                        <MapPin size={12} />
+                                                        <span className="truncate">{event.location}</span>
+                                                    </div>
+                                                    {isPast && <span className="inline-block px-2 py-0.5 bg-stone-100 text-stone-500 text-[10px] font-bold rounded">GEÇMİŞ</span>}
+                                                </div>
+
+                                                {!isPast && (
+                                                    <div className="flex flex-col items-center justify-center">
+                                                        <button className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center text-stone-400 hover:text-boun-red hover:bg-red-50 transition-colors">
+                                                            <Heart size={16} />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })
+                                ) : (
+                                    <div className="text-center py-12 bg-white rounded-xl border border-dashed border-stone-200">
+                                        <div className="w-12 h-12 bg-stone-50 rounded-full flex items-center justify-center mx-auto mb-3 text-stone-400">
+                                            <Calendar size={24} />
+                                        </div>
+                                        <p className="text-stone-500 font-medium text-sm">Planlanmış etkinlik bulunmuyor.</p>
+                                    </div>
+                                )}
+                            </motion.div>
+                        )}
+
+                        {activeTab === 'board' && (
+                            <motion.div key="board" {...fadeInUp}>
+                                <div className="bg-white rounded-xl border border-stone-200 p-8 text-center">
+                                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-stone-50 mb-4 text-stone-300">
+                                        <Users size={32} />
+                                    </div>
+                                    <h3 className="text-lg font-bold text-stone-900">Yönetim Kurulu</h3>
+                                    <p className="text-stone-500 text-sm mt-2">Bu bilgi sadece kulüp üyelerine açıktır.</p>
+                                    <button className="mt-6 text-xs font-bold text-boun-blue underline">Üyelik Başvurusu Yap</button>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+
+                {/* RIGHT: CONTACT & INFO (1/3) */}
+                <div className="space-y-6">
+                    {/* Contact Card */}
+                    <div className="bg-white rounded-2xl border border-stone-200 p-6 shadow-sm sticky top-24">
+                        <h3 className="font-serif font-bold text-lg text-stone-900 mb-4 border-b border-stone-100 pb-2">İletişim</h3>
+                        <div className="space-y-4">
+                            {club.email && (
+                                <a href={`mailto:${club.email}`} className="flex items-center gap-3 text-sm text-stone-600 hover:text-stone-900 transition-colors">
+                                    <div className="w-8 h-8 rounded-full bg-stone-50 flex items-center justify-center border border-stone-100"><Mail size={14} /></div>
+                                    <span className="truncate">{club.email}</span>
+                                </a>
+                            )}
+                            {/* Mock Social */}
+                            <div className="flex items-center gap-3 text-sm text-stone-600 cursor-pointer hover:text-pink-600 transition-colors">
+                                <div className="w-8 h-8 rounded-full bg-stone-50 flex items-center justify-center border border-stone-100"><Instagram size={14} /></div>
+                                <span className="truncate">@{safeShortName.toLowerCase()}bogazici</span>
+                            </div>
+                        </div>
+
+                        <div className="mt-6 pt-6 border-t border-stone-100">
+                            <h4 className="font-bold text-xs uppercase text-stone-400 tracking-wider mb-3">Kulüp Odası</h4>
+                            <div className="flex items-start gap-2 text-sm text-stone-700">
+                                <MapPin size={16} className="text-boun-red mt-0.5 shrink-0" />
+                                <span className="leading-snug">
+                                    Kuzey Kampüs,<br />
+                                    1. Yurt Altı<br />
+                                    34342 Bebek/İstanbul
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
         </div>
     );
-};
-
-export default ClubDetail;
+}

@@ -129,4 +129,5 @@ export interface Club {
     // Admin/Manager specific
     clubRoles?: Record<string, string>; // userId -> role
     contents?: any[]; // Archive contents
+    email?: string;
 }
