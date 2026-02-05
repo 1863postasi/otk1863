@@ -224,7 +224,7 @@ const CalendarSection: React.FC<CalendarSectionProps> = ({ onBack }) => {
         const fetchAllEvents = async () => {
             setLoading(true);
             // 1. Check Cache
-            const cachedData = cache.get<FirestoreEvent[]>('events_cache');
+            const cachedData = cache.get('events_cache') as FirestoreEvent[];
             if (cachedData) {
                 setEvents(cachedData);
                 setLoading(false);
