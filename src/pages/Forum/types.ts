@@ -1,8 +1,9 @@
 export interface Instructor {
     id: string;
     name: string; // Real name
+    normalizedName?: string; // For duplicate checking
     department: string;
-    courses: string[]; // List of Course IDs they have taught
+    courseCodes: string[]; // List of Course Codes they have taught
     rating: number; // Average rating
     reviewCount: number;
 }
@@ -10,10 +11,12 @@ export interface Instructor {
 export interface Course {
     id: string; // Internal ID
     code: string; // e.g., PHIL203
+    deptCode?: string; // e.g., PHIL
+    courseNumber?: string; // e.g., 203
     name: string; // e.g., Philosophy of Mind
     department: string;
     // Offerings are dynamic, but we might want to cache the "latest" or "all" instructors
-    instructors: string[]; // List of Instructor IDs
+    instructorIds: string[]; // List of Instructor IDs
     rating: number;
     reviewCount: number;
 }

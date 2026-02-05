@@ -21,7 +21,7 @@ import PublicationsPage from './pages/Publications'; // Import Publications Page
 import DiaryPage from './pages/Publications/Diary'; // Import Diary Page
 import PublicationDetail from './pages/Publications/PublicationDetail'; // Import Publication Detail Page
 import Forum from './pages/Forum/index';
-import AcademicReviews from './pages/Forum/Courses';
+import AcademicReviews from './pages/Forum/Courses.tsx';
 import CourseDetail from './pages/Forum/CourseDetail';
 import InstructorDetail from './pages/Forum/InstructorDetail';
 // Import the Course-Instructor Pairing Detail Page directly

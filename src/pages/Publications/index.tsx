@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, Lock, Unlock, Feather, Sparkles, ChevronRight, BookOpen, Loader2 } from 'lucide-react';
 import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
+import { cache, CACHE_TTL } from '../../lib/cache';
 import { Publication } from './types';
 
 // R2 Base URL
@@ -75,6 +76,7 @@ const SecretDiaryButton = () => {
             <h2 className="text-3xl font-serif font-bold text-stone-900 mb-8 tracking-tight">Özel</h2>
 
             <motion.div
+                layout
                 onClick={handleClick}
                 initial={{ width: '60px' }}
                 animate={{
@@ -146,15 +148,25 @@ const PublicationsPage: React.FC = () => {
     useEffect(() => {
         const fetchPublications = async () => {
             try {
+                // 1. Check Cache
+                const cachedDocs = cache.get('publications');
+                if (cachedDocs) {
+                    setPublications(cachedDocs);
+                    setLoading(false); // Show cached content immediately
+                }
+
+                // 2. Network Request (Stale-While-Revalidate)
                 const q = query(collection(db, 'publications'), orderBy('createdAt', 'desc'));
-                // orderBy ekledik ama index hatası verirse diye try-catch önemli ya da client side sort.
-                // Şimdilik basit query. Index gerekirse console'dan oluşturulur.
                 const querySnapshot = await getDocs(q);
                 const pubs: Publication[] = [];
                 querySnapshot.forEach((doc) => {
                     pubs.push({ id: doc.id, ...doc.data() } as Publication);
                 });
+
+                // Update state and cache
                 setPublications(pubs);
+                cache.set('publications', pubs, CACHE_TTL.MEDIUM);
+
             } catch (error) {
                 console.error("Yayınlar çekilirken hata:", error);
             } finally {
@@ -180,13 +192,14 @@ const PublicationsPage: React.FC = () => {
         <div className="min-h-screen bg-stone-50 pb-24 overflow-x-hidden">
 
             {/* --- HERO SECTION --- */}
-            <div className="relative h-[85vh] md:h-[75vh] w-full bg-stone-900 overflow-hidden">
+            <div className="relative aspect-[1200/773] h-auto md:h-[75vh] md:aspect-auto w-full bg-stone-900 overflow-hidden">
                 {/* Background Image */}
                 <div className="absolute inset-0 opacity-60">
                     <img
                         src={BG_IMAGE}
                         alt="Library"
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover will-change-transform"
+                        loading="eager"
                         onError={(e) => {
                             // Fallback if R2 image fails
                             (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1507842217121-9e871e7e8424?q=80&w=2483&auto=format&fit=crop";
@@ -196,12 +209,12 @@ const PublicationsPage: React.FC = () => {
                 </div>
 
                 {/* Hero Content */}
-                <div className="absolute inset-0 flex flex-col items-center pt-24 md:pt-32 z-10 text-center px-4">
+                <div className="absolute inset-0 flex flex-col items-center pt-16 md:pt-32 z-10 text-center px-4">
                     <motion.h1
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.8, ease: "easeOut" }}
-                        className="text-5xl md:text-8xl font-serif font-black text-white tracking-tighter shadow-2xl drop-shadow-lg mb-4"
+                        transition={{ duration: 0.6, ease: "easeOut" }}
+                        className="text-4xl md:text-8xl font-serif font-black text-white tracking-tighter shadow-2xl drop-shadow-lg mb-4"
                     >
                         Kütüphane
                     </motion.h1>
@@ -209,15 +222,22 @@ const PublicationsPage: React.FC = () => {
             </div>
 
             {/* --- PERIODICALS STRIP (Overlapping Hero) --- */}
-            <div className="relative z-20 -mt-64 md:-mt-48 mb-12">
+            <div className="relative z-20 -mt-20 md:-mt-48 mb-12">
                 <div className="container mx-auto px-8 md:px-20 mb-6">
-                    <h2 className="text-4xl md:text-6xl font-serif font-bold text-white/90 tracking-tight drop-shadow-lg">Süreli Yayınlar</h2>
+                    <motion.h2
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2, duration: 0.5 }}
+                        className="text-4xl md:text-6xl font-serif font-bold text-white/90 tracking-tight drop-shadow-lg"
+                    >
+                        Süreli Yayınlar
+                    </motion.h2>
                 </div>
                 <div className="w-full overflow-x-auto pb-12 pt-4 px-8 scrollbar-hide">
                     <motion.div
-                        initial={{ opacity: 0, x: 100 }}
+                        initial={{ opacity: 0, x: 50 }}
                         animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.6, duration: 0.8 }}
+                        transition={{ delay: 0.3, duration: 0.5 }}
                         className="flex gap-6 md:gap-10 w-max mx-auto md:mx-0 md:px-20"
                     >
                         {periodicals.length > 0 ? (
@@ -249,10 +269,15 @@ const PublicationsPage: React.FC = () => {
             {/* --- FANZINES STRIP --- */}
             <section className="mb-12">
                 <div className="container mx-auto px-8 md:px-20 mb-10 flex items-end justify-between">
-                    <div>
+                    <motion.div
+                        initial={{ opacity: 0, x: -20 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.5 }}
+                    >
                         <h2 className="text-4xl md:text-6xl font-serif font-bold text-stone-900 tracking-tight">Fanzinler</h2>
                         <p className="text-stone-500 mt-2 font-light text-lg">Öğrencilerin bağımsız sesi.</p>
-                    </div>
+                    </motion.div>
                     <Link to="/yayinlar/fanzin-gonder" className="hidden md:flex items-center gap-2 text-stone-900 font-bold hover:text-boun-blue transition-colors">
                         <span>Fanzin Gönder</span>
                         <ArrowRight size={18} />
@@ -260,7 +285,13 @@ const PublicationsPage: React.FC = () => {
                 </div>
 
                 <div className="w-full overflow-x-auto pb-8 px-8 scrollbar-hide">
-                    <div className="flex gap-6 md:gap-8 w-max md:px-20">
+                    <motion.div
+                        initial={{ opacity: 0, x: 50 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.5, delay: 0.2 }}
+                        className="flex gap-6 md:gap-8 w-max md:px-20"
+                    >
                         {fanzines.map((pub) => (
                             <PublicationCard key={pub.id} item={pub} />
                         ))}
@@ -271,7 +302,7 @@ const PublicationsPage: React.FC = () => {
                                 <span className="text-sm font-bold">Senin Fanzinin?</span>
                             </div>
                         </Link>
-                    </div>
+                    </motion.div>
                 </div>
             </section>
 

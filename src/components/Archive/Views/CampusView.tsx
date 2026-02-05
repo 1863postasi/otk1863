@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { ArrowLeft, Search, MapPin, Users, Folder, Music, Mountain, Radio, Clapperboard, Plane, Camera, X, ExternalLink, FileText, Image as ImageIcon, Download, Film, Link as LinkIcon, Eye, ChevronDown } from 'lucide-react';
-import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../../lib/utils';
 import { collection, query, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../lib/firebase';
@@ -39,7 +39,7 @@ interface ViewProps {
     onBack: () => void;
 }
 
-const CampusView: React.FC<ViewProps> = ({ onBack }) => {
+const CampusView: React.FC<ViewProps> = React.memo(({ onBack }) => {
     const [selectedClub, setSelectedClub] = useState<Club | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [hoveredClubId, setHoveredClubId] = useState<string | null>(null);
@@ -78,11 +78,19 @@ const CampusView: React.FC<ViewProps> = ({ onBack }) => {
         }
     }, [selectedClub]);
 
-    const toggleYear = (year: string) => {
+    const toggleYear = useCallback((year: string) => {
         setExpandedYears(prev =>
             prev.includes(year) ? prev.filter(y => y !== year) : [...prev, year]
         );
-    };
+    }, []);
+
+    const handleClubSelect = useCallback((club: Club) => {
+        setSelectedClub(club);
+    }, []);
+
+    const handleClubHover = useCallback((clubId: string | null) => {
+        setHoveredClubId(clubId);
+    }, []);
 
     const filteredClubs = useMemo(() => {
         return clubs.filter(club =>
@@ -151,10 +159,10 @@ const CampusView: React.FC<ViewProps> = ({ onBack }) => {
     };
 
     return (
-        <div className="relative w-full h-full flex flex-col md:flex-row bg-[#f5f5f4] overflow-hidden">
+        <div className="relative w-full h-full flex flex-col md:flex-row bg-[#f5f5f4] overflow-hidden pb-24 md:pb-0">
 
             {/* 1. LEFT PANEL: DIRECTORY */}
-            <div className="w-full md:w-80 flex flex-col border-r border-stone-300 bg-white z-20 shadow-xl md:shadow-none h-[40vh] md:h-full order-2 md:order-1 shrink-0">
+            <div className="w-full md:w-80 flex flex-col border-r border-stone-300 bg-white z-20 shadow-xl md:shadow-none h-auto max-h-[55vh] md:h-full order-2 md:order-1 shrink-0">
                 {/* Header */}
                 <div className="p-4 border-b border-stone-200 bg-stone-50">
                     <button
@@ -188,9 +196,9 @@ const CampusView: React.FC<ViewProps> = ({ onBack }) => {
                     {filteredClubs.map(club => (
                         <button
                             key={club.id}
-                            onClick={() => setSelectedClub(club)}
-                            onMouseEnter={() => setHoveredClubId(club.id)}
-                            onMouseLeave={() => setHoveredClubId(null)}
+                            onClick={() => handleClubSelect(club)}
+                            onMouseEnter={() => handleClubHover(club.id)}
+                            onMouseLeave={() => handleClubHover(null)}
                             className={cn(
                                 "w-full p-2 rounded-lg flex items-center gap-3 transition-all duration-200 text-left border",
                                 selectedClub?.id === club.id
@@ -216,13 +224,17 @@ const CampusView: React.FC<ViewProps> = ({ onBack }) => {
             </div>
 
             {/* 2. RIGHT PANEL: INTERACTIVE MAP */}
-            <div className="flex-1 relative bg-[#e0ded8] overflow-hidden order-1 md:order-2 h-[60vh] md:h-full border-b md:border-b-0 md:border-l border-stone-300">
+            <div className="flex-1 relative bg-[#e0ded8] overflow-hidden order-1 md:order-2 min-h-[45vh] md:h-full border-b md:border-b-0 md:border-l border-stone-300">
                 {/* Map Background */}
                 <div className="absolute inset-0">
                     <img
                         src="https://cdn.1863postasi.org/kulupler-arsivi/kroki.png"
-                        className="w-full h-full object-cover opacity-80 mix-blend-multiply"
+                        loading="eager"
+                        fetchPriority="high"
+                        decoding="async"
+                        className="w-full h-full object-contain opacity-80"
                         alt="Kampüs Krokisi"
+                        style={{ aspectRatio: '2500/1429' }}
                     />
                 </div>
 
@@ -246,9 +258,9 @@ const CampusView: React.FC<ViewProps> = ({ onBack }) => {
                             style={{ top: `${posY}%`, left: `${posX}%` }}
                         >
                             <motion.button
-                                onClick={() => setSelectedClub(club)}
-                                onMouseEnter={() => setHoveredClubId(club.id)}
-                                onMouseLeave={() => setHoveredClubId(null)}
+                                onClick={() => handleClubSelect(club)}
+                                onMouseEnter={() => handleClubHover(club.id)}
+                                onMouseLeave={() => handleClubHover(null)}
                                 whileHover={{ scale: 1.2 }}
                                 whileTap={{ scale: 0.9 }}
                                 className={cn(
@@ -299,14 +311,14 @@ const CampusView: React.FC<ViewProps> = ({ onBack }) => {
 
                         {/* Card Container */}
                         <motion.div
-                            layoutId={`card-${selectedClub.id}`}
                             initial={{ y: 50, opacity: 0, scale: 0.95 }}
                             animate={{ y: 0, opacity: 1, scale: 1 }}
                             exit={{ y: 50, opacity: 0, scale: 0.95 }}
                             transition={{ type: "spring", damping: 25, stiffness: 300 }}
                             className="relative w-full max-w-5xl bg-[#f0eadd] rounded-xl shadow-2xl overflow-hidden flex flex-col md:flex-row max-h-[90vh] pointer-events-auto border border-stone-400"
                             style={{
-                                backgroundImage: 'url("https://www.transparenttextures.com/patterns/cream-paper.png")'
+                                backgroundImage: 'url("https://www.transparenttextures.com/patterns/cream-paper.png")',
+                                willChange: 'transform, opacity'
                             }}
                         >
                             {/* Close Button */}
@@ -361,94 +373,95 @@ const CampusView: React.FC<ViewProps> = ({ onBack }) => {
 
                                 {/* CONTENT - PINTEREST STYLE WITH ACCORDION */}
                                 {Object.keys(groupedContents).length > 0 && (
-                                    <LayoutGroup>
-                                        <div className="space-y-4 pb-8">
-                                            {Object.entries(groupedContents).map(([year, items]) => {
-                                                const files = items as ClubContent[];
-                                                const isExpanded = expandedYears.includes(year);
+                                    <div className="space-y-4 pb-8">
+                                        {Object.entries(groupedContents).map(([year, items]) => {
+                                            const files = items as ClubContent[];
+                                            const isExpanded = expandedYears.includes(year);
 
-                                                return (
-                                                    <motion.div
-                                                        layout
-                                                        key={year}
-                                                        className="border border-stone-200 rounded-lg bg-white/60 overflow-hidden"
-                                                        initial={{ borderRadius: 8 }}
+                                            return (
+                                                <div
+                                                    key={year}
+                                                    className="border border-stone-200 rounded-lg bg-white/60 overflow-hidden"
+                                                >
+                                                    {/* Accordion Header */}
+                                                    <button
+                                                        onClick={() => toggleYear(year)}
+                                                        className="w-full flex items-center justify-between p-4 bg-stone-50 hover:bg-stone-100 transition-colors"
                                                     >
-                                                        {/* Accordion Header */}
-                                                        <motion.button
-                                                            layout="position"
-                                                            onClick={() => toggleYear(year)}
-                                                            className="w-full flex items-center justify-between p-4 bg-stone-50 hover:bg-stone-100 transition-colors"
+                                                        <h3 className="font-serif text-xl font-bold text-stone-800 flex items-center gap-2">
+                                                            <span className="text-stone-300">#</span> {year}
+                                                        </h3>
+                                                        <motion.div
+                                                            animate={{ rotate: isExpanded ? 180 : 0 }}
+                                                            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                                                            style={{ willChange: 'transform' }}
                                                         >
-                                                            <h3 className="font-serif text-xl font-bold text-stone-800 flex items-center gap-2">
-                                                                <span className="text-stone-300">#</span> {year}
-                                                            </h3>
+                                                            <ChevronDown size={20} className="text-stone-400" />
+                                                        </motion.div>
+                                                    </button>
+
+                                                    {/* Grid Content */}
+                                                    <AnimatePresence mode="sync">
+                                                        {isExpanded && (
                                                             <motion.div
-                                                                animate={{ rotate: isExpanded ? 180 : 0 }}
-                                                                transition={{ duration: 0.3 }}
+                                                                key={`content-${year}`}
+                                                                initial={{ height: 0, opacity: 0 }}
+                                                                animate={{ height: "auto", opacity: 1 }}
+                                                                exit={{ height: 0, opacity: 0 }}
+                                                                transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+                                                                style={{ overflow: 'hidden', willChange: 'height, opacity' }}
                                                             >
-                                                                <ChevronDown size={20} className="text-stone-400" />
+                                                                <div className="p-4 columns-2 md:columns-3 gap-4 space-y-4">
+                                                                    {files.map((file, idx) => (
+                                                                        <motion.div
+                                                                            key={idx}
+                                                                            initial={{ opacity: 0, y: 20 }}
+                                                                            animate={{ opacity: 1, y: 0 }}
+                                                                            transition={{
+                                                                                delay: Math.min(idx, 12) * 0.04,
+                                                                                duration: 0.25,
+                                                                                ease: [0.4, 0, 0.2, 1]
+                                                                            }}
+                                                                            onClick={(e) => handleContentClick(file, e)}
+                                                                            className="break-inside-avoid bg-white border border-stone-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow group cursor-pointer relative mb-4"
+                                                                            style={{ willChange: 'transform, opacity' }}
+                                                                        >
+                                                                            {/* PREVIEW AREA */}
+                                                                            <div className="aspect-[4/3] bg-stone-100 relative flex items-center justify-center overflow-hidden">
+                                                                                {file.subType.includes('image') ? (
+                                                                                    <img src={file.url} alt={file.title} className="w-full h-full object-cover" />
+                                                                                ) : file.subType.includes('video') ? (
+                                                                                    <div className="bg-stone-900 w-full h-full flex items-center justify-center text-white"><Film size={32} /></div>
+                                                                                ) : file.subType.includes('pdf') ? (
+                                                                                    <div className="bg-red-50 w-full h-full flex items-center justify-center text-red-400"><FileText size={40} /></div>
+                                                                                ) : (
+                                                                                    <div className="bg-stone-50 w-full h-full flex items-center justify-center text-stone-300"><Folder size={40} /></div>
+                                                                                )}
+
+                                                                                {/* Overlay Icon */}
+                                                                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                                                    <Eye className="text-white drop-shadow-md" size={32} />
+                                                                                </div>
+                                                                            </div>
+
+                                                                            {/* INFO AREA */}
+                                                                            <div className="p-3">
+                                                                                <h4 className="font-sans font-bold text-stone-800 text-xs leading-tight mb-1">{file.title || file.fileName}</h4>
+                                                                                <div className="flex items-center justify-between">
+                                                                                    <span className="text-[10px] text-stone-400 bg-stone-100 px-1.5 py-0.5 rounded uppercase tracking-wider">{file.subType}</span>
+                                                                                    <span className="text-[10px] text-stone-400">{file.date}</span>
+                                                                                </div>
+                                                                            </div>
+                                                                        </motion.div>
+                                                                    ))}
+                                                                </div>
                                                             </motion.div>
-                                                        </motion.button>
-
-                                                        {/* Grid Content */}
-                                                        <AnimatePresence mode="sync">
-                                                            {isExpanded && (
-                                                                <motion.div
-                                                                    key={`content-${year}`}
-                                                                    initial={{ height: 0, opacity: 0 }}
-                                                                    animate={{ height: "auto", opacity: 1 }}
-                                                                    exit={{ height: 0, opacity: 0 }}
-                                                                    transition={{ duration: 0.3, ease: "easeInOut" }}
-                                                                    style={{ overflow: 'hidden' }}
-                                                                >
-                                                                    <div className="p-4 columns-2 md:columns-3 gap-4 space-y-4">
-                                                                        {files.map((file, idx) => (
-                                                                            <motion.div
-                                                                                key={idx}
-                                                                                initial={{ opacity: 0, y: 20 }}
-                                                                                animate={{ opacity: 1, y: 0 }}
-                                                                                transition={{ delay: Math.min(idx, 12) * 0.05 }}
-                                                                                onClick={(e) => handleContentClick(file, e)}
-                                                                                className="break-inside-avoid bg-white border border-stone-200 rounded-lg overflow-hidden hover:shadow-lg transition-all group cursor-pointer relative mb-4"
-                                                                            >
-                                                                                {/* PREVIEW AREA */}
-                                                                                <div className="aspect-[4/3] bg-stone-100 relative flex items-center justify-center overflow-hidden">
-                                                                                    {file.subType.includes('image') ? (
-                                                                                        <img src={file.url} alt={file.title} className="w-full h-full object-cover" />
-                                                                                    ) : file.subType.includes('video') ? (
-                                                                                        <div className="bg-stone-900 w-full h-full flex items-center justify-center text-white"><Film size={32} /></div>
-                                                                                    ) : file.subType.includes('pdf') ? (
-                                                                                        <div className="bg-red-50 w-full h-full flex items-center justify-center text-red-400"><FileText size={40} /></div>
-                                                                                    ) : (
-                                                                                        <div className="bg-stone-50 w-full h-full flex items-center justify-center text-stone-300"><Folder size={40} /></div>
-                                                                                    )}
-
-                                                                                    {/* Overlay Icon */}
-                                                                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                                                                        <Eye className="text-white drop-shadow-md" size={32} />
-                                                                                    </div>
-                                                                                </div>
-
-                                                                                {/* INFO AREA */}
-                                                                                <div className="p-3">
-                                                                                    <h4 className="font-sans font-bold text-stone-800 text-xs leading-tight mb-1">{file.title || file.fileName}</h4>
-                                                                                    <div className="flex items-center justify-between">
-                                                                                        <span className="text-[10px] text-stone-400 bg-stone-100 px-1.5 py-0.5 rounded uppercase tracking-wider">{file.subType}</span>
-                                                                                        <span className="text-[10px] text-stone-400">{file.date}</span>
-                                                                                    </div>
-                                                                                </div>
-                                                                            </motion.div>
-                                                                        ))}
-                                                                    </div>
-                                                                </motion.div>
-                                                            )}
-                                                        </AnimatePresence>
-                                                    </motion.div>
-                                                );
-                                            })}
-                                        </div>
-                                    </LayoutGroup>
+                                                        )}
+                                                    </AnimatePresence>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 )}
 
                                 {/* Links Footer */}
@@ -518,6 +531,8 @@ const CampusView: React.FC<ViewProps> = ({ onBack }) => {
 
         </div>
     );
-};
+});
+
+CampusView.displayName = 'CampusView';
 
 export default CampusView;

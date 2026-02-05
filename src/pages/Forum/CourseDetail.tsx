@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, BookOpen, Star, User, MessageSquare, Plus, ThumbsUp, ShieldCheck, Loader2, X, AlertCircle } from 'lucide-react';
-import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
+import { ArrowLeft, BookOpen, Star, User, MessageSquare, Plus, ThumbsUp, ShieldCheck, Loader2, X, AlertCircle, Search } from 'lucide-react';
+import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { Course, Review, Instructor } from './types';
@@ -22,43 +22,52 @@ const CourseDetail: React.FC = () => {
     const [reviewData, setReviewData] = useState({ rating: 5, comment: '', isAnonymous: false });
     const [submitting, setSubmitting] = useState(false);
 
+    // Link Instructor Modal
+    const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+    const [allInstructors, setAllInstructors] = useState<Instructor[]>([]);
+    const [searchInstructor, setSearchInstructor] = useState('');
+    const [linking, setLinking] = useState(false);
+
     useEffect(() => {
         const fetchData = async () => {
-            await new Promise(r => setTimeout(r, 600));
-
-            setCourse({
-                id: '1',
-                code: courseCode || 'CMPE101',
-                name: 'Introduction to Computing',
-                department: courseCode?.replace(/[0-9]/g, '') || 'CMPE',
-                rating: 3.8,
-                reviewCount: 42,
-                instructors: ['1', '2']
-            });
-
-            setInstructors([
-                { id: '1', name: 'Ali Hoca', department: 'CMPE', rating: 4.5, reviewCount: 10, courses: [] },
-                { id: '2', name: 'Veli Hoca', department: 'CMPE', rating: 3.0, reviewCount: 5, courses: [] },
-            ]);
-
-            setReviews([
-                {
-                    id: 'r1', type: 'course', targetId: '1', userId: 'u1',
-                    userDisplayName: 'Anonim Öğrenci', isAnonymous: true,
-                    rating: 4, comment: 'Dersin içeriği çok yoğun ama öğretici. Kesinlikle Ali Hoca\'dan alın.',
-                    timestamp: { seconds: Date.now() / 1000 },
-                    likes: 12
-                },
-                {
-                    id: 'r2', type: 'course', targetId: '1', userId: 'u2',
-                    userDisplayName: 'mehmet_yilmaz', userBadge: 'Senior',
-                    rating: 3, comment: 'Lablar çok zorluyor, vaktiniz yoksa bulaşmayın.',
-                    timestamp: { seconds: (Date.now() - 86400000) / 1000 },
-                    likes: 5
+            if (!courseCode) return;
+            setLoading(true);
+            try {
+                // Fetch Course
+                const coursesQ = query(collection(db, 'courses'), where('code', '==', courseCode.toUpperCase()));
+                const coursesSnap = await getDocs(coursesQ);
+                if (coursesSnap.empty) {
+                    setCourse(null);
+                    setLoading(false);
+                    return;
                 }
-            ]);
+                const courseData = { id: coursesSnap.docs[0].id, ...coursesSnap.docs[0].data() } as Course;
+                setCourse(courseData);
 
-            setLoading(false);
+                // Fetch Instructors
+                if (courseData.instructorIds && courseData.instructorIds.length > 0) {
+                    // Fetch by ID
+                    const instructorsPromises = courseData.instructorIds.map(id => getDoc(doc(db, 'instructors', id)));
+                    const instructorsDocs = await Promise.all(instructorsPromises);
+                    const instructorsData = instructorsDocs
+                        .filter(d => d.exists())
+                        .map(d => ({ id: d.id, ...d.data() })) as Instructor[];
+                    setInstructors(instructorsData);
+                } else {
+                    setInstructors([]);
+                }
+
+                // Fetch Reviews (General Course Reviews)
+                const reviewsQ = query(collection(db, 'reviews'), where('type', '==', 'course'), where('targetId', '==', courseData.id));
+                const reviewsSnap = await getDocs(reviewsQ);
+                const reviewsData = reviewsSnap.docs.map(d => ({ id: d.id, ...d.data() })) as Review[];
+                setReviews(reviewsData);
+
+            } catch (e) {
+                console.error(e);
+            } finally {
+                setLoading(false);
+            }
         };
         fetchData();
     }, [courseCode]);
@@ -68,28 +77,85 @@ const CourseDetail: React.FC = () => {
             alert("Yorum yapmak için giriş yapmalısınız.");
             return;
         }
+        if (!course) return;
+
         setSubmitting(true);
         try {
             const newReview: any = {
-                type: 'course', targetId: course?.id, userId: userProfile.uid,
+                type: 'course', targetId: course.id, userId: userProfile.uid,
                 userDisplayName: reviewData.isAnonymous ? 'Anonim Öğrenci' : (userProfile.username || 'Öğrenci'),
                 userPhotoUrl: reviewData.isAnonymous ? null : userProfile.photoUrl,
                 isAnonymous: reviewData.isAnonymous, rating: reviewData.rating, comment: reviewData.comment,
                 likes: 0, timestamp: serverTimestamp()
             };
             await addDoc(collection(db, "reviews"), newReview);
+
+            // Update Course Stats (simple increment, real avg calculation would need all reviews)
+            const newCount = (course.reviewCount || 0) + 1;
+            const newRating = ((course.rating || 0) * (course.reviewCount || 0) + reviewData.rating) / newCount;
+            await updateDoc(doc(db, 'courses', course.id), {
+                reviewCount: newCount,
+                rating: newRating
+            });
+
             setReviews([{ ...newReview, id: 'temp-' + Date.now(), timestamp: { seconds: Date.now() / 1000 } }, ...reviews]);
+            setCourse({ ...course, reviewCount: newCount, rating: newRating });
             setIsReviewModalOpen(false);
             setReviewData({ rating: 5, comment: '', isAnonymous: false });
         } catch (e) { console.error(e); alert("Hata"); } finally { setSubmitting(false); }
     };
+
+    const handleLinkInstructor = async (instructorId: string) => {
+        if (!course) return;
+        setLinking(true);
+        try {
+            // Update Course
+            await updateDoc(doc(db, 'courses', course.id), {
+                instructorIds: arrayUnion(instructorId)
+            });
+            // Update Instructor
+            await updateDoc(doc(db, 'instructors', instructorId), {
+                courseCodes: arrayUnion(course.code)
+            });
+
+            // Refresh
+            const instDoc = await getDoc(doc(db, 'instructors', instructorId));
+            if (instDoc.exists()) {
+                setInstructors([...instructors, { id: instDoc.id, ...instDoc.data() } as Instructor]);
+            }
+            setIsLinkModalOpen(false);
+            alert('Hoca başarıyla eklendi!');
+        } catch (e) {
+            console.error(e);
+            alert('Hata oluştu.');
+        } finally {
+            setLinking(false);
+        }
+    };
+
+    const openLinkModal = async () => {
+        setIsLinkModalOpen(true);
+        // Fetch all instructors
+        const instructorsSnap = await getDocs(collection(db, 'instructors'));
+        setAllInstructors(instructorsSnap.docs.map(d => ({ id: d.id, ...d.data() })) as Instructor[]);
+    };
+
+    const filteredInstructors = useMemo(() => {
+        if (!searchInstructor) return allInstructors;
+        return allInstructors.filter(i => i.name.toLowerCase().includes(searchInstructor.toLowerCase()));
+    }, [allInstructors, searchInstructor]);
 
     if (loading) return (
         <div className="h-dvh flex items-center justify-center bg-[#f5f5f4]">
             <Loader2 className="animate-spin text-stone-400" size={32} />
         </div>
     );
-    if (!course) return null;
+    if (!course) return (
+        <div className="h-dvh flex items-center justify-center bg-[#f5f5f4] flex-col gap-4">
+            <h2 className="text-2xl font-serif font-bold text-stone-700">Ders Bulunamadı</h2>
+            <Link to="/forum/akademik" className="text-blue-600 hover:underline">← Akademik Arama'ya dön</Link>
+        </div>
+    );
 
     return (
         <div className="min-h-screen bg-[#f5f5f4] font-sans selection:bg-blue-100 flex flex-col">
@@ -107,7 +173,7 @@ const CourseDetail: React.FC = () => {
                     <div className="flex items-center gap-4">
                         <div className="flex items-center gap-1.5 bg-white px-3 py-1 rounded-full border border-stone-100 shadow-sm">
                             <Star size={14} className="fill-amber-400 text-amber-400" />
-                            <span className="text-sm font-bold text-stone-900">{course.rating}</span>
+                            <span className="text-sm font-bold text-stone-900">{course.rating?.toFixed(1) || '—'}</span>
                         </div>
                         <button
                             onClick={() => setIsReviewModalOpen(true)}
@@ -143,7 +209,7 @@ const CourseDetail: React.FC = () => {
                                         <div className="w-6 h-6 rounded-full bg-stone-300 border-2 border-white" />
                                         <div className="w-6 h-6 rounded-full bg-stone-400 border-2 border-white" />
                                     </div>
-                                    <span className="text-xs font-bold text-stone-500 pl-1">{course.reviewCount} öğrenci değerlendirdi</span>
+                                    <span className="text-xs font-bold text-stone-500 pl-1">{course.reviewCount || 0} öğrenci değerlendirdi</span>
                                 </div>
                             </div>
 
@@ -172,27 +238,41 @@ const CourseDetail: React.FC = () => {
                     <div className="space-y-6">
                         {/* Instructors */}
                         <div className="space-y-3">
-                            <h3 className="text-sm font-bold text-stone-400 uppercase tracking-widest pl-1">Veren Hocalar</h3>
-                            {instructors.map(inst => (
-                                <Link
-                                    key={inst.id}
-                                    to={`/forum/degerlendirme/${course.code}/${inst.id}`}
-                                    className="flex items-center justify-between p-3 rounded-xl bg-white border border-stone-200 hover:border-blue-300 hover:shadow-md transition-all group"
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-sm font-bold text-stone-400 uppercase tracking-widest pl-1">Veren Hocalar</h3>
+                                <button
+                                    onClick={openLinkModal}
+                                    className="text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-1"
                                 >
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs group-hover:scale-110 transition-transform">
-                                            {inst.name.substring(0, 2)}
+                                    <Plus size={14} /> Ekle
+                                </button>
+                            </div>
+                            {instructors.length === 0 ? (
+                                <div className="p-4 border border-dashed border-stone-200 rounded-xl text-center text-xs text-stone-400">
+                                    Henüz hoca eklenmemiş. İlk sen ekle!
+                                </div>
+                            ) : (
+                                instructors.map(inst => (
+                                    <Link
+                                        key={inst.id}
+                                        to={`/forum/degerlendirme/${course.code}/${inst.id}`}
+                                        className="flex items-center justify-between p-3 rounded-xl bg-white border border-stone-200 hover:border-blue-300 hover:shadow-md transition-all group"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs group-hover:scale-110 transition-transform">
+                                                {inst.name.substring(0, 2)}
+                                            </div>
+                                            <div>
+                                                <div className="text-sm font-bold text-stone-700 group-hover:text-stone-900">{inst.name}</div>
+                                                <div className="text-[10px] text-stone-400">Detaylı İncele →</div>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <div className="text-sm font-bold text-stone-700 group-hover:text-stone-900">{inst.name}</div>
-                                            <div className="text-[10px] text-stone-400">Detaylı İncele →</div>
+                                        <div className="flex items-center gap-1 text-xs font-bold text-amber-500 bg-amber-50 px-2 py-1 rounded">
+                                            <Star size={10} fill="currentColor" /> {inst.rating?.toFixed(1) || '—'}
                                         </div>
-                                    </div>
-                                    <div className="flex items-center gap-1 text-xs font-bold text-amber-500 bg-amber-50 px-2 py-1 rounded">
-                                        <Star size={10} fill="currentColor" /> {inst.rating}
-                                    </div>
-                                </Link>
-                            ))}
+                                    </Link>
+                                ))
+                            )}
                         </div>
 
                         {/* Advice Box */}
@@ -201,7 +281,7 @@ const CourseDetail: React.FC = () => {
                                 <ShieldCheck size={16} /> ÖTK İpucu
                             </h4>
                             <p className="text-xs text-blue-800/80 leading-relaxed">
-                                Bu ders genellikle 3. sınıfta alınır. Projeler dönem sonu notunun %40'ını oluşturur. Grup arkadaşlarınızı iyi seçin!
+                                Hocanın anlatımı derse çok etki eder. Lütfen soldaki listeden hoca seçip özel değerlendirmeleri inceleyin.
                             </p>
                         </div>
                     </div>
@@ -249,6 +329,13 @@ const CourseDetail: React.FC = () => {
                             </div>
 
                             <div className="p-6 space-y-6">
+                                {/* INFO ALERT */}
+                                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                                    <p className="text-xs text-blue-800 leading-relaxed">
+                                        <strong>Not:</strong> Bu yorum <strong>hocadan bağımsız</strong> olarak dersin genel içeriğini değerlendirir. Spesifik bir hoca deneyimi paylaşmak için lütfen "Veren Hocalar" listesinden seçim yapın.
+                                    </p>
+                                </div>
+
                                 <div>
                                     <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">Puanın</label>
                                     <div className="flex justify-center gap-3">
@@ -272,7 +359,7 @@ const CourseDetail: React.FC = () => {
 
                                 <TextArea
                                     label="Deneyimin"
-                                    placeholder="Dersin işlenişi, sınavları ve genel tavsiyelerin..."
+                                    placeholder="Dersin konuları, zorluk seviyesi, genel tavsiyelerin..."
                                     className="h-32 text-sm"
                                     value={reviewData.comment}
                                     onChange={(v: string) => setReviewData({ ...reviewData, comment: v })}
@@ -299,6 +386,65 @@ const CourseDetail: React.FC = () => {
                                     {submitting && <Loader2 size={16} className="animate-spin" />}
                                     {submitting ? 'Gönderiliyor...' : 'Yorumu Gönder'}
                                 </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* LINK INSTRUCTOR MODAL */}
+            <AnimatePresence>
+                {isLinkModalOpen && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-stone-900/60 backdrop-blur-sm p-4">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden"
+                        >
+                            <div className="p-6 border-b border-stone-100 flex justify-between items-center bg-stone-50">
+                                <h3 className="font-serif font-bold text-lg text-stone-800">Hoca Bağla</h3>
+                                <button onClick={() => setIsLinkModalOpen(false)} className="p-2 bg-white rounded-full hover:bg-stone-200 transition-colors">
+                                    <X size={20} className="text-stone-500" />
+                                </button>
+                            </div>
+
+                            <div className="p-6 space-y-4">
+                                <div className="flex items-center bg-stone-100 border border-stone-200 rounded-xl px-3 py-2">
+                                    <Search className="text-stone-400 shrink-0" size={16} />
+                                    <input
+                                        type="text"
+                                        value={searchInstructor}
+                                        onChange={(e) => setSearchInstructor(e.target.value)}
+                                        placeholder="Hoca ara..."
+                                        className="w-full bg-transparent border-none text-sm font-medium text-stone-800 placeholder:text-stone-400 focus:ring-0 px-2 outline-none"
+                                    />
+                                </div>
+
+                                <div className="max-h-64 overflow-y-auto space-y-2">
+                                    {filteredInstructors.map(inst => (
+                                        <button
+                                            key={inst.id}
+                                            onClick={() => handleLinkInstructor(inst.id)}
+                                            disabled={linking || instructors.some(i => i.id === inst.id)}
+                                            className="w-full flex items-center gap-3 p-3 rounded-xl bg-stone-50 hover:bg-stone-100 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs shrink-0">
+                                                {inst.name.substring(0, 2)}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="text-sm font-bold text-stone-800 truncate">{inst.name}</div>
+                                                <div className="text-xs text-stone-500">{inst.department}</div>
+                                            </div>
+                                            {instructors.some(i => i.id === inst.id) && (
+                                                <span className="text-xs font-bold text-green-600">✓ Ekli</span>
+                                            )}
+                                        </button>
+                                    ))}
+                                    {filteredInstructors.length === 0 && (
+                                        <p className="text-center text-stone-400 text-sm py-10">Hoca bulunamadı</p>
+                                    )}
+                                </div>
                             </div>
                         </motion.div>
                     </div>

@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, BookOpen, Star, User, MessageSquare, Plus, ThumbsUp, Loader2, X } from 'lucide-react';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
-import { Instructor, Review } from './types';
+import { Instructor, Review, Course } from './types';
 import { TextArea, Input } from '../../pages/Admin/components/SharedUI';
 import { cn } from '../../lib/utils';
 
@@ -25,41 +25,40 @@ const InstructorDetail: React.FC = () => {
 
     useEffect(() => {
         const fetchData = async () => {
-            await new Promise(r => setTimeout(r, 600));
-
-            // Mock Data
-            setInstructor({
-                id: instructorId || '1',
-                name: 'Ali Hoca',
-                department: 'CMPE',
-                rating: 4.8,
-                reviewCount: 45,
-                courses: ['1', '2']
-            });
-
-            setCourses([
-                { id: '1', code: 'CMPE150', name: 'Intro to Computing' },
-                { id: '2', code: 'CMPE451', name: 'Project Development' },
-            ]);
-
-            setReviews([
-                {
-                    id: 'r1', type: 'instructor', targetId: '1', userId: 'u1',
-                    userDisplayName: 'Anonim', isAnonymous: true,
-                    rating: 5, comment: 'Hayatımda gördüğüm en ilgili hoca. Mutlaka dersini alın.',
-                    timestamp: { seconds: Date.now() / 1000 },
-                    likes: 34
-                },
-                {
-                    id: 'r2', type: 'instructor', targetId: '1', userId: 'u3',
-                    userDisplayName: 'Ayşe K.', userBadge: 'Junior',
-                    rating: 4, comment: 'Notu biraz kıttır ama çok iyi öğretir.',
-                    timestamp: { seconds: (Date.now() - 100000) / 1000 },
-                    likes: 8
+            if (!instructorId) return;
+            setLoading(true);
+            try {
+                // Fetch Instructor
+                const instDoc = await getDoc(doc(db, 'instructors', instructorId));
+                if (!instDoc.exists()) {
+                    setInstructor(null);
+                    setLoading(false);
+                    return;
                 }
-            ]);
+                const instructorData = { id: instDoc.id, ...instDoc.data() } as Instructor;
+                setInstructor(instructorData);
 
-            setLoading(false);
+                // Fetch Courses
+                if (instructorData.courseCodes && instructorData.courseCodes.length > 0) {
+                    const coursesQ = query(collection(db, 'courses'), where('code', 'in', instructorData.courseCodes));
+                    const coursesSnap = await getDocs(coursesQ);
+                    const coursesData = coursesSnap.docs.map(d => ({ id: d.id, code: (d.data() as Course).code, name: (d.data() as Course).name }));
+                    setCourses(coursesData);
+                } else {
+                    setCourses([]);
+                }
+
+                // Fetch Reviews (General Instructor Reviews)
+                const reviewsQ = query(collection(db, 'reviews'), where('type', '==', 'instructor'), where('targetId', '==', instructorId));
+                const reviewsSnap = await getDocs(reviewsQ);
+                const reviewsData = reviewsSnap.docs.map(d => ({ id: d.id, ...d.data() })) as Review[];
+                setReviews(reviewsData);
+
+            } catch (e) {
+                console.error(e);
+            } finally {
+                setLoading(false);
+            }
         };
         fetchData();
     }, [instructorId]);
@@ -69,11 +68,13 @@ const InstructorDetail: React.FC = () => {
             alert("Yorum yapmak için giriş yapmalısınız.");
             return;
         }
+        if (!instructor) return;
+
         setSubmitting(true);
         try {
             const newReview: any = {
                 type: 'instructor',
-                targetId: instructor?.id,
+                targetId: instructor.id,
                 userId: userProfile.uid,
                 userDisplayName: reviewData.isAnonymous ? 'Anonim Öğrenci' : (userProfile.username || 'Öğrenci'),
                 userPhotoUrl: reviewData.isAnonymous ? null : userProfile.photoUrl,
@@ -84,8 +85,18 @@ const InstructorDetail: React.FC = () => {
                 timestamp: serverTimestamp()
             };
             await addDoc(collection(db, "reviews"), newReview);
+
+            // Update Instructor Stats
+            const newCount = (instructor.reviewCount || 0) + 1;
+            const newRating = ((instructor.rating || 0) * (instructor.reviewCount || 0) + reviewData.rating) / newCount;
+            await updateDoc(doc(db, 'instructors', instructor.id), {
+                reviewCount: newCount,
+                rating: newRating
+            });
+
             // Optimistic update
             setReviews([{ ...newReview, id: 'temp-' + Date.now(), timestamp: { seconds: Date.now() / 1000 } }, ...reviews]);
+            setInstructor({ ...instructor, reviewCount: newCount, rating: newRating });
             setIsReviewModalOpen(false);
             setReviewData({ rating: 5, comment: '', isAnonymous: false });
         } catch (e) {
@@ -102,7 +113,12 @@ const InstructorDetail: React.FC = () => {
         </div>
     );
 
-    if (!instructor) return null; // Or 404 page
+    if (!instructor) return (
+        <div className="h-dvh flex items-center justify-center bg-[#f5f5f4] flex-col gap-4">
+            <h2 className="text-2xl font-serif font-bold text-stone-700">Hoca Bulunamadı</h2>
+            <Link to="/forum/akademik" className="text-blue-600 hover:underline">← Akademik Arama'ya dön</Link>
+        </div>
+    );
 
     return (
         <div className="min-h-screen bg-[#f5f5f4] font-sans selection:bg-purple-100 flex flex-col">
@@ -121,7 +137,7 @@ const InstructorDetail: React.FC = () => {
                     <div className="flex items-center gap-4">
                         <div className="flex items-center gap-1.5 bg-white px-3 py-1 rounded-full border border-stone-100 shadow-sm">
                             <Star size={14} className="fill-amber-400 text-amber-400" />
-                            <span className="text-sm font-bold text-stone-900">{instructor.rating}</span>
+                            <span className="text-sm font-bold text-stone-900">{instructor.rating?.toFixed(1) || '—'}</span>
                         </div>
                         <button
                             onClick={() => setIsReviewModalOpen(true)}
@@ -153,7 +169,7 @@ const InstructorDetail: React.FC = () => {
                                     {instructor.department}
                                 </span>
                                 <span className="text-xs font-medium text-stone-500">
-                                    • {instructor.reviewCount} değerlendirme
+                                    • {instructor.reviewCount || 0} değerlendirme
                                 </span>
                             </div>
                         </div>
@@ -166,24 +182,25 @@ const InstructorDetail: React.FC = () => {
                     <div className="space-y-6">
                         <h3 className="text-sm font-bold text-stone-400 uppercase tracking-widest pl-1">Verdiği Dersler</h3>
                         <div className="space-y-3">
-                            {courses.map(course => (
-                                <Link
-                                    key={course.id}
-                                    to={`/forum/degerlendirme/${course.code}/${instructor.id}`}
-                                    className="block group bg-white p-4 rounded-xl border border-stone-200 hover:border-purple-300 hover:shadow-md transition-all text-left relative overflow-hidden"
-                                >
-                                    <div className="absolute top-0 left-0 w-1 h-full bg-purple-500 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300" />
-                                    <div className="flex items-center justify-between mb-1 pl-2 group-hover:pl-3 transition-all">
-                                        <span className="font-mono font-bold text-stone-900 group-hover:text-purple-700 transition-colors">{course.code}</span>
-                                        <ArrowLeft size={16} className="rotate-180 text-stone-300 group-hover:text-purple-500 opacity-0 group-hover:opacity-100 transition-all transform -translate-x-2 group-hover:translate-x-0" />
-                                    </div>
-                                    <div className="text-xs text-stone-500 line-clamp-1 pl-2 group-hover:pl-3 transition-all">{course.name}</div>
-                                </Link>
-                            ))}
-                            {courses.length === 0 && (
+                            {courses.length === 0 ? (
                                 <div className="p-4 border border-dashed border-stone-300 rounded-xl text-center text-xs text-stone-400">
                                     Kayıtlı ders bulunamadı.
                                 </div>
+                            ) : (
+                                courses.map(course => (
+                                    <Link
+                                        key={course.id}
+                                        to={`/forum/degerlendirme/${course.code}/${instructor.id}`}
+                                        className="block group bg-white p-4 rounded-xl border border-stone-200 hover:border-purple-300 hover:shadow-md transition-all text-left relative overflow-hidden"
+                                    >
+                                        <div className="absolute top-0 left-0 w-1 h-full bg-purple-500 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300" />
+                                        <div className="flex items-center justify-between mb-1 pl-2 group-hover:pl-3 transition-all">
+                                            <span className="font-mono font-bold text-stone-900 group-hover:text-purple-700 transition-colors">{course.code}</span>
+                                            <ArrowLeft size={16} className="rotate-180 text-stone-300 group-hover:text-purple-500 opacity-0 group-hover:opacity-100 transition-all transform -translate-x-2 group-hover:translate-x-0" />
+                                        </div>
+                                        <div className="text-xs text-stone-500 line-clamp-1 pl-2 group-hover:pl-3 transition-all">{course.name}</div>
+                                    </Link>
+                                ))
                             )}
                         </div>
                     </div>
@@ -225,6 +242,13 @@ const InstructorDetail: React.FC = () => {
                             </div>
 
                             <div className="p-6 space-y-6">
+                                {/* INFO ALERT */}
+                                <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
+                                    <p className="text-xs text-purple-800 leading-relaxed">
+                                        <strong>Not:</strong> Bu yorum <strong>dersten bağımsız</strong> olarak hocanın genel tutumunu değerlendirir (danışmanlık, iletişim vb.). Spesifik bir ders deneyimi için "Verdiği Dersler" listesinden seçim yapın.
+                                    </p>
+                                </div>
+
                                 <div>
                                     <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">Puanın</label>
                                     <div className="flex justify-center gap-3">

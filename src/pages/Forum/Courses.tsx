@@ -5,94 +5,167 @@ import {
     Loader2, X, ChevronDown
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { Course, Instructor } from './types';
-import { cn } from '../../lib/utils';
-import { format } from 'date-fns';
+import { cn, normalizeCourseCode, normalizeName, toTitleCase } from '../../lib/utils';
 
-// --- MOCK DATA ---
-const MOCK_DEPARTMENTS = ["CMPE", "EE", "IE", "ME", "CE", "PHYS", "CHEM", "MATH", "HUM", "EC", "PSY", "SOC", "POLS", "HIST"];
-
-
+const MOCK_DEPARTMENTS = ["CMPE", "EE", "IE", "ME", "CE", "PHYS", "CHEM", "MATH", "HUM", "EC", "PSY", "SOC", "POLS", "HIST", "STS", "PHIL"];
 
 const AcademicReviews: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'courses' | 'instructors'>('courses');
     const [searchTerm, setSearchTerm] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [results, setResults] = useState<(Course | Instructor)[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [courses, setCourses] = useState<Course[]>([]);
+    const [instructors, setInstructors] = useState<Instructor[]>([]);
+
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const [createFormData, setCreateFormData] = useState<any>({});
     const [creating, setCreating] = useState(false);
 
-    // --- SEARCH LOGIC ---
+    // Form states
+    const [courseDept, setCourseDept] = useState('');
+    const [courseNumber, setCourseNumber] = useState('');
+    const [courseName, setCourseName] = useState('');
+    const [instructorName, setInstructorName] = useState('');
+    const [department, setDepartment] = useState('');
+
+    // Fetch data
     useEffect(() => {
-        const performSearch = async () => {
+        const fetchData = async () => {
             setLoading(true);
             try {
-                // Simulate network delay for "weight"
-                await new Promise(r => setTimeout(r, 600));
+                const coursesSnap = await getDocs(collection(db, 'courses'));
+                const coursesData = coursesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Course[];
+                setCourses(coursesData);
 
-                let mockResults: any[] = [];
-                if (activeTab === 'courses') {
-                    mockResults = [
-                        { id: '1', code: 'CMPE150', name: 'Introduction to Computing', department: 'CMPE', rating: 3.5, reviewCount: 124 },
-                        { id: '2', code: 'PHYS101', name: 'Physics I', department: 'PHYS', rating: 2.8, reviewCount: 89 },
-                        { id: '3', code: 'HUM101', name: 'Cultural Encounters I', department: 'HUM', rating: 4.2, reviewCount: 250 },
-                        { id: '4', code: 'MATH101', name: 'Calculus I', department: 'MATH', rating: 3.0, reviewCount: 150 },
-                        { id: '5', code: 'EC101', name: 'Introduction to Economics I', department: 'EC', rating: 3.8, reviewCount: 200 },
-                        { id: '6', code: 'STS205', name: 'Science Tech & Society', department: 'STS', rating: 4.7, reviewCount: 42 },
-                    ];
-                    if (searchTerm) {
-                        mockResults = mockResults.filter(r =>
-                            r.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            r.name.toLowerCase().includes(searchTerm.toLowerCase())
-                        );
-                    }
-                } else {
-                    mockResults = [
-                        { id: '1', name: 'Prof. Dr. Ali Veli', department: 'CMPE', rating: 4.8, reviewCount: 45 },
-                        { id: '2', name: 'Dr. Ayşe Yılmaz', department: 'PHYS', rating: 3.2, reviewCount: 22 },
-                        { id: '3', name: 'Mehmet Öz', department: 'HUM', rating: 4.9, reviewCount: 110 },
-                        { id: '4', name: 'Zeynep Kaya', department: 'MATH', rating: 2.5, reviewCount: 15 },
-                    ];
-                    if (searchTerm) {
-                        mockResults = mockResults.filter(r => r.name.toLowerCase().includes(searchTerm.toLowerCase()));
-                    }
-                }
-                setResults(mockResults);
+                const instructorsSnap = await getDocs(collection(db, 'instructors'));
+                const instructorsData = instructorsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Instructor[];
+                setInstructors(instructorsData);
+            } catch (e) {
+                console.error(e);
             } finally {
                 setLoading(false);
             }
         };
-        performSearch();
-    }, [searchTerm, activeTab]);
+        fetchData();
+    }, []);
 
-    const handleCreate = async () => {
+    // Search results
+    const results = useMemo(() => {
+        const items = activeTab === 'courses' ? courses : instructors;
+        if (!searchTerm) return items;
+
+        const term = searchTerm.toLowerCase();
+        return items.filter(item => {
+            if (activeTab === 'courses') {
+                const c = item as Course;
+                return c.code.toLowerCase().includes(term) || c.name.toLowerCase().includes(term);
+            } else {
+                const i = item as Instructor;
+                return i.name.toLowerCase().includes(term);
+            }
+        });
+    }, [activeTab, courses, instructors, searchTerm]);
+
+    const handleCreateCourse = async () => {
+        if (!courseDept || !courseNumber || !courseName) {
+            alert('Lütfen tüm alanları doldurun.');
+            return;
+        }
+
+        const normalizedCode = normalizeCourseCode(courseDept, courseNumber);
+
+        // Duplicate kontrolü
+        const existing = courses.find(c => c.code === normalizedCode);
+        if (existing) {
+            alert(`Bu ders zaten mevcut: ${normalizedCode}`);
+            setIsCreateModalOpen(false);
+            return;
+        }
+
         setCreating(true);
         try {
-            const colName = activeTab === 'courses' ? "courses" : "instructors";
-            await addDoc(collection(db, colName), {
-                ...createFormData,
+            await addDoc(collection(db, 'courses'), {
+                code: normalizedCode,
+                deptCode: courseDept.toUpperCase(),
+                courseNumber,
+                name: courseName,
+                department: courseDept.toUpperCase(),
                 rating: 0,
                 reviewCount: 0,
-                [activeTab === 'courses' ? 'instructors' : 'courses']: []
+                instructorIds: []
             });
+
+            // Refresh
+            const coursesSnap = await getDocs(collection(db, 'courses'));
+            setCourses(coursesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Course[]);
+
             setIsCreateModalOpen(false);
-            setCreateFormData({});
-            alert("Başarıyla eklendi! Moderatör onayı bekleniyor.");
+            setCourseDept('');
+            setCourseNumber('');
+            setCourseName('');
+            alert('Ders başarıyla eklendi!');
         } catch (e) {
             console.error(e);
-            alert("Hata oluştu.");
+            alert('Hata oluştu.');
         } finally {
             setCreating(false);
         }
     };
 
+    const handleCreateInstructor = async () => {
+        if (!instructorName || !department) {
+            alert('Lütfen tüm alanları doldurun.');
+            return;
+        }
+
+        const normalized = normalizeName(instructorName);
+
+        // Duplicate kontrolü
+        const existing = instructors.find(i => normalizeName(i.name) === normalized);
+        if (existing) {
+            alert(`Bu hoca zaten mevcut: ${existing.name}`);
+            setIsCreateModalOpen(false);
+            return;
+        }
+
+        setCreating(true);
+        try {
+            await addDoc(collection(db, 'instructors'), {
+                name: toTitleCase(instructorName),
+                normalizedName: normalized,
+                department,
+                rating: 0,
+                reviewCount: 0,
+                courseCodes: []
+            });
+
+            // Refresh
+            const instructorsSnap = await getDocs(collection(db, 'instructors'));
+            setInstructors(instructorsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Instructor[]);
+
+            setIsCreateModalOpen(false);
+            setInstructorName('');
+            setDepartment('');
+            alert('Hoca başarıyla eklendi!');
+        } catch (e) {
+            console.error(e);
+            alert('Hata oluştu.');
+        } finally {
+            setCreating(false);
+        }
+    };
+
+    const handleCreate = () => {
+        if (activeTab === 'courses') {
+            handleCreateCourse();
+        } else {
+            handleCreateInstructor();
+        }
+    };
+
     return (
         <div className="min-h-screen flex flex-col bg-[#f0f0f0] font-sans selection:bg-stone-900 selection:text-white overflow-x-hidden">
-
-
 
             {/* --- HEADER --- */}
             <div className="sticky top-0 z-40 bg-[#f0f0f0]/95 backdrop-blur-xl border-b border-stone-200/50 transition-all duration-300">
@@ -282,7 +355,7 @@ const AcademicReviews: React.FC = () => {
                                                         "bg-red-50 border-red-100 text-red-700"
                                             )}>
                                                 <Star size={12} className="fill-current" />
-                                                <span className="font-bold text-xs">{item.rating}</span>
+                                                <span className="font-bold text-xs">{item.rating || '—'}</span>
                                             </div>
                                         </div>
 
@@ -367,51 +440,65 @@ const AcademicReviews: React.FC = () => {
                             <div className="p-8 space-y-6">
                                 {activeTab === 'courses' ? (
                                     <>
-                                        <div className="space-y-1">
-                                            <label className="text-xs font-bold text-stone-500 uppercase ml-1">Ders Kodu</label>
-                                            <input
-                                                className="w-full bg-stone-100 border-2 border-transparent focus:border-stone-900 rounded-xl p-3 font-bold text-stone-900 outline-none transition-all"
-                                                placeholder="Örn: CMPE150"
-                                                value={createFormData.code}
-                                                onChange={(e) => setCreateFormData({ ...createFormData, code: e.target.value.toUpperCase() })}
-                                            />
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-1">
+                                                <label className="text-xs font-bold text-stone-500 uppercase ml-1">Bölüm Kodu</label>
+                                                <input
+                                                    className="w-full bg-stone-100 border-2 border-transparent focus:border-stone-900 rounded-xl p-3 font-bold text-stone-900 outline-none transition-all uppercase"
+                                                    placeholder="CMPE"
+                                                    maxLength={6}
+                                                    value={courseDept}
+                                                    onChange={(e) => setCourseDept(e.target.value.toUpperCase())}
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-xs font-bold text-stone-500 uppercase ml-1">Ders Numarası</label>
+                                                <input
+                                                    className="w-full bg-stone-100 border-2 border-transparent focus:border-stone-900 rounded-xl p-3 font-bold text-stone-900 outline-none transition-all"
+                                                    placeholder="150"
+                                                    maxLength={4}
+                                                    value={courseNumber}
+                                                    onChange={(e) => setCourseNumber(e.target.value)}
+                                                />
+                                            </div>
                                         </div>
                                         <div className="space-y-1">
                                             <label className="text-xs font-bold text-stone-500 uppercase ml-1">Ders Adı</label>
                                             <input
                                                 className="w-full bg-stone-100 border-2 border-transparent focus:border-stone-900 rounded-xl p-3 font-medium text-stone-900 outline-none transition-all"
-                                                placeholder="Örn: Introduction to Computing"
-                                                value={createFormData.name}
-                                                onChange={(e) => setCreateFormData({ ...createFormData, name: e.target.value })}
+                                                placeholder="Introduction to Computing"
+                                                value={courseName}
+                                                onChange={(e) => setCourseName(e.target.value)}
                                             />
                                         </div>
                                     </>
                                 ) : (
-                                    <div className="space-y-1">
-                                        <label className="text-xs font-bold text-stone-500 uppercase ml-1">Hoca Adı Soyadı</label>
-                                        <input
-                                            className="w-full bg-stone-100 border-2 border-transparent focus:border-stone-900 rounded-xl p-3 font-bold text-stone-900 outline-none transition-all"
-                                            placeholder="Örn: Prof. Dr. Cahit Arf"
-                                            value={createFormData.name}
-                                            onChange={(e) => setCreateFormData({ ...createFormData, name: e.target.value })}
-                                        />
-                                    </div>
+                                    <>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-bold text-stone-500 uppercase ml-1">Hoca Adı Soyadı</label>
+                                            <input
+                                                className="w-full bg-stone-100 border-2 border-transparent focus:border-stone-900 rounded-xl p-3 font-bold text-stone-900 outline-none transition-all"
+                                                placeholder="Prof. Dr. Cahit Arf"
+                                                value={instructorName}
+                                                onChange={(e) => setInstructorName(e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-bold text-stone-500 uppercase ml-1">Bölüm</label>
+                                            <div className="relative">
+                                                <select
+                                                    className="w-full appearance-none bg-stone-100 border-2 border-transparent focus:border-stone-900 rounded-xl p-3 font-bold text-stone-900 outline-none transition-all cursor-pointer"
+                                                    value={department}
+                                                    onChange={(e) => setDepartment(e.target.value)}
+                                                >
+                                                    <option value="">Seçiniz</option>
+                                                    {MOCK_DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+                                                </select>
+                                                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" size={18} />
+                                            </div>
+                                        </div>
+                                    </>
                                 )}
-
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-stone-500 uppercase ml-1">Bölüm</label>
-                                    <div className="relative">
-                                        <select
-                                            className="w-full appearance-none bg-stone-100 border-2 border-transparent focus:border-stone-900 rounded-xl p-3 font-bold text-stone-900 outline-none transition-all cursor-pointer"
-                                            value={createFormData.department}
-                                            onChange={(e) => setCreateFormData({ ...createFormData, department: e.target.value })}
-                                        >
-                                            <option value="">Seçiniz</option>
-                                            {MOCK_DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
-                                        </select>
-                                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" size={18} />
-                                    </div>
-                                </div>
 
                                 <button
                                     onClick={handleCreate}
