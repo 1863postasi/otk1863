@@ -151,8 +151,8 @@ const ClubDetail: React.FC = () => {
                 {/* Gradient Overlay for Text Readability */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
 
-                {/* Navbar Placeholder (Back Button) */}
-                <div className="absolute top-4 left-4 md:top-8 md:left-8 z-20">
+                {/* Navbar Placeholder (Back Button - Lowered for Global Button Safety) */}
+                <div className="absolute top-14 left-4 md:top-8 md:left-8 z-20">
                     <Link to="/forum/kulupler" className="flex items-center gap-2 text-white/80 hover:text-white bg-black/20 hover:bg-black/40 backdrop-blur-md px-4 py-2 rounded-full transition-all text-sm font-bold border border-white/10">
                         <ArrowLeft size={18} />
                         <span className="hidden md:inline">Kulüplere Dön</span>
@@ -183,7 +183,7 @@ const ClubDetail: React.FC = () => {
                                 <h1 className="text-2xl md:text-3xl font-bold font-serif text-stone-900 leading-tight">
                                     {club.name}
                                 </h1>
-                                <p className="text-sm font-bold text-stone-400 mt-1">{club.description?.substring(0, 100) || club.name}...</p>
+                                <p className="text-sm font-bold text-stone-400 mt-1">{(club.description || "").substring(0, 100) || club.name}...</p>
                             </div>
 
                             {/* Action Buttons */}
@@ -255,22 +255,26 @@ const ClubDetail: React.FC = () => {
                             {activeTab === 'events' && (
                                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
                                     {upcomingEvents.length > 0 ? (
-                                        upcomingEvents.map(event => (
-                                            <div key={event.id} className="bg-white rounded-xl border border-stone-200 p-4 shadow-sm flex gap-4">
-                                                <div className="w-14 h-14 bg-stone-100 rounded-lg flex flex-col items-center justify-center text-stone-600 shrink-0 font-bold border border-stone-200">
-                                                    <span className="text-[10px] uppercase text-stone-500">{new Date(event.startDate).toLocaleString('tr', { month: 'short' })}</span>
-                                                    <span className="text-xl leading-none">{new Date(event.startDate).getDate()}</span>
-                                                </div>
-                                                <div>
-                                                    <h4 className="font-bold text-stone-900">{event.title}</h4>
-                                                    <div className="flex items-center gap-2 text-xs text-stone-500 mt-1">
-                                                        <MapPin size={12} /> {event.location}
-                                                        <span>•</span>
-                                                        <Calendar size={12} /> {new Date(event.startDate).toLocaleTimeString('tr', { hour: '2-digit', minute: '2-digit' })}
+                                        upcomingEvents.map(event => {
+                                            // Extra safety for date parsing in render
+                                            const start = event.startDate ? new Date(event.startDate) : new Date();
+                                            return (
+                                                <div key={event.id} className="bg-white rounded-xl border border-stone-200 p-4 shadow-sm flex gap-4">
+                                                    <div className="w-14 h-14 bg-stone-100 rounded-lg flex flex-col items-center justify-center text-stone-600 shrink-0 font-bold border border-stone-200">
+                                                        <span className="text-[10px] uppercase text-stone-500">{start.toLocaleString('tr', { month: 'short' })}</span>
+                                                        <span className="text-xl leading-none">{start.getDate()}</span>
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="font-bold text-stone-900">{event.title}</h4>
+                                                        <div className="flex items-center gap-2 text-xs text-stone-500 mt-1">
+                                                            <MapPin size={12} /> {event.location || 'Kampüs'}
+                                                            <span>•</span>
+                                                            <Calendar size={12} /> {start.toLocaleTimeString('tr', { hour: '2-digit', minute: '2-digit' })}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))
+                                            );
+                                        })
                                     ) : (
                                         <div className="text-center py-10 bg-white border border-dashed border-stone-200 rounded-xl text-stone-400 text-sm">
                                             Yaklaşan etkinlik bulunmuyor.

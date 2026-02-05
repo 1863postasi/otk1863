@@ -1,23 +1,13 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { formatTime, formatDate } from '../../lib/utils';
-import { MapPin, ChevronDown, X, ArrowRight, Loader2, ChevronLeft, Calendar, Bookmark } from 'lucide-react';
-import { SPRINGS } from '../../lib/animations';
-import { motion as m, AnimatePresence, LayoutGroup } from 'framer-motion';
-import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
+import { formatDate, formatTime } from '../../lib/utils';
+import { MapPin, ChevronDown, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, Link as LinkIcon, Info } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { collection, query, getDocs } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { useAuth } from '../../context/AuthContext';
-import { cache, CACHE_KEYS, CACHE_TTL } from '../../lib/cache';
+import { cache, CACHE_TTL } from '../../lib/cache';
+import { cn } from '../../lib/utils';
 
-const motion = m as any;
-
-const START_HOUR = 8; // 08:00
-const END_HOUR = 23;  // 23:00
-const PIXELS_PER_HOUR = 120; // Increased slightly for better spacing
-
-interface CalendarSectionProps {
-    onBack?: () => void;
-}
-
+// --- TYPES ---
 interface FirestoreEvent {
     id: string;
     title: string;
@@ -32,501 +22,340 @@ interface FirestoreEvent {
     clubId: string;
 }
 
+interface CalendarSectionProps {
+    onBack?: () => void;
+}
+
+// --- SUB-COMPONENTS ---
+
+// 1. Date Strip (Horizontal Scroll)
+const DateStrip = React.memo(({ selectedDate, onSelectDate, days }: { selectedDate: Date, onSelectDate: (d: Date) => void, days: Date[] }) => {
+    const scrollRef = useRef<HTMLDivElement>(null);
+
+    // Auto-scroll to selected date on mount/change
+    useEffect(() => {
+        if (scrollRef.current) {
+            const selectedIndex = days.findIndex(d => d.toDateString() === selectedDate.toDateString());
+            if (selectedIndex !== -1) {
+                const buttonWidth = 60; // Approximate width of a date button
+                const centerOffset = (scrollRef.current.offsetWidth / 2) - (buttonWidth / 2);
+                scrollRef.current.scrollTo({
+                    left: (selectedIndex * buttonWidth) - centerOffset,
+                    behavior: 'smooth'
+                });
+            }
+        }
+    }, [selectedDate, days]);
+
+    return (
+        <div className="w-full bg-stone-100/50 border-b border-stone-200 py-3 relative backdrop-blur-md z-20">
+            <div
+                ref={scrollRef}
+                className="flex overflow-x-auto gap-2 px-4 scrollbar-hide snap-x"
+            >
+                {days.map((date, i) => {
+                    const isSelected = date.toDateString() === selectedDate.toDateString();
+                    const isToday = date.toDateString() === new Date().toDateString();
+
+                    return (
+                        <button
+                            key={i}
+                            onClick={() => onSelectDate(date)}
+                            className={cn(
+                                "flex-shrink-0 flex flex-col items-center justify-center w-[50px] h-[70px] rounded-2xl transition-all duration-300 snap-center border",
+                                isSelected
+                                    ? "bg-stone-800 text-stone-50 border-stone-800 shadow-md scale-110 z-10"
+                                    : "bg-white text-stone-500 border-stone-100 hover:border-stone-300",
+                                !isSelected && isToday && "border-boun-red/50 text-boun-red"
+                            )}
+                        >
+                            <span className="text-[10px] font-bold uppercase tracking-wider opacity-80">
+                                {date.toLocaleDateString('tr-TR', { weekday: 'short' }).replace('.', '')}
+                            </span>
+                            <span className={cn("text-xl font-serif font-bold leading-none mt-1", isSelected ? "text-stone-50" : "text-stone-800")}>
+                                {date.getDate()}
+                            </span>
+                            {isToday && !isSelected && (
+                                <div className="w-1 h-1 rounded-full bg-boun-red mt-1" />
+                            )}
+                        </button>
+                    );
+                })}
+            </div>
+            {/* Fade Shadows for Scroll Hint */}
+            <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[#fdfbf7] to-transparent pointer-events-none" />
+            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[#fdfbf7] to-transparent pointer-events-none" />
+        </div>
+    );
+});
+
+
+// 2. Event Card (Expandable)
+const EventCard = React.memo(({ event, isExpanded, onClick }: { event: FirestoreEvent, isExpanded: boolean, onClick: () => void }) => {
+    return (
+        <motion.div
+            layout
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            onClick={onClick}
+            className={cn(
+                "relative pl-6 pb-8 border-l-2 last:border-l-0 transition-colors group",
+                isExpanded ? "border-stone-300" : "border-stone-200"
+            )}
+        >
+            {/* Timeline Dot */}
+            <div className={cn(
+                "absolute -left-[9px] top-0 w-4 h-4 rounded-full border-4 transition-colors z-10",
+                isExpanded ? "bg-white border-boun-red scale-110 shadow-sm" : "bg-stone-200 border-[#fdfbf7] group-hover:bg-stone-300"
+            )} />
+
+            {/* Content Container */}
+            <div className={cn(
+                "rounded-2xl border transition-all duration-300 overflow-hidden",
+                isExpanded
+                    ? "bg-white border-stone-200 shadow-xl ring-1 ring-stone-900/5 -mt-2"
+                    : "bg-white border-stone-100 shadow-sm hover:shadow-md hover:border-stone-200"
+            )}>
+                {/* Header (Always Visible) */}
+                <div className="p-4 flex gap-4">
+                    {/* Time Column */}
+                    <div className="flex flex-col items-center justify-center w-14 shrink-0 border-r border-stone-100 pr-4">
+                        <span className="text-lg font-bold font-serif text-stone-900 leading-none">
+                            {new Date(event.startDate).getHours().toString().padStart(2, '0')}
+                        </span>
+                        <span className="text-xs text-stone-400 font-mono">
+                            {new Date(event.startDate).getMinutes().toString().padStart(2, '0')}
+                        </span>
+                    </div>
+
+                    {/* Title & Info */}
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-stone-100 text-stone-600 truncate max-w-[120px]">
+                                {event.clubName}
+                            </span>
+                            {/* Status Indicator (e.g. Live) could go here */}
+                        </div>
+                        <h3 className={cn("font-bold text-base leading-tight text-stone-900", !isExpanded && "line-clamp-2")}>
+                            {event.title}
+                        </h3>
+                        {!isExpanded && (
+                            <div className="flex items-center gap-1 mt-2 text-xs text-stone-500 truncate">
+                                <MapPin size={12} />
+                                <span>{event.location}</span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Expand Chevron Icon */}
+                    <div className="flex items-center text-stone-300">
+                        <motion.div animate={{ rotate: isExpanded ? 180 : 0 }}>
+                            <ChevronDown size={20} />
+                        </motion.div>
+                    </div>
+                </div>
+
+                {/* Expanded Details */}
+                <AnimatePresence>
+                    {isExpanded && (
+                        <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.3, ease: "easeInOut" }}
+                        >
+                            <div className="px-4 pb-4 pt-0 border-t border-stone-100 mt-2">
+                                {/* Poster Image */}
+                                {event.posterUrl && (
+                                    <div className="my-4 rounded-xl overflow-hidden bg-stone-100 border border-stone-200">
+                                        <img src={event.posterUrl} alt="Event Poster" className="w-full h-auto object-cover max-h-80" />
+                                    </div>
+                                )}
+
+                                {/* Location Full */}
+                                <div className="flex items-center gap-2 text-sm text-stone-700 font-medium mb-3 mt-4">
+                                    <div className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center text-stone-500">
+                                        <MapPin size={16} />
+                                    </div>
+                                    {event.location}
+                                </div>
+
+                                {/* Description */}
+                                <div className="text-sm text-stone-600 leading-relaxed whitespace-pre-wrap pl-10">
+                                    {event.details}
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div className="flex gap-2 mt-6 pl-10">
+                                    {event.link && (
+                                        <a
+                                            href={event.link}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex-1 bg-stone-900 text-white py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-stone-700 transition-colors"
+                                        >
+                                            <LinkIcon size={16} />
+                                            Kayıt / Detay
+                                        </a>
+                                    )}
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
+        </motion.div>
+    );
+});
+
+
+// --- MAIN COMPONENT ---
+
 const CalendarSection: React.FC<CalendarSectionProps> = ({ onBack }) => {
-    const { userProfile, toggleBookmark } = useAuth();
-    const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
-    const [isMobileCalendarOpen, setIsMobileCalendarOpen] = useState(false);
+    // State
+    const [selectedDate, setSelectedDate] = useState<Date>(new Date());
     const [events, setEvents] = useState<FirestoreEvent[]>([]);
     const [loading, setLoading] = useState(false);
+    const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
 
-    // --- DATE STATE ---
-    const [selectedDate, setSelectedDate] = useState<Date>(new Date()); // The actual selected day
-    const [viewDate, setViewDate] = useState<Date>(new Date()); // The month currently being viewed in the mini-calendar
-
-    // --- DYNAMIC TIME STATE ---
-    const [currentTimeMinutes, setCurrentTimeMinutes] = useState<number | null>(null);
-
-    const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-    // Update "Now" indicator every minute
+    // Initial Data Fetch
     useEffect(() => {
-        const updateTime = () => {
-            const now = new Date();
-            // Calculate total minutes from start of the day
-            const minutes = now.getHours() * 60 + now.getMinutes();
-            setCurrentTimeMinutes(minutes);
-        };
-
-        updateTime(); // Initial call
-        const interval = setInterval(updateTime, 60000); // Update every minute
-        return () => clearInterval(interval);
-    }, []);
-
-    // Fetch Events from Firestore (with Cache)
-    useEffect(() => {
-        setLoading(true);
-
-        const fetchEvents = async () => {
-            // 1. Try Cache
-            const cachedData = cache.get('events_cache');
+        const fetchAllEvents = async () => {
+            setLoading(true);
+            // 1. Check Cache
+            const cachedData = cache.get<FirestoreEvent[]>('events_cache');
             if (cachedData) {
-                filterAndSetEvents(cachedData);
+                setEvents(cachedData);
                 setLoading(false);
                 return;
             }
 
-            // 2. Fetch
+            // 2. Fetch from Firestore
             try {
                 const q = query(collection(db, "events"));
-                const snapshot = await getDocs(q);
-                const allEvents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as FirestoreEvent[];
+                const snap = await getDocs(q);
+                const allEvents = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as FirestoreEvent[];
 
-                // 3. Set & Cache
+                // 3. Cache
                 cache.set('events_cache', allEvents, CACHE_TTL.MEDIUM);
-                filterAndSetEvents(allEvents);
-            } catch (error) {
-                console.error("Error fetching events:", error);
+                setEvents(allEvents);
+            } catch (err) {
+                console.error("Calendar fetch error:", err);
             } finally {
                 setLoading(false);
             }
         };
+        fetchAllEvents();
+    }, []);
 
-        const filterAndSetEvents = (allEvents: FirestoreEvent[]) => {
-            // Filter client-side for the specific selected date
-            const dayEvents = allEvents.filter(e => {
+    // Derived Data: Filtered Events for Selected Day
+    const dayEvents = useMemo(() => {
+        return events
+            .filter(e => {
                 if (!e.startDate) return false;
-                const eStart = new Date(e.startDate);
-                return eStart.toDateString() === selectedDate.toDateString();
-            });
-            setEvents(dayEvents);
-        };
+                const d = new Date(e.startDate);
+                return d.toDateString() === selectedDate.toDateString();
+            })
+            .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+    }, [events, selectedDate]);
 
-        fetchEvents();
-    }, [selectedDate]);
+    // Derived Data: "Next 30 Days" Array for DateStrip
+    const calendarDays = useMemo(() => {
+        const days = [];
+        const today = new Date();
+        // Generate current month + next month roughly
+        // Better: Generate +/- 15 days from selected date? 
+        // User wants "Calendar", so let's just generate the whole current month + some buffer.
+        // Actually for a scroll strip, let's show Today + 30 days usually.
+        // But user might want to go back.
+        // Let's generate a generous range: -7 days to +45 days from Today.
+        const start = new Date();
+        start.setDate(start.getDate() - 7);
 
-    // Determine layout positions for overlapping events
-    const positionedEvents = useMemo(() => {
-        const validEvents = events.filter(e => e.startDate && e.endDate);
+        for (let i = 0; i < 60; i++) {
+            const d = new Date(start);
+            d.setDate(start.getDate() + i);
+            days.push(d);
+        }
+        return days;
+    }, []);
 
-        const mappedWithPositions = validEvents.map(event => {
-            const start = new Date(event.startDate);
-            const end = new Date(event.endDate);
-
-            const startMinutes = start.getHours() * 60 + start.getMinutes();
-            const endMinutes = end.getHours() * 60 + end.getMinutes();
-
-            const dayStartMinutes = START_HOUR * 60;
-
-            const top = ((startMinutes - dayStartMinutes) / 60) * PIXELS_PER_HOUR;
-            const durationHours = (endMinutes - startMinutes) / 60;
-            const height = Math.max(durationHours * PIXELS_PER_HOUR, 50); // Min height constraint
-
-            return { ...event, top, height, startMinutes, endMinutes, width: 100, left: 0 };
-        });
-
-        const columns: any[][] = [];
-        mappedWithPositions.forEach(event => {
-            let placed = false;
-            for (let i = 0; i < columns.length; i++) {
-                const lastEventInColumn = columns[i][columns[i].length - 1];
-                if (event.startMinutes >= lastEventInColumn.endMinutes) {
-                    columns[i].push(event);
-                    event.left = i;
-                    placed = true;
-                    break;
-                }
-            }
-            if (!placed) {
-                columns.push([event]);
-                event.left = columns.length - 1;
-            }
-        });
-
-        return mappedWithPositions.map(event => {
-            const overlaps = mappedWithPositions.filter(e =>
-                e.id !== event.id &&
-                Math.max(event.startMinutes, e.startMinutes) < Math.min(event.endMinutes, e.endMinutes)
-            );
-
-            const totalOverlaps = overlaps.length + 1;
-            const myIndex = overlaps.filter(e => e.startMinutes < event.startMinutes || (e.startMinutes === event.startMinutes && e.id < event.id)).length;
-
-            return {
-                ...event,
-                width: 95 / totalOverlaps,
-                left: (100 / totalOverlaps) * myIndex
-            };
-        });
-
-    }, [events]);
-
-    // Helper for Month Navigation
-    const changeMonth = (offset: number) => {
-        const newDate = new Date(viewDate);
-        newDate.setMonth(newDate.getMonth() + offset);
-        setViewDate(newDate);
+    // --- UI HELPERS ---
+    const handleDateChange = (date: Date) => {
+        setSelectedDate(date);
+        setExpandedEventId(null); // Collapse any open cards when changing day
     };
 
-    // Helper to generate days for the mini calendar grid
-    const calendarDays = useMemo(() => {
-        const year = viewDate.getFullYear();
-        const month = viewDate.getMonth();
-
-        const firstDayOfMonth = new Date(year, month, 1).getDay(); // 0 = Sunday
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-        // Adjust so Monday is 0, Sunday is 6
-        const startDay = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
-
-        const days = [];
-        // Empty slots for previous month
-        for (let i = 0; i < startDay; i++) days.push(null);
-        // Days of current month
-        for (let i = 1; i <= daysInMonth; i++) days.push(new Date(year, month, i));
-
-        return days;
-    }, [viewDate]);
-
-    // Calculate "Now" Line Position
-    const nowLineTop = useMemo(() => {
-        if (currentTimeMinutes === null) return -1;
-        const dayStartMinutes = START_HOUR * 60;
-        // Check if current time is within viewable hours
-        if (currentTimeMinutes < dayStartMinutes || currentTimeMinutes > END_HOUR * 60 + 59) return -1;
-
-        return ((currentTimeMinutes - dayStartMinutes) / 60) * PIXELS_PER_HOUR;
-    }, [currentTimeMinutes]);
-
-    // Check if selected date is today to show the line
-    const isTodaySelected = useMemo(() => {
-        const today = new Date();
-        return selectedDate.getDate() === today.getDate() &&
-            selectedDate.getMonth() === today.getMonth() &&
-            selectedDate.getFullYear() === today.getFullYear();
-    }, [selectedDate]);
-
     return (
-        <div className="w-full h-full flex flex-col md:flex-row bg-[#fdfbf7] overflow-hidden relative touch-pan-y font-sans">
+        <div className="w-full h-full flex flex-col bg-[#fdfbf7] font-sans relative overflow-hidden">
+            {/* 1. Header (Abs Fixed Top in PWA, but here it's a child) */}
+            <div className="flex items-center justify-between p-4 bg-[#efede6]/80 backdrop-blur-md sticky top-0 z-30 border-b border-stone-200">
+                {onBack ? (
+                    <button onClick={onBack} className="p-2 -ml-2 text-stone-500 hover:text-stone-900 transition-colors">
+                        <ChevronLeft size={24} />
+                    </button>
+                ) : <div className="w-8" />}
 
-            {/* MOBILE HEADER */}
-            <div className="md:hidden flex items-center justify-between p-4 bg-[#efede6] shadow-sm border-b border-stone-300 z-30 shrink-0 h-16">
-                <button
-                    onClick={() => setIsMobileCalendarOpen(!isMobileCalendarOpen)}
-                    className="flex-1 flex items-center justify-center gap-2 font-serif font-bold text-stone-900 text-lg px-2 py-1 rounded-md active:bg-stone-200 transition-colors"
-                >
-                    <Calendar size={20} className="text-stone-500" />
-                    {formatDate(selectedDate.toISOString())}
-                    <motion.div animate={{ rotate: isMobileCalendarOpen ? 180 : 0 }}>
-                        <ChevronDown size={16} />
-                    </motion.div>
-                </button>
-            </div>
+                <div className="flex flex-col items-center">
+                    <h2 className="text-xl font-serif font-bold text-stone-800 uppercase tracking-widest leading-none">
+                        {selectedDate.toLocaleDateString('tr-TR', { month: 'long' })}
+                    </h2>
+                    <span className="text-[10px] font-bold text-stone-400 tracking-[0.2em]">
+                        {selectedDate.getFullYear()}
+                    </span>
+                </div>
 
-            {/* LEFT SIDE: Sidebar & Calendar (Desktop) */}
-            <div className="hidden md:flex md:w-1/3 lg:w-1/4 bg-[#efede6] border-r border-stone-300 flex-col z-20 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
-
-                <div className="p-6 pb-2">
+                <div className="w-8 flex justify-end">
                     <button
-                        onClick={onBack}
-                        className="group flex items-center gap-2 text-stone-500 hover:text-boun-red transition-colors font-serif text-sm font-medium"
+                        onClick={() => setSelectedDate(new Date())}
+                        className="p-2 -mr-2 text-stone-400 hover:text-boun-red transition-colors"
+                        title="Bugün"
                     >
-                        Ana Sayfa
-                        <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
+                        <CalendarIcon size={20} />
                     </button>
                 </div>
-
-                {/* Selected Date Large Display */}
-                <div className="px-8 mt-4">
-                    <div className="flex flex-col animate-in fade-in slide-in-from-left duration-500">
-                        <span className="font-serif text-7xl text-stone-800 leading-none tracking-tighter">
-                            {selectedDate.getDate()}
-                        </span>
-                        <span className="font-serif text-3xl text-stone-600 italic">
-                            {selectedDate.toLocaleDateString('tr-TR', { month: 'long' })}
-                        </span>
-                        <span className="font-sans text-sm font-bold text-stone-400 uppercase tracking-widest mt-1">
-                            {selectedDate.toLocaleDateString('tr-TR', { weekday: 'long' })}, {selectedDate.getFullYear()}
-                        </span>
-                    </div>
-                    <div className="w-full h-px bg-stone-400/50 my-8"></div>
-                </div>
-
-                {/* Mini Calendar */}
-                <div className="px-6 flex-1 overflow-y-auto">
-                    {/* Month Nav */}
-                    <div className="flex items-center justify-between mb-4 px-2">
-                        <button onClick={() => changeMonth(-1)} className="p-1 hover:bg-stone-200 rounded-full transition-colors"><ChevronLeft size={18} /></button>
-                        <span className="font-bold text-stone-800 text-sm">{viewDate.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' })}</span>
-                        <button onClick={() => changeMonth(1)} className="p-1 hover:bg-stone-200 rounded-full transition-colors"><ArrowRight size={18} /></button>
-                    </div>
-
-                    <div className="grid grid-cols-7 gap-y-2 gap-x-1 w-full text-center font-sans text-sm mb-8">
-                        {['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'].map(day => (
-                            <div key={day} className="text-stone-400 font-bold text-[10px] uppercase tracking-wider">{day}</div>
-                        ))}
-
-                        {calendarDays.map((date, i) => {
-                            if (!date) return <div key={`empty-${i}`} />;
-
-                            const isSelected = date.getDate() === selectedDate.getDate() &&
-                                date.getMonth() === selectedDate.getMonth() &&
-                                date.getFullYear() === selectedDate.getFullYear();
-
-                            const isToday = date.getDate() === new Date().getDate() &&
-                                date.getMonth() === new Date().getMonth() &&
-                                date.getFullYear() === new Date().getFullYear();
-
-                            return (
-                                <motion.button
-                                    key={i}
-                                    whileTap={{ scale: 0.9 }}
-                                    onClick={() => setSelectedDate(date)}
-                                    className={`
-                                        aspect-square flex items-center justify-center rounded-full text-xs font-medium transition-all relative
-                                        ${isSelected ? 'bg-stone-800 text-white shadow-md font-bold' : 'text-stone-600 hover:bg-stone-200'}
-                                        ${!isSelected && isToday ? 'border border-boun-gold text-boun-gold font-bold' : ''}
-                                    `}
-                                >
-                                    {date.getDate()}
-                                </motion.button>
-                            );
-                        })}
-                    </div>
-                </div>
             </div>
 
-            {/* MOBILE OVERLAY DRAWER (Simplified Calendar) */}
-            <AnimatePresence>
-                {isMobileCalendarOpen && (
-                    <motion.div
-                        initial={{ y: "100%" }}
-                        animate={{ y: 0 }}
-                        exit={{ y: "100%" }}
-                        transition={SPRINGS.snappy}
-                        className="absolute inset-0 z-50 bg-[#efede6] md:hidden flex flex-col pt-safe-top pb-safe-bottom"
-                    >
-                        {/* Drawer Header */}
-                        <div className="px-4 py-4 border-b border-stone-200 flex justify-between items-center bg-[#fdfbf7] shadow-sm">
-                            <h3 className="font-serif text-xl font-bold text-stone-800">Tarih Seçin</h3>
-                            <button onClick={() => setIsMobileCalendarOpen(false)} className="p-2 bg-stone-100 rounded-full text-stone-500 hover:bg-stone-200 transition-colors">
-                                <X size={20} />
-                            </button>
-                        </div>
+            {/* 2. Date Strip */}
+            <DateStrip selectedDate={selectedDate} onSelectDate={handleDateChange} days={calendarDays} />
 
-                        <div className="flex-1 overflow-y-auto p-6">
-
-                            {/* Mobile Month Nav */}
-                            <div className="flex items-center justify-between mb-8 bg-white p-2 rounded-lg shadow-sm border border-stone-100">
-                                <button onClick={() => changeMonth(-1)} className="p-3 hover:bg-stone-100 rounded-full transition-colors text-stone-600"><ChevronLeft size={24} /></button>
-                                <span className="font-serif font-bold text-stone-900 text-lg uppercase tracking-wider">{viewDate.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' })}</span>
-                                <button onClick={() => changeMonth(1)} className="p-3 hover:bg-stone-100 rounded-full transition-colors text-stone-600"><ArrowRight size={24} /></button>
-                            </div>
-
-                            {/* Mobile Calendar Grid */}
-                            <div className="grid grid-cols-7 gap-y-4 gap-x-2 w-full text-center font-sans mb-8">
-                                {['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'].map(day => (
-                                    <div key={day} className="text-stone-400 font-bold text-xs uppercase tracking-wider mb-2">{day}</div>
-                                ))}
-
-                                {calendarDays.map((date, i) => {
-                                    if (!date) return <div key={`empty-m-${i}`} />;
-
-                                    const isSelected = date.getDate() === selectedDate.getDate() &&
-                                        date.getMonth() === selectedDate.getMonth() &&
-                                        date.getFullYear() === selectedDate.getFullYear();
-
-                                    const isToday = date.getDate() === new Date().getDate() &&
-                                        date.getMonth() === new Date().getMonth() &&
-                                        date.getFullYear() === new Date().getFullYear();
-
-                                    return (
-                                        <motion.button
-                                            key={i}
-                                            whileTap={{ scale: 0.9 }}
-                                            onClick={() => {
-                                                setSelectedDate(date);
-                                                setIsMobileCalendarOpen(false);
-                                            }}
-                                            className={`
-                                                aspect-square flex items-center justify-center rounded-2xl text-lg font-medium transition-all relative shadow-sm
-                                                ${isSelected ? 'bg-stone-900 text-boun-gold shadow-lg font-bold scale-105 ring-2 ring-stone-900 ring-offset-2 ring-offset-[#efede6]' : 'bg-white text-stone-600 border border-stone-100'}
-                                                ${!isSelected && isToday ? 'border-2 border-boun-gold text-boun-gold font-bold bg-amber-50' : ''}
-                                            `}
-                                        >
-                                            {date.getDate()}
-                                        </motion.button>
-                                    );
-                                })}
-                            </div>
-
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* RIGHT SIDE: Timeline */}
-            <div
-                ref={scrollContainerRef}
-                className="flex-1 bg-[#fdfbf7] overflow-y-auto relative custom-scrollbar w-full touch-pan-y"
-                style={{ backgroundImage: 'linear-gradient(#e5e7eb 1px, transparent 1px)', backgroundSize: `100% ${PIXELS_PER_HOUR}px` }}
-            >
-                <div className="relative min-h-full" style={{ height: (END_HOUR - START_HOUR + 1) * PIXELS_PER_HOUR + 50 }}>
-
-                    {/* Hour Markers */}
-                    {Array.from({ length: END_HOUR - START_HOUR + 1 }).map((_, i) => {
-                        const hour = START_HOUR + i;
-                        return (
-                            <div
-                                key={hour}
-                                className="absolute w-full border-t border-stone-200/60 flex items-start"
-                                style={{ top: i * PIXELS_PER_HOUR, height: PIXELS_PER_HOUR }}
-                            >
-                                <span className="text-xs font-sans font-bold text-stone-400 w-16 text-right pr-4 -mt-2.5 bg-[#fdfbf7]">
-                                    {hour.toString().padStart(2, '0')}:00
-                                </span>
-                            </div>
-                        );
-                    })}
-
-                    {/* Events Layer */}
-                    <div className="absolute top-0 right-4 left-20 bottom-0">
-
-                        {loading && (
-                            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-2 text-stone-400">
-                                <Loader2 className="animate-spin" size={24} />
-                                <span className="text-xs font-bold uppercase">Etkinlikler Yükleniyor...</span>
-                            </div>
-                        )}
-
-                        {!loading && positionedEvents.length === 0 && (
-                            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-stone-400 font-serif italic text-center px-4">
-                                Bu güne ait etkinlik bulunamadı.
-                            </div>
-                        )}
-
-                        <LayoutGroup>
-                            <AnimatePresence>
-                                {positionedEvents.map((event) => {
-                                    const isSelected = selectedEventId === event.id;
-                                    const isSaved = userProfile?.savedEventIds?.includes(event.id);
-
-                                    return (
-                                        <motion.div
-                                            layout
-                                            key={event.id}
-                                            initial={{ opacity: 0, scale: 0.95 }}
-                                            animate={{
-                                                opacity: 1,
-                                                scale: 1,
-                                                height: isSelected ? 'auto' : `${event.height}px`,
-                                                zIndex: isSelected ? 50 : 10
-                                            }}
-                                            style={{
-                                                top: `${event.top}px`,
-                                                minHeight: `${Math.max(event.height, 60)}px`,
-                                                left: `${event.left}%`,
-                                                width: `${event.width}%`,
-                                            }}
-                                            onClick={() => setSelectedEventId(isSelected ? null : event.id)}
-                                            className={`
-                                        absolute cursor-pointer transition-all duration-200
-                                        bg-white rounded-sm shadow-sm hover:shadow-md
-                                        border-l-[6px] border-stone-500
-                                        p-3 overflow-hidden group
-                                     `}
-                                        >
-                                            <motion.div layout="position" className="flex flex-col h-full relative">
-                                                <div className="flex justify-between items-start gap-2">
-                                                    <span className="text-xs font-bold font-sans uppercase tracking-wider text-stone-600">
-                                                        {formatTime(event.startDate)}
-                                                    </span>
-                                                    {isSelected && (
-                                                        <div className="flex items-center gap-2">
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    toggleBookmark('event', event.id);
-                                                                }}
-                                                                className="text-stone-400 hover:text-boun-gold transition-colors"
-                                                            >
-                                                                <Bookmark size={16} fill={isSaved ? "currentColor" : "none"} className={isSaved ? "text-boun-gold" : ""} />
-                                                            </button>
-                                                            <button
-                                                                onClick={(e) => { e.stopPropagation(); setSelectedEventId(null); }}
-                                                                className="text-stone-400 hover:text-stone-600"
-                                                            >
-                                                                <X size={14} />
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                <motion.h4 layout="position" className="font-serif font-bold text-lg text-stone-900 leading-tight mt-1 line-clamp-2 group-hover:text-boun-blue transition-colors">
-                                                    {event.title}
-                                                </motion.h4>
-
-                                                {!isSelected && (
-                                                    <motion.div layout="position" className="text-xs text-stone-500 mt-1 flex items-center gap-1 truncate font-sans">
-                                                        <MapPin size={10} /> {event.location}
-                                                    </motion.div>
-                                                )}
-
-                                                {/* Expanded Content */}
-                                                {isSelected && (
-                                                    <motion.div
-                                                        initial={{ opacity: 0 }}
-                                                        animate={{ opacity: 1 }}
-                                                        transition={{ duration: 0.3 }}
-                                                        className="mt-3 text-stone-600 font-sans border-t border-stone-100 pt-2"
-                                                    >
-                                                        {event.posterUrl && (
-                                                            <div className="mb-4 rounded-lg overflow-hidden border border-stone-200">
-                                                                <img src={event.posterUrl} alt={event.title} className="w-full h-auto max-h-60 object-contain bg-stone-100" />
-                                                            </div>
-                                                        )}
-
-                                                        <div className="flex items-center justify-between mb-2">
-                                                            <div className="flex items-center gap-1 text-xs font-bold text-stone-500">
-                                                                <MapPin size={12} /> {event.location}
-                                                            </div>
-                                                            <div className="text-[10px] font-bold text-boun-blue bg-blue-50 px-2 py-1 rounded">
-                                                                {event.clubName}
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="text-sm leading-relaxed whitespace-pre-wrap mb-4">
-                                                            {event.details}
-                                                        </div>
-
-                                                        {event.link && (
-                                                            <a href={event.link} target="_blank" rel="noreferrer" className="block w-full text-center bg-stone-900 text-white py-2 rounded text-sm font-bold hover:bg-stone-700 transition-colors">
-                                                                Kayıt / Detay
-                                                            </a>
-                                                        )}
-                                                    </motion.div>
-                                                )}
-                                            </motion.div>
-                                        </motion.div>
-                                    );
-                                })}
-                            </AnimatePresence>
-                        </LayoutGroup>
-
-                        {/* DYNAMIC NOW LINE */}
-                        {isTodaySelected && nowLineTop !== -1 && (
-                            <div
-                                className="absolute w-full flex items-center z-30 pointer-events-none transition-all duration-1000 ease-linear"
-                                style={{ top: nowLineTop }}
-                            >
-                                <div className="h-px bg-boun-red w-full border-t border-dashed border-boun-red/50 shadow-[0_0_8px_rgba(138,27,27,0.4)]"></div>
-                                <div className="absolute right-0 bg-boun-red text-white text-[10px] px-2 py-0.5 font-bold rounded-l-md shadow-sm flex items-center gap-1">
-                                    <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></div> ŞİMDİ
-                                </div>
-                            </div>
-                        )}
-
+            {/* 3. Main Content (Timeline) */}
+            <div className="flex-1 overflow-y-auto relative p-6 custom-scrollbar">
+                {loading ? (
+                    <div className="flex flex-col items-center justify-center h-40 text-stone-400 animate-pulse">
+                        <Clock size={32} className="mb-2 opacity-50" />
+                        <span className="text-xs font-bold uppercase tracking-widest">Yükleniyor...</span>
                     </div>
-                </div>
+                ) : dayEvents.length > 0 ? (
+                    <div className="max-w-2xl mx-auto pl-2">
+                        {dayEvents.map(event => (
+                            <EventCard
+                                key={event.id}
+                                event={event}
+                                isExpanded={expandedEventId === event.id}
+                                onClick={() => setExpandedEventId(expandedEventId === event.id ? null : event.id)}
+                            />
+                        ))}
+                    </div>
+                ) : (
+                    <div className="flex flex-col items-center justify-center h-[50vh] text-stone-400 text-center px-6 opacity-60">
+                        <div className="w-20 h-20 rounded-full bg-stone-100 flex items-center justify-center mb-4">
+                            <CalendarIcon size={32} className="text-stone-300" />
+                        </div>
+                        <h3 className="font-serif text-xl font-bold text-stone-600 mb-1">Etkinlik Yok</h3>
+                        <p className="text-sm font-medium">Bu tarihte planlanmış bir etkinlik bulunmuyor.</p>
+                        <button
+                            onClick={() => setSelectedDate(new Date())}
+                            className="mt-6 px-6 py-2 bg-stone-800 text-stone-50 rounded-full text-xs font-bold uppercase tracking-wider hover:bg-stone-700 transition-colors"
+                        >
+                            Bugüne Dön
+                        </button>
+                    </div>
+                )}
+
+                {/* Bottom Safe Area Spacer */}
+                <div className="h-20" />
             </div>
         </div>
     );

@@ -95,21 +95,26 @@ const AcademicReviews: React.FC = () => {
 
 
             {/* --- HEADER --- */}
-            <div className="sticky top-0 z-40 bg-[#f0f0f0]/80 backdrop-blur-xl border-b border-stone-200/50 transition-all duration-300">
-                <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 md:h-20 flex items-center justify-between">
+            <div className="sticky top-0 z-40 bg-[#f0f0f0]/95 backdrop-blur-xl border-b border-stone-200/50 transition-all duration-300">
+                <div className="max-w-7xl mx-auto px-4 md:px-6 h-14 md:h-20 flex items-center justify-between relative">
 
-                    {/* Left: Brand */}
-                    <div className="flex items-center gap-4">
+                    {/* DESKTOP LEFT: Brand */}
+                    <div className="hidden md:flex items-center gap-4">
                         <Link to="/forum" className="p-2 -ml-2 rounded-full hover:bg-white/50 text-stone-400 hover:text-stone-900 transition-all active:scale-95">
                             <ArrowRight size={20} className="rotate-180" />
                         </Link>
                         <div>
-                            <h1 className="font-serif font-black text-xl md:text-2xl text-stone-900 leading-none tracking-tight">AKADEMİK</h1>
-                            <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest hidden md:block">BOĞAZİÇİ AKADEMİK FORUMU</p>
+                            <h1 className="font-serif font-black text-2xl text-stone-900 leading-none tracking-tight">AKADEMİK</h1>
+                            <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">BOĞAZİÇİ AKADEMİK FORUMU</p>
                         </div>
                     </div>
 
-                    {/* Desktop Center: Tab Switcher (Original style for desktop) */}
+                    {/* MOBILE CENTER: Title (Absolute) */}
+                    <div className="md:hidden absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+                        <h1 className="font-serif font-bold text-lg text-stone-900 leading-none">AKADEMİK</h1>
+                    </div>
+
+                    {/* DESKTOP CENTER: Tab Switcher */}
                     <div className="hidden md:flex bg-stone-200/60 p-1.5 rounded-xl">
                         <button
                             onClick={() => setActiveTab('courses')}
@@ -133,13 +138,13 @@ const AcademicReviews: React.FC = () => {
                         </button>
                     </div>
 
-                    {/* Right: Actions & Search */}
-                    <div className="flex items-center gap-3">
-                        {/* Search Input - Expands on focus */}
+                    {/* DESKTOP RIGHT: Actions & Search */}
+                    <div className="hidden md:flex items-center gap-3">
+                        {/* Search Input */}
                         <div className="relative group w-auto">
                             <div className={cn(
                                 "flex items-center bg-white border border-stone-200 rounded-xl px-3 py-2 transition-all duration-300",
-                                "w-32 focus-within:w-48 md:w-48 md:focus-within:w-64 focus-within:border-stone-400 focus-within:shadow-md"
+                                "w-48 focus-within:w-64 focus-within:border-stone-400 focus-within:shadow-md"
                             )}>
                                 <Search className="text-stone-400 shrink-0" size={16} />
                                 <input
@@ -154,12 +159,32 @@ const AcademicReviews: React.FC = () => {
 
                         <button
                             onClick={() => setIsCreateModalOpen(true)}
-                            className="bg-stone-900 hover:bg-black text-white p-2 md:px-4 md:py-2 rounded-xl flex items-center gap-2 transition-transform active:scale-95 shadow-lg shadow-stone-900/20"
+                            className="bg-stone-900 hover:bg-black text-white px-4 py-2 rounded-xl flex items-center gap-2 transition-transform active:scale-95 shadow-lg shadow-stone-900/20"
                         >
                             <Plus size={20} />
-                            <span className="hidden md:inline font-bold text-sm">Katkıda Bulun</span>
+                            <span className="font-bold text-sm">Katkıda Bulun</span>
                         </button>
                     </div>
+                </div>
+
+                {/* MOBILE SUB-HEADER: Search & Add (Below Title Bar) */}
+                <div className="md:hidden px-4 pb-3 flex items-center gap-3">
+                    <div className="flex-1 flex items-center bg-white border border-stone-200 rounded-xl px-3 py-2.5 shadow-sm">
+                        <Search className="text-stone-400 shrink-0" size={16} />
+                        <input
+                            type="text"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            placeholder={activeTab === 'courses' ? "Ders Kodu, Adı..." : "Hoca Adı..."}
+                            className="w-full bg-transparent border-none text-sm font-bold text-stone-800 placeholder:text-stone-400 focus:ring-0 px-2 outline-none"
+                        />
+                    </div>
+                    <button
+                        onClick={() => setIsCreateModalOpen(true)}
+                        className="bg-stone-900 text-white p-2.5 rounded-xl shadow-md active:scale-95"
+                    >
+                        <Plus size={20} />
+                    </button>
                 </div>
 
                 {/* --- MOBILE TOGGLE SECTION (Centered & Enlarged) --- */}

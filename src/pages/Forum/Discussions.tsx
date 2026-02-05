@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     MessageSquare, Heart, Share2, MoreHorizontal, Plus,
     Search, Filter, Ghost, User as UserIcon, X, ChevronLeft,
-    Flame, CornerDownRight, Flag
+    Flame, CornerDownRight, Flag, Send
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -24,10 +24,10 @@ const useMediaQuery = ({ query }: { query: string }) => {
 
 // --- MOCK DATA ---
 const CATEGORIES = [
-    { id: 'genel', label: 'Genel', icon: MessageSquare, color: 'text-blue-400' },
-    { id: 'soru-cevap', label: 'Soru/Cevap', icon: MessageSquare, color: 'text-emerald-400' },
-    { id: 'gundem', label: 'Gündem', icon: Flame, color: 'text-orange-500' },
-    { id: 'itiraf', label: 'İtiraf', icon: Ghost, color: 'text-purple-500' },
+    { id: 'genel', label: 'Genel', icon: MessageSquare, color: 'text-blue-600' },
+    { id: 'soru-cevap', label: 'Soru/Cevap', icon: MessageSquare, color: 'text-emerald-600' },
+    { id: 'gundem', label: 'Gündem', icon: Flame, color: 'text-orange-600' },
+    { id: 'itiraf', label: 'İtiraf', icon: Ghost, color: 'text-purple-600' },
 ] as const;
 
 type CategoryId = typeof CATEGORIES[number]['id'];
@@ -79,7 +79,7 @@ const MOCK_THREADS: Thread[] = Array.from({ length: 20 }).map((_, i) => ({
 }));
 
 
-// --- SUB-COMPONENTS (INLINED FOR SINGLE FILE CLARITY INITIALLY) ---
+// --- SUB-COMPONENTS ---
 
 // 1. Thread Card (Feed Item)
 const ThreadCard = ({ thread, isActive, onClick }: { thread: Thread, isActive: boolean, onClick: () => void }) => {
@@ -90,13 +90,13 @@ const ThreadCard = ({ thread, isActive, onClick }: { thread: Thread, isActive: b
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             className={cn(
-                "group relative p-4 cursor-pointer border-b border-stone-800 hover:bg-stone-900/50 transition-colors",
-                isActive ? "bg-stone-900 border-l-2 border-l-red-600" : "bg-transparent border-l-2 border-l-transparent"
+                "group relative p-4 cursor-pointer border-b border-stone-200 hover:bg-stone-100 transition-colors",
+                isActive ? "bg-stone-100 border-l-2 border-l-stone-900" : "bg-transparent border-l-2 border-l-transparent"
             )}
         >
             {/* Hype Indicator */}
             {thread.isHot && (
-                <div className="absolute top-2 right-2 text-[10px] font-bold text-orange-500 flex items-center gap-1 animate-pulse">
+                <div className="absolute top-2 right-2 text-[10px] font-bold text-orange-600 flex items-center gap-1 animate-pulse">
                     <Flame size={10} /> HOT
                 </div>
             )}
@@ -104,33 +104,33 @@ const ThreadCard = ({ thread, isActive, onClick }: { thread: Thread, isActive: b
             <div className="flex items-start gap-3">
                 {/* Avatar / Vote Sidebar (Combined for density) */}
                 <div className="flex flex-col items-center gap-1 min-w-[30px]">
-                    <div className={cn("w-8 h-8 rounded-full flex items-center justify-center bg-stone-800 border border-stone-700", thread.author.isAnon && "border-purple-500/30")}>
-                        {thread.author.isAnon ? <Ghost size={14} className="text-purple-400" /> : <UserIcon size={14} className="text-stone-400" />}
+                    <div className={cn("w-8 h-8 rounded-full flex items-center justify-center bg-white border border-stone-200 shadow-sm", thread.author.isAnon && "border-purple-200 bg-purple-50")}>
+                        {thread.author.isAnon ? <Ghost size={14} className="text-purple-500" /> : <UserIcon size={14} className="text-stone-400" />}
                     </div>
                     <span className="text-[10px] font-bold text-stone-500 mt-1">{thread.stats.upvotes}</span>
                 </div>
 
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                        <span className={cn("text-[10px] px-1.5 py-0.5 rounded border bg-stone-900/50",
-                            CATEGORIES.find(c => c.id === thread.category)?.color,
-                            "border-stone-800"
+                        <span className={cn("text-[10px] px-1.5 py-0.5 rounded border font-bold",
+                            CATEGORIES.find(c => c.id === thread.category)?.color.replace('text-', 'bg-').replace('600', '100').replace('500', '100'),
+                            "border-transparent text-stone-600"
                         )}>
                             {CATEGORIES.find(c => c.id === thread.category)?.label}
                         </span>
-                        <span className="text-[10px] text-stone-600">• {thread.timestamp}</span>
+                        <span className="text-[10px] text-stone-400">• {thread.timestamp}</span>
                     </div>
 
-                    <h3 className={cn("text-sm font-bold text-stone-200 mb-1 leading-snug line-clamp-2 group-hover:text-red-500 transition-colors", isActive && "text-red-500")}>
+                    <h3 className={cn("text-sm font-bold text-stone-900 mb-1 leading-snug line-clamp-2 group-hover:text-boun-blue transition-colors", isActive && "text-boun-blue")}>
                         {thread.title}
                     </h3>
-                    <p className="text-xs text-stone-500 line-clamp-2">{thread.content}</p>
+                    <p className="text-xs text-stone-500 line-clamp-2 leading-relaxed">{thread.content}</p>
 
-                    <div className="flex items-center gap-4 mt-3 text-stone-600">
-                        <div className="flex items-center gap-1 text-xs hover:text-stone-300 transition-colors">
+                    <div className="flex items-center gap-4 mt-3 text-stone-400">
+                        <div className="flex items-center gap-1 text-xs hover:text-stone-600 transition-colors">
                             <MessageSquare size={12} /> {thread.stats.comments}
                         </div>
-                        <div className="flex items-center gap-1 text-xs hover:text-stone-300 transition-colors">
+                        <div className="flex items-center gap-1 text-xs hover:text-stone-600 transition-colors">
                             <Share2 size={12} /> Paylaş
                         </div>
                     </div>
@@ -145,7 +145,7 @@ const CommentNode = ({ comment, isRoot = false }: { comment: Comment, isRoot?: b
     const [collapsed, setCollapsed] = useState(false);
 
     return (
-        <div className={cn("relative", !isRoot && "pl-4 md:pl-6 border-l border-stone-800 hover:border-stone-700 transition-colors")}>
+        <div className={cn("relative", !isRoot && "pl-4 md:pl-6 border-l border-stone-200 hover:border-stone-300 transition-colors")}>
             {/* Collapse Trigger Line */}
             <div
                 className="absolute left-0 top-0 bottom-0 w-4 cursor-pointer z-10 -ml-2" // Invisible click area for line
@@ -154,22 +154,22 @@ const CommentNode = ({ comment, isRoot = false }: { comment: Comment, isRoot?: b
 
             <div className="py-2 group">
                 <div className="flex items-center gap-2 mb-1" onClick={() => setCollapsed(!collapsed)}>
-                    <span className={cn("font-bold text-xs cursor-pointer hover:underline", comment.author.isAnon ? "text-purple-400" : "text-stone-300")}>
+                    <span className={cn("font-bold text-xs cursor-pointer hover:underline", comment.author.isAnon ? "text-purple-600" : "text-stone-700")}>
                         {comment.author.isAnon ? "Anonim" : comment.author.name}
                     </span>
-                    <span className="text-[10px] text-stone-600">{comment.timestamp}</span>
-                    {collapsed && <span className="text-[10px] text-stone-500 bg-stone-800 px-1 rounded">+{comment.children.length} yanıt</span>}
+                    <span className="text-[10px] text-stone-400">{comment.timestamp}</span>
+                    {collapsed && <span className="text-[10px] text-stone-500 bg-stone-100 px-1 rounded">+{comment.children.length} yanıt</span>}
                 </div>
 
                 {!collapsed && (
                     <>
-                        <p className="text-sm text-stone-400 leading-relaxed mb-2">{comment.content}</p>
+                        <p className="text-sm text-stone-700 leading-relaxed mb-2">{comment.content}</p>
 
                         {/* Actions */}
-                        <div className="flex items-center gap-4 text-stone-600 mb-2">
+                        <div className="flex items-center gap-4 text-stone-400 mb-2">
                             <button className="flex items-center gap-1 text-[10px] font-bold hover:text-orange-500 transition-colors"><Heart size={10} /> {comment.upvotes}</button>
                             <button className="flex items-center gap-1 text-[10px] font-bold hover:text-blue-500 transition-colors"><CornerDownRight size={10} /> Yanıtla</button>
-                            <button className="ml-auto hover:text-stone-300"><MoreHorizontal size={12} /></button>
+                            <button className="ml-auto hover:text-stone-600"><MoreHorizontal size={12} /></button>
                         </div>
                     </>
                 )}
@@ -204,44 +204,58 @@ const Discussions: React.FC = () => {
     }, [isDesktop, activeTab]);
 
     return (
-        <div className="min-h-screen bg-[#0a0a0a] text-stone-200 flex flex-col md:flex-row h-screen overflow-hidden">
+        <div className="min-h-screen bg-stone-50 text-stone-900 flex flex-col md:flex-row h-screen overflow-hidden font-sans">
 
-            {/* LEFT PANE: FEED (Visible on Mobile unless thread selected, Always visible on Desktop) */}
+            {/* LEFT PANE: FEED */}
             <div className={cn(
-                "w-full md:w-[400px] lg:w-[450px] flex flex-col border-r border-stone-800 bg-[#0a0a0a] z-10",
+                "w-full md:w-[400px] lg:w-[450px] flex flex-col border-r border-stone-200 bg-stone-50 z-10",
                 !isDesktop && selectedThread ? "hidden" : "flex"
             )}>
-                {/* Header & Filters */}
-                <div className="p-4 border-b border-stone-800 bg-[#0a0a0a]/95 backdrop-blur z-20 sticky top-0">
-                    <div className="flex items-center justify-between mb-4">
-                        <h1 className="text-xl font-bold font-serif tracking-tight">Topluluk</h1>
-                        <button className="p-2 bg-stone-900 rounded-full text-stone-400 hover:text-white"><Search size={18} /></button>
+                {/* HEADER */}
+                <div className="border-b border-stone-200 bg-stone-50/95 backdrop-blur z-20 sticky top-0 transition-all">
+
+                    {/* DESKTOP HEADER */}
+                    <div className="hidden md:flex p-4 items-center justify-between pointer-events-none md:pointer-events-auto">
+                        <h1 className="text-2xl font-bold font-serif tracking-tight text-stone-900">Topluluk</h1>
+                        <button className="p-2 bg-white border border-stone-200 rounded-full text-stone-400 hover:text-boun-blue shadow-sm cursor-pointer"><Search size={18} /></button>
                     </div>
 
-                    {/* Category Chips */}
-                    <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
-                        <button
-                            onClick={() => setActiveTab('all')}
-                            className={cn("px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all", activeTab === 'all' ? "bg-stone-100 text-black" : "bg-stone-900 text-stone-500 hover:bg-stone-800")}
-                        >
-                            Tümü
+                    {/* MOBILE HEADER (Centered Title) */}
+                    <div className="md:hidden h-14 relative flex items-center justify-center border-b border-stone-200/50">
+                        <h1 className="text-lg font-bold font-serif text-stone-900">Topluluk</h1>
+                        <button className="absolute right-4 p-2 text-stone-500 hover:text-stone-900">
+                            <Search size={20} />
                         </button>
-                        {CATEGORIES.map(cat => (
+                    </div>
+
+                    {/* Category Chips (Scrollable) */}
+                    <div className="p-4 pt-4 md:pt-4">
+                        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
                             <button
-                                key={cat.id}
-                                onClick={() => setActiveTab(cat.id)}
-                                className={cn("px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all border border-transparent",
-                                    activeTab === cat.id ? `bg-stone-900 ${cat.color} border-stone-700` : "bg-stone-900 text-stone-500 hover:bg-stone-800"
+                                onClick={() => setActiveTab('all')}
+                                className={cn("px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border shadow-sm",
+                                    activeTab === 'all' ? "bg-stone-900 text-white border-stone-900" : "bg-white text-stone-600 border-stone-200 hover:border-stone-300"
                                 )}
                             >
-                                <cat.icon size={10} /> {cat.label}
+                                Tümü
                             </button>
-                        ))}
+                            {CATEGORIES.map(cat => (
+                                <button
+                                    key={cat.id}
+                                    onClick={() => setActiveTab(cat.id)}
+                                    className={cn("px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all border shadow-sm",
+                                        activeTab === cat.id ? `bg-stone-900 text-white border-stone-900` : "bg-white text-stone-600 border-stone-200 hover:border-stone-300"
+                                    )}
+                                >
+                                    <cat.icon size={12} /> {cat.label}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
 
                 {/* Thread List */}
-                <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-stone-800">
+                <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-stone-200">
                     {filteredThreads.map(thread => (
                         <ThreadCard
                             key={thread.id}
@@ -250,44 +264,50 @@ const Discussions: React.FC = () => {
                             onClick={() => setSelectedThread(thread)}
                         />
                     ))}
-                    {/* Bottom Padding for FAB */}
                     <div className="h-24" />
                 </div>
             </div>
 
 
-            {/* RIGHT PANE: DETAIL (Agora Split View) */}
-            {/* On Mobile: Full screen overlay. On Desktop: Static right pane */}
+            {/* RIGHT PANE: DETAIL */}
             <div className={cn(
-                "flex-1 bg-[#0c0c0c] flex flex-col h-full",
+                "flex-1 bg-white flex flex-col h-full border-l border-stone-200",
                 !isDesktop && !selectedThread ? "hidden" : "flex"
             )}>
                 {selectedThread ? (
                     <>
                         {/* Detail Header */}
-                        <div className="p-4 border-b border-stone-800 flex items-center gap-4 bg-[#0c0c0c] sticky top-0 z-20">
+                        <div className="h-14 md:h-20 px-4 flex items-center gap-4 bg-white/95 backdrop-blur sticky top-0 z-20 border-b border-stone-100">
                             {!isDesktop && (
-                                <button onClick={() => setSelectedThread(null)} className="p-1 -ml-1 text-stone-400">
+                                <button onClick={() => setSelectedThread(null)} className="p-2 -ml-2 text-stone-500 hover:bg-stone-100 rounded-full">
                                     <ChevronLeft size={24} />
                                 </button>
                             )}
-                            <div className="flex-1 min-w-0">
-                                <h1 className="text-lg font-bold leading-tight truncate">{selectedThread.title}</h1>
-                                <span className="text-xs text-stone-500">
+                            <div className="flex-1 min-w-0 flex flex-col justify-center">
+                                <h1 className="text-lg md:text-xl font-bold leading-tight truncate text-stone-900">{selectedThread.title}</h1>
+                                <span className="text-xs text-stone-500 font-medium hidden md:inline">
                                     {CATEGORIES.find(c => c.id === selectedThread.category)?.label} • {selectedThread.author.isAnon ? "Anonim" : selectedThread.author.name}
                                 </span>
                             </div>
                             <div className="flex gap-2">
-                                <button className="p-2 hover:bg-stone-800 rounded-full transition-colors text-stone-500"><Flag size={18} /></button>
-                                <button className="p-2 hover:bg-stone-800 rounded-full transition-colors text-stone-500"><Share2 size={18} /></button>
+                                <button className="p-2 hover:bg-stone-50 rounded-full transition-colors text-stone-400 hover:text-red-500"><Flag size={18} /></button>
+                                <button className="p-2 hover:bg-stone-50 rounded-full transition-colors text-stone-400 hover:text-blue-500"><Share2 size={18} /></button>
                             </div>
                         </div>
 
-                        {/* Detail Content (Scrollable) */}
-                        <div className="flex-1 overflow-y-auto p-4 md:p-8 scrollbar-thin scrollbar-thumb-stone-800">
+                        {/* Detail Content */}
+                        <div className="flex-1 overflow-y-auto p-4 md:p-8 scrollbar-thin scrollbar-thumb-stone-200">
+                            {/* Mobile Sub-info */}
+                            <div className="md:hidden flex items-center gap-2 mb-4 text-xs text-stone-500 font-medium">
+                                <span className={cn("px-2 py-0.5 rounded-full border", CATEGORIES.find(c => c.id === selectedThread.category)?.color.replace('text-', 'bg-').replace('600', '100') || "bg-stone-100", "border-transparent text-stone-800")}>
+                                    {CATEGORIES.find(c => c.id === selectedThread.category)?.label}
+                                </span>
+                                <span>• {selectedThread.author.isAnon ? "Anonim" : selectedThread.author.name}</span>
+                            </div>
+
                             {/* Original Post */}
-                            <div className="mb-8 pb-8 border-b border-stone-800/50">
-                                <p className="text-stone-300 leading-relaxed whitespace-pre-wrap text-sm md:text-base">
+                            <div className="mb-8 pb-8 border-b border-stone-100">
+                                <p className="text-stone-800 leading-relaxed whitespace-pre-wrap text-base font-medium">
                                     {selectedThread.content}
                                 </p>
                             </div>
@@ -296,9 +316,9 @@ const Discussions: React.FC = () => {
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between mb-6">
                                     <h3 className="font-bold text-stone-400 text-xs uppercase tracking-widest">Yanıtlar</h3>
-                                    <div className="flex gap-2">
-                                        <button className="text-xs text-stone-500 hover:text-stone-300">En Yeniler</button>
-                                        <button className="text-xs font-bold text-stone-300">Popüler</button>
+                                    <div className="flex gap-4">
+                                        <button className="text-xs font-bold text-stone-900 border-b-2 border-stone-900 pb-0.5">En Yeniler</button>
+                                        <button className="text-xs font-bold text-stone-400 hover:text-stone-600">Popüler</button>
                                     </div>
                                 </div>
 
@@ -306,30 +326,30 @@ const Discussions: React.FC = () => {
                                     <CommentNode key={comment.id} comment={comment} isRoot />
                                 ))}
 
-                                {/* Padding for mobile bottom */}
                                 <div className="h-24 md:h-8" />
                             </div>
                         </div>
 
-                        {/* Reply Input (Sticky Bottom) */}
-                        <div className="p-4 bg-[#0c0c0c] border-t border-stone-800">
-                            <div className="relative">
+                        {/* Reply Input */}
+                        <div className="p-4 bg-white border-t border-stone-200">
+                            <div className="relative max-w-3xl mx-auto">
                                 <input
                                     type="text"
                                     placeholder="Düşüncelerini paylaş..."
-                                    className="w-full bg-stone-900 border border-stone-800 rounded-full py-3 px-4 text-sm focus:outline-none focus:border-stone-600 transition-colors"
+                                    className="w-full bg-stone-50 border border-stone-200 rounded-full py-3.5 px-6 text-sm focus:outline-none focus:border-boun-blue focus:ring-1 focus:ring-boun-blue/20 transition-all shadow-sm"
                                 />
-                                <button className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-stone-700 rounded-full hover:bg-stone-600 transition-colors">
-                                    <CornerDownRight size={14} className="text-white" />
+                                <button className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-stone-200 rounded-full hover:bg-boun-blue hover:text-white transition-all text-stone-500">
+                                    <CornerDownRight size={16} />
                                 </button>
                             </div>
                         </div>
                     </>
                 ) : (
-                    // Empty State (Desktop only)
-                    <div className="flex-1 flex flex-col items-center justify-center text-stone-600">
-                        <MessageSquare size={48} className="mb-4 opacity-20" />
-                        <p>Bir başlık seçin veya yeni bir tartışma başlatın.</p>
+                    <div className="flex-1 flex flex-col items-center justify-center text-stone-400 bg-stone-50/50">
+                        <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-stone-100 mb-4">
+                            <MessageSquare size={32} className="opacity-50" />
+                        </div>
+                        <p className="font-bold text-stone-500">Bir başlık seçin veya yeni bir tartışma başlatın.</p>
                     </div>
                 )}
             </div>
@@ -339,32 +359,24 @@ const Discussions: React.FC = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setIsCreateModalOpen(true)}
-                className="fixed bottom-6 right-6 md:bottom-8 md:right-8 w-14 h-14 bg-red-700 rounded-full flex items-center justify-center text-white shadow-lg shadow-red-900/40 z-50 hover:bg-red-600 transition-colors"
+                className="fixed bottom-6 right-6 md:bottom-8 md:right-8 w-14 h-14 bg-boun-blue rounded-full flex items-center justify-center text-white shadow-xl shadow-blue-900/20 z-50 hover:bg-blue-700 transition-colors"
             >
                 <Plus size={28} />
             </motion.button>
 
-
             {/* CREATE POST MODAL */}
             <AnimatePresence>
                 {isCreateModalOpen && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setIsCreateModalOpen(false)}
-                            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-                        />
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-stone-900/20 backdrop-blur-sm">
                         <motion.div
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.9, opacity: 0 }}
-                            className="relative w-full max-w-lg bg-[#111] border border-stone-800 rounded-2xl p-6 shadow-2xl"
+                            className="relative w-full max-w-lg bg-white rounded-2xl p-6 shadow-2xl border border-stone-100"
                         >
                             <div className="flex justify-between items-center mb-6">
-                                <h2 className="text-xl font-bold font-serif">Yeni Tartışma Başlat</h2>
-                                <button onClick={() => setIsCreateModalOpen(false)} className="text-stone-500 hover:text-white"><X /></button>
+                                <h2 className="text-xl font-bold font-serif text-stone-800">Yeni Tartışma Başlat</h2>
+                                <button onClick={() => setIsCreateModalOpen(false)} className="text-stone-400 hover:text-stone-900 transition-colors"><X /></button>
                             </div>
 
                             <div className="space-y-4">
@@ -374,27 +386,26 @@ const Discussions: React.FC = () => {
                                         {CATEGORIES.map(cat => (
                                             <button
                                                 key={cat.id}
-                                                // Simplified selection logic for demo
-                                                className={cn("flex flex-col items-center justify-center gap-2 p-3 rounded-lg border text-xs font-bold transition-all",
-                                                    cat.id === 'itiraf' ? "border-purple-900/50 bg-purple-900/10 hover:bg-purple-900/20 text-purple-400" : "border-stone-800 bg-stone-900 hover:bg-stone-800 text-stone-400"
+                                                className={cn("flex flex-col items-center justify-center gap-2 p-3 rounded-xl border text-xs font-bold transition-all",
+                                                    cat.id === 'itiraf' ? "bg-purple-50 border-purple-100 text-purple-600 hover:bg-purple-100" : "bg-stone-50 border-stone-200 text-stone-600 hover:bg-stone-100"
                                                 )}
                                             >
-                                                <cat.icon size={16} />
+                                                <cat.icon size={18} />
                                                 <span>{cat.label}</span>
                                             </button>
                                         ))}
                                     </div>
-                                    <p className="mt-2 text-[10px] text-stone-500 flex items-center gap-1">
-                                        <Ghost size={10} className="text-purple-500" />
-                                        "İtiraf" kategorisinde kimliğiniz <span className="text-purple-400 font-bold">gizli</span> tutulur.
+                                    <p className="mt-3 text-[10px] text-stone-400 flex items-center gap-1">
+                                        <Ghost size={12} className="text-purple-500" />
+                                        "İtiraf" kategorisinde kimliğiniz <span className="text-purple-600 font-bold">gizli</span> tutulur.
                                     </p>
                                 </div>
 
-                                <input type="text" placeholder="Başlık" className="w-full bg-stone-900 border border-stone-800 rounded-lg p-3 text-sm focus:border-stone-600 outline-none" />
-                                <textarea placeholder="İçerik..." rows={5} className="w-full bg-stone-900 border border-stone-800 rounded-lg p-3 text-sm focus:border-stone-600 outline-none resize-none" />
+                                <input type="text" placeholder="Başlık" className="w-full bg-stone-50 border border-stone-200 rounded-xl p-3.5 text-sm focus:border-boun-blue focus:ring-1 focus:ring-boun-blue/20 outline-none font-bold text-stone-800" />
+                                <textarea placeholder="İçerik..." rows={5} className="w-full bg-stone-50 border border-stone-200 rounded-xl p-3.5 text-sm focus:border-boun-blue focus:ring-1 focus:ring-boun-blue/20 outline-none resize-none text-stone-800" />
 
-                                <button className="w-full py-3 bg-stone-200 text-black font-bold rounded-lg hover:bg-white transition-colors">
-                                    Yayınla
+                                <button className="w-full py-3.5 bg-boun-blue text-white font-bold rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20">
+                                    <Send size={18} /> Yayınla
                                 </button>
                             </div>
                         </motion.div>

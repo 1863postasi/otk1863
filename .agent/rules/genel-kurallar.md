@@ -46,6 +46,7 @@ Proje, sunucusuz (serverless) mimari üzerine kuruludur. Aşağıdaki yapı taş
 
 ## 4. UI Bileşen Mimarisi
 *   **Sticky Header:** Mobil uyumluluğa dikkat edin. `sticky top-0` kullanırken içeriğin header altında kalmamasına veya header'ın sayfa düzenini bozmamasına (gereksiz padding vb.) özen gösterin.
+*   **PWA Mobile Layout:** Mobil görünümde ana navigasyon (Header) ekranın **alt** kenarındadır. Ekranın **Sol Üst** ve **Sağ Üst** köşelerinde global butonlar bulunur. Sayfa başlıkları (Titles) mobilde **ortalanmalıdır**. Tasarımlar bu güvenli alanlara (safe areas) dikkat etmelidir.
 *   **Responsive First:** Tüm tasarımlar Mobile-First yaklaşımıyla, hem telefonlarda hem de geniş ekranlarda kusursuz görünmelidir. `hidden md:flex` gibi patternleri etkin kullanın.
 
 ## 5. İletişim ve Süreç

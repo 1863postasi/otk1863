@@ -40,32 +40,33 @@ const CategoryPill = ({ label, active, onClick }: { label: string, active: boole
     </button>
 );
 
-const ProductCard = ({ item, onClick }: { item: Listing, onClick: () => void }) => (
+const ProductCard = React.memo(({ item, onClick }: { item: Listing, onClick: () => void }) => (
     <motion.div
-        layoutId={`product-${item.id}`}
         onClick={onClick}
-        className="break-inside-avoid mb-4 group relative rounded-xl overflow-hidden cursor-pointer bg-white shadow-sm hover:shadow-md transition-shadow"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+        className="group relative rounded-xl overflow-hidden cursor-pointer bg-white shadow-sm hover:shadow-md transition-shadow h-full flex flex-col border border-stone-100"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.2 }}
     >
         {/* Image */}
-        <div className="w-full bg-stone-200 relative aspect-[4/5] sm:aspect-auto">
+        <div className="w-full bg-stone-100 relative aspect-[4/5] sm:aspect-[4/5] overflow-hidden">
             {item.images?.[0] ? (
                 <img
                     src={item.images[0]}
                     alt={item.title}
-                    className="w-full h-full object-cover opacity-95 group-hover:scale-105 transition-transform duration-700 ease-out"
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     loading="lazy"
+                    decoding="async"
                 />
             ) : (
-                <div className="w-full h-48 flex items-center justify-center bg-stone-100 text-stone-300">
+                <div className="w-full h-full flex items-center justify-center bg-stone-100 text-stone-300">
                     <Camera size={32} />
                 </div>
             )}
 
             {/* Price Tag */}
-            <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-md px-2 py-1 rounded-lg shadow-sm border border-stone-100 z-10">
-                <span className="text-xs font-black text-emerald-700">
+            <div className="absolute top-2 right-2 bg-white/95 backdrop-blur-sm px-2 py-1 rounded-md shadow-sm z-10">
+                <span className="text-xs font-bold text-emerald-800">
                     {item.price === 0 ? "BEDAVA" : `${item.price} ${item.currency || '₺'}`}
                 </span>
             </div>
@@ -73,20 +74,20 @@ const ProductCard = ({ item, onClick }: { item: Listing, onClick: () => void }) 
             {/* Sold Overlay */}
             {item.status === 'sold' && (
                 <div className="absolute inset-0 bg-black/50 z-20 flex items-center justify-center backdrop-blur-[1px]">
-                    <span className="border-4 border-white text-white px-4 py-1 font-black text-xl uppercase -rotate-12 tracking-widest opacity-80">Satıldı</span>
+                    <span className="border-2 border-white text-white px-3 py-1 font-bold text-lg uppercase -rotate-12 tracking-widest opacity-90">Satıldı</span>
                 </div>
             )}
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent text-white pt-10">
-            <h3 className="font-bold text-sm leading-tight mb-0.5 line-clamp-2">{item.title}</h3>
-            <div className="flex items-center gap-1 text-[10px] text-white/80">
+        <div className="p-3 flex flex-col flex-1">
+            <h3 className="font-bold text-stone-800 text-sm leading-tight mb-1 line-clamp-2">{item.title}</h3>
+            <div className="mt-auto flex items-center gap-1 text-[10px] text-stone-500">
                 <MapPin size={10} />
                 <span>Kuzey Kampüs</span>
             </div>
         </div>
     </motion.div>
-);
+));
 
 
 const ProductSheet = ({ item, onClose, onContact }: { item: Listing, onClose: () => void, onContact: () => void }) => {
@@ -434,17 +435,32 @@ export default function Marketplace() {
         <div className="min-h-screen bg-stone-50 pb-20 relative">
 
             {/* Header */}
-            <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-xl border-b border-stone-200">
-                <div className="max-w-7xl mx-auto px-4 py-4">
-                    <div className="flex items-center justify-between mb-4">
+            <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-stone-200 transition-all">
+                <div className="max-w-7xl mx-auto px-4 py-2 md:py-4">
+
+                    {/* Desktop Header */}
+                    <div className="hidden md:flex items-center justify-between mb-4">
                         <h1 className="text-xl font-bold font-serif text-stone-800">Kampüs Pazarı</h1>
-                        <button className="p-2 bg-stone-100 rounded-full"><Filter size={18} /></button>
+                        <button className="p-2 bg-stone-100 rounded-full hover:bg-stone-200 transition-colors"><Filter size={18} /></button>
                     </div>
-                    {/* Categories */}
-                    <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-                        {categories.map(cat => (
-                            <CategoryPill key={cat} label={cat} active={activeCategory === cat} onClick={() => setActiveCategory(cat)} />
-                        ))}
+
+                    {/* Mobile Header (Centered Title) */}
+                    <div className="md:hidden h-12 flex items-center justify-center relative mb-2">
+                        <h1 className="text-lg font-bold font-serif text-stone-900">Kampüs Pazarı</h1>
+                    </div>
+
+                    {/* Categories & Filter */}
+                    <div className="flex items-center gap-2">
+                        {/* Mobile Filter Button (Inline with categories) */}
+                        <div className="md:hidden shrink-0">
+                            <button className="p-2 bg-stone-100 rounded-full text-stone-600"><Filter size={16} /></button>
+                        </div>
+
+                        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide flex-1">
+                            {categories.map(cat => (
+                                <CategoryPill key={cat} label={cat} active={activeCategory === cat} onClick={() => setActiveCategory(cat)} />
+                            ))}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -454,21 +470,20 @@ export default function Marketplace() {
                 {loading ? (
                     <div className="flex justify-center py-20"><Loader2 className="animate-spin text-emerald-600" /></div>
                 ) : (
-                    <div className="columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4">
-                        <AnimatePresence>
-                            {filteredItems.map(item => (
-                                <ProductCard key={item.id} item={item} onClick={() => setSelectedItem(item)} />
-                            ))}
-                        </AnimatePresence>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {filteredItems.map(item => (
+                            <ProductCard key={item.id} item={item} onClick={() => setSelectedItem(item)} />
+                        ))}
                         {filteredItems.length === 0 && (
                             <div className="text-center py-20 text-stone-400 col-span-full w-full">İlan bulunamadı.</div>
                         )}
                     </div>
-                )}
-            </div>
+                )
+                }
+            </div >
 
             {/* Default FAB */}
-            <motion.button
+            < motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => {
@@ -478,84 +493,90 @@ export default function Marketplace() {
                 className="fixed bottom-6 right-6 z-40 bg-emerald-600 text-white rounded-full p-4 shadow-xl flex items-center gap-2 font-bold pr-6"
             >
                 <Plus size={24} /> İlan Ver
-            </motion.button>
+            </motion.button >
 
             {/* Detail Sheet */}
             <AnimatePresence>
-                {selectedItem && (
-                    <ProductSheet
-                        item={selectedItem}
-                        onClose={() => setSelectedItem(null)}
-                        onContact={() => {
-                            if (!currentUser) return alert("Giriş yapmalısınız!");
-                            setIsNoteModalOpen(true);
-                        }}
-                    />
-                )}
-            </AnimatePresence>
+                {
+                    selectedItem && (
+                        <ProductSheet
+                            item={selectedItem}
+                            onClose={() => setSelectedItem(null)}
+                            onContact={() => {
+                                if (!currentUser) return alert("Giriş yapmalısınız!");
+                                setIsNoteModalOpen(true);
+                            }}
+                        />
+                    )
+                }
+            </AnimatePresence >
 
             {/* Message Modal */}
-            {selectedItem && (
-                <SendNoteModal
-                    isOpen={isNoteModalOpen}
-                    onClose={() => setIsNoteModalOpen(false)}
-                    listing={selectedItem}
-                    currentUser={currentUser}
-                />
-            )}
+            {
+                selectedItem && (
+                    <SendNoteModal
+                        isOpen={isNoteModalOpen}
+                        onClose={() => setIsNoteModalOpen(false)}
+                        listing={selectedItem}
+                        currentUser={currentUser}
+                    />
+                )
+            }
 
             {/* Create Modal */}
-            {createPortal(
-                <AnimatePresence>
-                    {isAddModalOpen && (
-                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                            <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="bg-white w-full max-w-lg rounded-2xl max-h-[90vh] flex flex-col overflow-hidden">
-                                <div className="p-4 border-b flex justify-between items-center bg-stone-50">
-                                    <h3 className="font-bold text-lg">Yeni İlan</h3>
-                                    <button onClick={() => setIsAddModalOpen(false)}><X /></button>
-                                </div>
-                                <form onSubmit={handleCreateSubmit} className="p-6 overflow-y-auto space-y-4">
-                                    <input name="title" placeholder="Başlık" className="w-full border p-3 rounded-lg" required />
-
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <input name="price" type="number" placeholder="Fiyat (TL)" className="w-full border p-3 rounded-lg" required />
-                                        <select name="category" className="w-full border p-3 rounded-lg">
-                                            {categories.filter(c => c !== 'Tümü').map(c => <option key={c} value={c}>{c}</option>)}
-                                        </select>
+            {
+                createPortal(
+                    <AnimatePresence>
+                        {isAddModalOpen && (
+                            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                                <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="bg-white w-full max-w-lg rounded-2xl max-h-[90vh] flex flex-col overflow-hidden">
+                                    <div className="p-4 border-b flex justify-between items-center bg-stone-50">
+                                        <h3 className="font-bold text-lg">Yeni İlan</h3>
+                                        <button onClick={() => setIsAddModalOpen(false)}><X /></button>
                                     </div>
+                                    <form onSubmit={handleCreateSubmit} className="p-6 overflow-y-auto space-y-4">
+                                        <input name="title" placeholder="Başlık" className="w-full border p-3 rounded-lg" required />
 
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <select name="condition" className="w-full border p-3 rounded-lg">
-                                            <option value="new">Yeni</option>
-                                            <option value="like-new">Yeni Gibi</option>
-                                            <option value="good">İyi</option>
-                                            <option value="fair">İdare Eder</option>
-                                        </select>
-                                        <input name="phone" placeholder="Görünen Tel (Opsiyonel)" className="w-full border p-3 rounded-lg" />
-                                    </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <input name="price" type="number" placeholder="Fiyat (TL)" className="w-full border p-3 rounded-lg" required />
+                                            <select name="category" className="w-full border p-3 rounded-lg">
+                                                {categories.filter(c => c !== 'Tümü').map(c => <option key={c} value={c}>{c}</option>)}
+                                            </select>
+                                        </div>
 
-                                    <input name="whatsapp" placeholder="WhatsApp No (örn: 90555...)" className="w-full border p-3 rounded-lg border-green-200 bg-green-50" />
-                                    <p className="text-[10px] text-green-700 -mt-2">WhatsApp linki oluşturmak için kullanılır.</p>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <select name="condition" className="w-full border p-3 rounded-lg">
+                                                <option value="new">Yeni</option>
+                                                <option value="like-new">Yeni Gibi</option>
+                                                <option value="good">İyi</option>
+                                                <option value="fair">İdare Eder</option>
+                                            </select>
+                                            <input name="phone" placeholder="Görünen Tel (Opsiyonel)" className="w-full border p-3 rounded-lg" />
+                                        </div>
 
-                                    <textarea name="description" rows={3} placeholder="Açıklama" className="w-full border p-3 rounded-lg" required />
+                                        <input name="whatsapp" placeholder="WhatsApp No (örn: 90555...)" className="w-full border p-3 rounded-lg border-green-200 bg-green-50" />
+                                        <p className="text-[10px] text-green-700 -mt-2">WhatsApp linki oluşturmak için kullanılır.</p>
 
-                                    {/* Simplified File Upload */}
-                                    <div className="border-2 border-dashed p-4 rounded-lg text-center cursor-pointer hover:bg-stone-50" onClick={() => document.getElementById('file-upload')?.click()}>
-                                        {selectedFile ? selectedFile.name : "Fotoğraf Yükle"}
-                                        <input id="file-upload" type="file" hidden accept="image/*" onChange={e => e.target.files && setSelectedFile(e.target.files[0])} />
-                                    </div>
+                                        <textarea name="description" rows={3} placeholder="Açıklama" className="w-full border p-3 rounded-lg" required />
 
-                                    <button disabled={isSubmitting} className="w-full bg-emerald-900 text-white font-bold py-3 rounded-xl flex justify-center">
-                                        {isSubmitting ? <Loader2 className="animate-spin" /> : "Yayınla"}
-                                    </button>
-                                </form>
-                            </motion.div>
-                        </div>
-                    )}
-                </AnimatePresence>,
-                document.body
-            )}
+                                        {/* Simplified File Upload */}
+                                        <div className="border-2 border-dashed p-4 rounded-lg text-center cursor-pointer hover:bg-stone-50" onClick={() => document.getElementById('file-upload')?.click()}>
+                                            {selectedFile ? selectedFile.name : "Fotoğraf Yükle"}
+                                            <input id="file-upload" type="file" hidden accept="image/*" onChange={e => e.target.files && setSelectedFile(e.target.files[0])} />
+                                        </div>
 
-        </div>
+                                        <button disabled={isSubmitting} className="w-full bg-emerald-900 text-white font-bold py-3 rounded-xl flex justify-center">
+                                            {isSubmitting ? <Loader2 className="animate-spin" /> : "Yayınla"}
+                                        </button>
+                                    </form>
+                                </motion.div>
+                            </div>
+                        )}
+                    </AnimatePresence>,
+                    document.body
+                )
+            }
+
+        </div >
     );
 }
