@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Menu, X, Search, Lock, User, LogOut, Settings, LogIn, UserPlus, Mail, Briefcase, Gamepad2, Info } from 'lucide-react';
+import { Menu, X, Search, Lock, User, LogOut, Settings, LogIn, UserPlus, Mail, Briefcase, Gamepad2, Info, Home } from 'lucide-react';
 import * as router from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { motion as m, AnimatePresence } from 'framer-motion';
@@ -188,7 +188,7 @@ const Header: React.FC = () => {
                 to="/"
                 className="pointer-events-auto bg-white/90 backdrop-blur text-stone-800 p-2.5 rounded-full shadow-lg border border-stone-200 hover:bg-stone-100 focus:outline-none active:scale-95 transition-all"
               >
-                <img src="https://cdn.1863postasi.org/bg/otk-logo.png" alt="Home" className="w-5 h-5 object-contain opacity-80" />
+                <Home size={20} className="text-stone-800" />
               </Link>
 
               {/* SETTINGS BUTTON (Top Right - Existing) */}
