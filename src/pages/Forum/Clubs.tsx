@@ -129,7 +129,7 @@ export default function Clubs() {
                                     transition={{ duration: 0.2 }}
                                     key={club.id}
                                 >
-                                    <Link to={`/forum/clubs/${club.id}`} className="block group h-full relative">
+                                    <Link to={`/forum/kulupler/${club.id}`} className="block group h-full relative">
                                         <div className="h-full bg-white rounded-xl overflow-hidden border border-stone-200 shadow-sm hover:shadow-md hover:border-boun-gold/50 transition-all duration-300 flex flex-col">
                                             {/* Card Header / Banner Area */}
                                             <div className="aspect-[2/1] bg-stone-100 relative overflow-hidden">
