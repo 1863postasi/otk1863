@@ -215,6 +215,7 @@ const EventCard = React.memo(({ event, isExpanded, onClick }: { event: Firestore
 const CalendarSection: React.FC<CalendarSectionProps> = ({ onBack }) => {
     // State
     const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+    const [viewDate, setViewDate] = useState<Date>(new Date()); // Tracks the month being viewed
     const [events, setEvents] = useState<FirestoreEvent[]>([]);
     const [loading, setLoading] = useState(false);
     const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
@@ -260,26 +261,19 @@ const CalendarSection: React.FC<CalendarSectionProps> = ({ onBack }) => {
             .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
     }, [events, selectedDate]);
 
-    // Derived Data: "Next 30 Days" Array for DateStrip
+    // Derived Data: Days for the Current View Month
     const calendarDays = useMemo(() => {
         const days = [];
-        const today = new Date();
-        // Generate current month + next month roughly
-        // Better: Generate +/- 15 days from selected date? 
-        // User wants "Calendar", so let's just generate the whole current month + some buffer.
-        // Actually for a scroll strip, let's show Today + 30 days usually.
-        // But user might want to go back.
-        // Let's generate a generous range: -7 days to +45 days from Today.
-        const start = new Date();
-        start.setDate(start.getDate() - 7);
+        const year = viewDate.getFullYear();
+        const month = viewDate.getMonth();
+        const date = new Date(year, month, 1);
 
-        for (let i = 0; i < 60; i++) {
-            const d = new Date(start);
-            d.setDate(start.getDate() + i);
-            days.push(d);
+        while (date.getMonth() === month) {
+            days.push(new Date(date));
+            date.setDate(date.getDate() + 1);
         }
         return days;
-    }, []);
+    }, [viewDate]);
 
     // --- UI HELPERS ---
     const handleDateChange = (date: Date) => {
@@ -287,9 +281,15 @@ const CalendarSection: React.FC<CalendarSectionProps> = ({ onBack }) => {
         setExpandedEventId(null); // Collapse any open cards when changing day
     };
 
+    const changeMonth = (delta: number) => {
+        const newDate = new Date(viewDate);
+        newDate.setMonth(newDate.getMonth() + delta);
+        setViewDate(newDate);
+    };
+
     return (
-        <div className="w-full h-full flex flex-col bg-[#fdfbf7] font-sans relative overflow-hidden">
-            {/* 1. Header (Abs Fixed Top in PWA, but here it's a child) */}
+        <div className="w-full h-full flex flex-col bg-[#fdfbf7] font-sans relative overflow-hidden touch-pan-y">
+            {/* 1. Header with Month Navigation */}
             <div className="flex items-center justify-between p-4 bg-[#efede6]/80 backdrop-blur-md sticky top-0 z-30 border-b border-stone-200">
                 {onBack ? (
                     <button onClick={onBack} className="p-2 -ml-2 text-stone-500 hover:text-stone-900 transition-colors">
@@ -297,18 +297,38 @@ const CalendarSection: React.FC<CalendarSectionProps> = ({ onBack }) => {
                     </button>
                 ) : <div className="w-8" />}
 
-                <div className="flex flex-col items-center">
-                    <h2 className="text-xl font-serif font-bold text-stone-800 uppercase tracking-widest leading-none">
-                        {selectedDate.toLocaleDateString('tr-TR', { month: 'long' })}
-                    </h2>
-                    <span className="text-[10px] font-bold text-stone-400 tracking-[0.2em]">
-                        {selectedDate.getFullYear()}
-                    </span>
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => changeMonth(-1)}
+                        className="p-1 text-stone-400 hover:text-stone-800 transition-colors"
+                    >
+                        <ChevronLeft size={20} />
+                    </button>
+
+                    <div className="flex flex-col items-center w-32">
+                        <h2 className="text-xl font-serif font-bold text-stone-800 uppercase tracking-widest leading-none">
+                            {viewDate.toLocaleDateString('tr-TR', { month: 'long' })}
+                        </h2>
+                        <span className="text-[10px] font-bold text-stone-400 tracking-[0.2em]">
+                            {viewDate.getFullYear()}
+                        </span>
+                    </div>
+
+                    <button
+                        onClick={() => changeMonth(1)}
+                        className="p-1 text-stone-400 hover:text-stone-800 transition-colors"
+                    >
+                        <ChevronRight size={20} />
+                    </button>
                 </div>
 
                 <div className="w-8 flex justify-end">
                     <button
-                        onClick={() => setSelectedDate(new Date())}
+                        onClick={() => {
+                            const now = new Date();
+                            setSelectedDate(now);
+                            setViewDate(now);
+                        }}
                         className="p-2 -mr-2 text-stone-400 hover:text-boun-red transition-colors"
                         title="Bugün"
                     >
@@ -321,7 +341,7 @@ const CalendarSection: React.FC<CalendarSectionProps> = ({ onBack }) => {
             <DateStrip selectedDate={selectedDate} onSelectDate={handleDateChange} days={calendarDays} />
 
             {/* 3. Main Content (Timeline) */}
-            <div className="flex-1 overflow-y-auto relative p-6 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto relative p-6 custom-scrollbar touch-pan-y">
                 {loading ? (
                     <div className="flex flex-col items-center justify-center h-40 text-stone-400 animate-pulse">
                         <Clock size={32} className="mb-2 opacity-50" />
@@ -346,7 +366,11 @@ const CalendarSection: React.FC<CalendarSectionProps> = ({ onBack }) => {
                         <h3 className="font-serif text-xl font-bold text-stone-600 mb-1">Etkinlik Yok</h3>
                         <p className="text-sm font-medium">Bu tarihte planlanmış bir etkinlik bulunmuyor.</p>
                         <button
-                            onClick={() => setSelectedDate(new Date())}
+                            onClick={() => {
+                                const now = new Date();
+                                setSelectedDate(now);
+                                setViewDate(now);
+                            }}
                             className="mt-6 px-6 py-2 bg-stone-800 text-stone-50 rounded-full text-xs font-bold uppercase tracking-wider hover:bg-stone-700 transition-colors"
                         >
                             Bugüne Dön
