@@ -22,3 +22,6 @@ root.render(
     </BrowserRouter>
   </React.StrictMode>
 );
+
+import { registerSW } from './registerSW';
+registerSW();
