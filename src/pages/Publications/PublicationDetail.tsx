@@ -133,12 +133,44 @@ const PublicationDetail = () => {
                                     </div>
                                     <div>
                                         <span className="block text-[10px] uppercase tracking-widest text-stone-500 mb-1">Sosyal Medya</span>
-                                        <a href="#" className="text-sm font-bold text-amber-500 hover:text-amber-400 transition-colors">
-                                            {publication.instagram || "@boun"}
-                                        </a>
+                                        {(() => {
+                                            const rawInsta = publication.instagram || "@";
+                                            // Extract handle: removes url parts, slashes, and @
+                                            const handle = rawInsta.replace(/^(?:https?:\/\/)?(?:www\.)?instagram\.com\//, '').replace(/\/$/, '').replace(/^@/, '');
+                                            const displayHandle = `@${handle}`;
+                                            const url = `https://instagram.com/${handle}`;
+                                            
+                                            // If handle is empty or just "@", handle accordingly (maybe hide or show default)
+                                            if (!handle) return <span className="text-stone-400">-</span>;
+
+                                            return (
+                                                <a 
+                                                    href={url} 
+                                                    target="_blank" 
+                                                    rel="noopener noreferrer" 
+                                                    className="text-sm font-bold text-amber-500 hover:text-amber-400 transition-colors"
+                                                >
+                                                    {displayHandle}
+                                                </a>
+                                            );
+                                        })()}
                                     </div>
                                     <div className="col-span-2 md:col-span-1 flex gap-2">
-                                        <button className="flex-1 md:flex-none h-10 px-6 bg-stone-100 text-stone-900 text-xs font-bold uppercase tracking-wider hover:bg-white transition-colors flex items-center justify-center gap-2 rounded-sm">
+                                        <button 
+                                            onClick={() => {
+                                                if (navigator.share) {
+                                                    navigator.share({
+                                                        title: publication.title,
+                                                        text: `${publication.title} - 1863 Postası`,
+                                                        url: window.location.href,
+                                                    }).catch(console.error);
+                                                } else {
+                                                    navigator.clipboard.writeText(window.location.href);
+                                                    alert("Link kopyalandı!");
+                                                }
+                                            }}
+                                            className="flex-1 md:flex-none h-10 px-6 bg-stone-100 text-stone-900 text-xs font-bold uppercase tracking-wider hover:bg-white transition-colors flex items-center justify-center gap-2 rounded-sm"
+                                        >
                                             <Share2 size={14} /> Paylaş
                                         </button>
                                     </div>
@@ -164,7 +196,9 @@ const PublicationDetail = () => {
 
                     {publication.issues && publication.issues.length > 0 ? (
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-10 md:gap-8">
-                            {publication.issues.map((issue, index) => (
+                            {[...publication.issues]
+                                .sort((a, b) => b.date.localeCompare(a.date)) // Sort by Date Descending (Newest First)
+                                .map((issue, index, sortedIssues) => (
                                 <motion.div
                                     key={issue.id}
                                     initial={{ opacity: 0, y: 20 }}
@@ -184,10 +218,25 @@ const PublicationDetail = () => {
 
                                         {/* Actions Overlay */}
                                         <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center p-4">
-                                            <button className="w-full bg-white text-stone-900 py-2.5 mb-2 text-xs font-bold uppercase tracking-widest hover:bg-amber-400 transition-colors shadow-lg flex items-center justify-center gap-2">
+                                            <button 
+                                                onClick={() => window.open(issue.pdfUrl, '_blank')}
+                                                className="w-full bg-white text-stone-900 py-2.5 mb-2 text-xs font-bold uppercase tracking-widest hover:bg-amber-400 transition-colors shadow-lg flex items-center justify-center gap-2"
+                                            >
                                                 <BookOpen size={14} /> Oku
                                             </button>
-                                            <button className="w-full bg-stone-900 text-white py-2.5 text-xs font-bold uppercase tracking-widest hover:bg-stone-800 transition-colors shadow-lg flex items-center justify-center gap-2">
+                                            <button 
+                                                onClick={() => {
+                                                  // Create a temporary link to force download if possible, otherwise open in new tab
+                                                  const link = document.createElement('a');
+                                                  link.href = issue.pdfUrl;
+                                                  link.download = `${publication.title} - ${issue.title}.pdf`;
+                                                  link.target = "_blank"; // Fallback
+                                                  document.body.appendChild(link);
+                                                  link.click();
+                                                  document.body.removeChild(link);
+                                                }}
+                                                className="w-full bg-stone-900 text-white py-2.5 text-xs font-bold uppercase tracking-widest hover:bg-stone-800 transition-colors shadow-lg flex items-center justify-center gap-2"
+                                            >
                                                 <Download size={14} /> İndir
                                             </button>
                                         </div>
@@ -198,7 +247,7 @@ const PublicationDetail = () => {
                                             {issue.title}
                                         </h3>
                                         <div className="flex items-center text-xs text-stone-400 font-mono">
-                                            <span>NO. {publication.issues ? publication.issues.length - index : 0}</span>
+                                            <span>NO. {sortedIssues.length - index}</span>
                                             <span className="mx-2">•</span>
                                             <span>{issue.date}</span>
                                         </div>

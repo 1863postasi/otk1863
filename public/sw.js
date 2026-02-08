@@ -1,3 +1,6 @@
+importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js');
+
 const CACHE_NAME = 'otk1863-v1';
 const ASSETS = [
     '/',
@@ -6,9 +9,16 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
+    // Force new Service Worker to activate immediately
+    self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
     );
+});
+
+self.addEventListener('activate', (event) => {
+    // Claim clients immediately so the new SW controls the page without reload
+    event.waitUntil(self.clients.claim());
 });
 
 self.addEventListener('fetch', (event) => {
@@ -46,3 +56,27 @@ function calculateTimeToNextMidnight() {
     midnight.setHours(24, 0, 0, 0);
     return midnight.getTime() - now.getTime();
 }
+
+// Initialize Firebase in SW
+firebase.initializeApp({
+    apiKey: "AIzaSyCPWaTQtnG19k40aDEf6kYbK2VPPeqYVzg",
+    projectId: "postasi-b5327",
+    messagingSenderId: "405383525944",
+    appId: "1:405383525944:web:84f62222beff8a742418cd"
+});
+
+const messaging = firebase.messaging();
+
+messaging.onBackgroundMessage((payload) => {
+    console.log('[firebase-messaging-sw.js] Received background message ', payload);
+    // Customize notification here
+    const notificationTitle = payload.notification.title;
+    const notificationOptions = {
+        body: payload.notification.body,
+        icon: '/pwa-icon.png',
+        badge: '/pwa-icon.png',
+        data: payload.data
+    };
+
+    self.registration.showNotification(notificationTitle, notificationOptions);
+});

@@ -27,13 +27,13 @@ export const AnnouncementsPanel = () => {
   // Fetch Announcements Live
   useEffect(() => {
     const q = query(collection(db, "announcements"));
-    
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
-      
+
       // Client-side Sort: Pinned First, Then Date Descending
       const sortedData = data.sort((a: any, b: any) => {
         if (a.isPinned && !b.isPinned) return -1;
@@ -80,11 +80,12 @@ export const AnnouncementsPanel = () => {
           category: formData.category || 'Genel',
           type: 'general',
           createdAt: serverTimestamp(),
-          isPinned: false
+          isPinned: false,
+          sendNotification: formData.sendNotification || false
         });
         alert("Duyuru başarıyla yayına alındı!");
       }
-      setFormData({ category: 'Genel' }); // Clear form
+      setFormData({ category: 'Genel', sendNotification: false }); // Clear form
     } catch (error: any) {
       console.error("Hata:", error);
       alert("İşlem başarısız: " + error.message);
@@ -127,7 +128,7 @@ export const AnnouncementsPanel = () => {
           return;
         }
       }
-      
+
       await updateDoc(doc(db, "announcements", item.id), {
         isPinned: !item.isPinned
       });
@@ -143,60 +144,77 @@ export const AnnouncementsPanel = () => {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 animate-in fade-in duration-500">
-      
+
       {/* LEFT: FORM AREA */}
       <div className="lg:col-span-2 space-y-6">
         <div className={cn("p-6 rounded-xl border transition-colors", editingId ? "bg-blue-50 border-blue-200" : "bg-white border-stone-200")}>
           <div className="mb-6">
-             <h3 className={cn("font-serif text-xl font-bold", editingId ? "text-boun-blue" : "text-stone-900")}>
-               {editingId ? "Duyuruyu Düzenle" : "Yeni Duyuru Oluştur"}
-             </h3>
-             <p className="text-stone-500 text-xs mt-1">Kampüs geneli için metin bazlı bildiri.</p>
+            <h3 className={cn("font-serif text-xl font-bold", editingId ? "text-boun-blue" : "text-stone-900")}>
+              {editingId ? "Duyuruyu Düzenle" : "Yeni Duyuru Oluştur"}
+            </h3>
+            <p className="text-stone-500 text-xs mt-1">Kampüs geneli için metin bazlı bildiri.</p>
           </div>
 
           <div className="space-y-4">
-            <Input 
-              label="Duyuru Başlığı" 
-              placeholder="Örn: Bahar Dönemi Ders Seçimleri" 
+            <Input
+              label="Duyuru Başlığı"
+              placeholder="Örn: Bahar Dönemi Ders Seçimleri"
               value={formData.title || ''}
-              onChange={(v: string) => handleInputChange('title', v)} 
+              onChange={(v: string) => handleInputChange('title', v)}
             />
-            
-            <Select 
+
+            <Select
               label="Kategori"
               options={ANNOUNCEMENT_CATEGORIES}
               value={formData.category || 'Genel'}
               onChange={(v: string) => handleInputChange('category', v)}
             />
 
-            <TextArea 
-              label="Duyuru Metni" 
-              placeholder="Duyuru detaylarını buraya girin..." 
+            <TextArea
+              label="Duyuru Metni"
+              placeholder="Duyuru detaylarını buraya girin..."
               value={formData.text || ''}
-              onChange={(v: string) => handleInputChange('text', v)} 
+              onChange={(v: string) => handleInputChange('text', v)}
             />
-            
+
             <div className="grid grid-cols-2 gap-4">
-              <Input 
-                label="Tarih" 
-                type="date" 
+              <Input
+                label="Tarih"
+                type="date"
                 value={formData.date || ''}
-                onChange={(v: string) => handleInputChange('date', v)} 
+                onChange={(v: string) => handleInputChange('date', v)}
               />
-              <Input 
-                label="İlgili Link (Opsiyonel)" 
-                placeholder="https://..." 
+              <Input
+                label="İlgili Link (Opsiyonel)"
+                placeholder="https://..."
                 value={formData.link || ''}
-                onChange={(v: string) => handleInputChange('link', v)} 
+                onChange={(v: string) => handleInputChange('link', v)}
               />
             </div>
+
+            {/* Notification Checkbox */}
+            {!editingId && (
+              <div className="flex items-center gap-2 mt-4 p-3 bg-stone-50 rounded-lg border border-stone-200">
+                <input
+                  type="checkbox"
+                  id="sendNotification"
+                  checked={formData.sendNotification || false}
+                  onChange={(e) => handleInputChange('sendNotification', e.target.checked)}
+                  className="w-4 h-4 text-boun-blue rounded border-stone-300 focus:ring-boun-blue"
+                />
+                <label htmlFor="sendNotification" className="text-sm text-stone-700 select-none cursor-pointer flex flex-col">
+                  <span className="font-bold">Bildirim Gönder</span>
+                  <span className="text-xs text-stone-500">Tüm kullanıcılara anlık bildirim gider.</span>
+                </label>
+              </div>
+            )}
           </div>
-          
-          <ActionButtons 
-            loading={loading} 
-            onSave={handleSave} 
-            isEditing={!!editingId} 
-            onCancel={handleCancelEdit} 
+
+          <ActionButtons
+            loading={loading}
+            onSave={handleSave}
+            isEditing={!!editingId}
+            onCancel={handleCancelEdit}
           />
         </div>
       </div>
@@ -204,83 +222,83 @@ export const AnnouncementsPanel = () => {
       {/* RIGHT: LIVE LIST AREA */}
       <div className="lg:col-span-3">
         <div className="bg-stone-100 rounded-xl border border-stone-200 p-6 h-full flex flex-col">
-           <div className="flex items-center justify-between mb-4">
-              <h3 className="font-serif text-lg font-bold text-stone-900 flex items-center gap-2">
-                <Megaphone size={18} /> Yayındaki Duyurular
-              </h3>
-              <span className="bg-stone-200 text-stone-600 px-2 py-1 rounded text-xs font-bold">
-                {announcements.length} Adet
-              </span>
-           </div>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-serif text-lg font-bold text-stone-900 flex items-center gap-2">
+              <Megaphone size={18} /> Yayındaki Duyurular
+            </h3>
+            <span className="bg-stone-200 text-stone-600 px-2 py-1 rounded text-xs font-bold">
+              {announcements.length} Adet
+            </span>
+          </div>
 
-           <div className="space-y-3 overflow-y-auto custom-scrollbar pr-2 max-h-[600px]">
-              {announcements.length === 0 && (
-                <div className="text-center py-12 text-stone-400 text-sm">
-                  Henüz duyuru bulunmuyor.
-                </div>
-              )}
-              
-              {announcements.map((item) => (
-                <div 
-                  key={item.id} 
-                  className={cn(
-                    "bg-white p-4 rounded-lg border shadow-sm transition-all flex flex-col gap-3 group relative",
-                    item.isPinned ? "border-boun-red ring-1 ring-boun-red/20" : "border-stone-200 hover:border-stone-300",
-                    editingId === item.id && "ring-2 ring-boun-blue border-boun-blue"
-                  )}
-                >
-                   {/* Header Row */}
-                   <div className="flex justify-between items-start">
-                      <div className="flex-1 min-w-0 pr-4">
-                         <div className="flex items-center gap-2 mb-1">
-                            {item.isPinned && (
-                              <span className="bg-boun-red text-white text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1">
-                                <Pin size={8} fill="currentColor" /> PİNLİ
-                              </span>
-                            )}
-                            <span className="bg-stone-100 text-stone-600 text-[10px] font-bold px-1.5 py-0.5 rounded border border-stone-200">
-                              {item.category || 'Genel'}
-                            </span>
-                            <span className="text-xs text-stone-400 font-mono font-bold">{formatDate(item.date)}</span>
-                         </div>
-                         <h4 className="font-bold text-stone-800 leading-tight truncate">{item.title}</h4>
-                      </div>
-                      
-                      <div className="flex items-center gap-1">
-                         <button 
-                           onClick={() => handleTogglePin(item)}
-                           className={cn(
-                             "p-2 rounded hover:bg-stone-100 transition-colors",
-                             item.isPinned ? "text-boun-red" : "text-stone-300 hover:text-stone-500"
-                           )}
-                           title={item.isPinned ? "Pini Kaldır" : "Pinle (Max 3)"}
-                         >
-                           <Pin size={16} fill={item.isPinned ? "currentColor" : "none"} />
-                         </button>
-                         <button 
-                           onClick={() => handleEdit(item)}
-                           className="p-2 text-stone-400 hover:text-boun-blue hover:bg-blue-50 rounded transition-colors"
-                           title="Düzenle"
-                         >
-                           <Edit3 size={16} />
-                         </button>
-                         <button 
-                           onClick={() => handleDelete(item.id)}
-                           className="p-2 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                           title="Sil"
-                         >
-                           <Trash2 size={16} />
-                         </button>
-                      </div>
-                   </div>
+          <div className="space-y-3 overflow-y-auto custom-scrollbar pr-2 max-h-[600px]">
+            {announcements.length === 0 && (
+              <div className="text-center py-12 text-stone-400 text-sm">
+                Henüz duyuru bulunmuyor.
+              </div>
+            )}
 
-                   {/* Content Snippet */}
-                   <p className="text-xs text-stone-500 line-clamp-2 border-t border-stone-100 pt-2">
-                     {item.summary}
-                   </p>
+            {announcements.map((item) => (
+              <div
+                key={item.id}
+                className={cn(
+                  "bg-white p-4 rounded-lg border shadow-sm transition-all flex flex-col gap-3 group relative",
+                  item.isPinned ? "border-boun-red ring-1 ring-boun-red/20" : "border-stone-200 hover:border-stone-300",
+                  editingId === item.id && "ring-2 ring-boun-blue border-boun-blue"
+                )}
+              >
+                {/* Header Row */}
+                <div className="flex justify-between items-start">
+                  <div className="flex-1 min-w-0 pr-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      {item.isPinned && (
+                        <span className="bg-boun-red text-white text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1">
+                          <Pin size={8} fill="currentColor" /> PİNLİ
+                        </span>
+                      )}
+                      <span className="bg-stone-100 text-stone-600 text-[10px] font-bold px-1.5 py-0.5 rounded border border-stone-200">
+                        {item.category || 'Genel'}
+                      </span>
+                      <span className="text-xs text-stone-400 font-mono font-bold">{formatDate(item.date)}</span>
+                    </div>
+                    <h4 className="font-bold text-stone-800 leading-tight truncate">{item.title}</h4>
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleTogglePin(item)}
+                      className={cn(
+                        "p-2 rounded hover:bg-stone-100 transition-colors",
+                        item.isPinned ? "text-boun-red" : "text-stone-300 hover:text-stone-500"
+                      )}
+                      title={item.isPinned ? "Pini Kaldır" : "Pinle (Max 3)"}
+                    >
+                      <Pin size={16} fill={item.isPinned ? "currentColor" : "none"} />
+                    </button>
+                    <button
+                      onClick={() => handleEdit(item)}
+                      className="p-2 text-stone-400 hover:text-boun-blue hover:bg-blue-50 rounded transition-colors"
+                      title="Düzenle"
+                    >
+                      <Edit3 size={16} />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(item.id)}
+                      className="p-2 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                      title="Sil"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
-              ))}
-           </div>
+
+                {/* Content Snippet */}
+                <p className="text-xs text-stone-500 line-clamp-2 border-t border-stone-100 pt-2">
+                  {item.summary}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 

@@ -10,7 +10,75 @@ import { db } from '../../lib/firebase';
 import { Course, Instructor } from './types';
 import { cn, normalizeCourseCode, normalizeName, toTitleCase } from '../../lib/utils';
 
-const MOCK_DEPARTMENTS = ["CMPE", "EE", "IE", "ME", "CE", "PHYS", "CHEM", "MATH", "HUM", "EC", "PSY", "SOC", "POLS", "HIST", "STS", "PHIL"];
+const MOCK_DEPARTMENTS = [
+    "ASIAN STUDIES",
+    "ATATURK INSTITUTE FOR MODERN TURKISH HISTORY (HTR)",
+    "BIOMEDICAL ENGINEERING",
+    "BUSINESS INFORMATION SYSTEMS",
+    "CHEMICAL ENGINEERING",
+    "CHEMISTRY",
+    "CIVIL ENGINEERING",
+    "COGNITIVE SCIENCE",
+    "COMPUTATIONAL SCIENCE & ENGINEERING",
+    "COMPUTER EDUCATION & EDUCATIONAL TECHNOLOGY",
+    "COMPUTER ENGINEERING",
+    "CONFERENCE INTERPRETING",
+    "CONSTRUCTION ENGINEERING AND MANAGEMENT",
+    "CRITICAL AND CULTURAL STUDIES",
+    "DATA SCIENCE AND ARTIFICIAL INTELLIGENCE",
+    "EARLY CHILDHOOD EDUCATION",
+    "EARTHQUAKE ENGINEERING",
+    "ECONOMICS",
+    "ECONOMICS AND FINANCE",
+    "EDUCATIONAL SCIENCES",
+    "EDUCATIONAL TECHNOLOGY",
+    "ELECTRICAL & ELECTRONICS ENGINEERING",
+    "ENGINEERING AND TECHNOLOGY MANAGEMENT",
+    "ENGLISH LITERATURE",
+    "ENVIRONMENTAL SCIENCES",
+    "ENVIRONMENTAL TECHNOLOGY",
+    "EXECUTIVE MBA",
+    "FILM AND MEDIA STUDIES",
+    "FINANCIAL ENGINEERING",
+    "FINE ARTS",
+    "FOREIGN LANGUAGE EDUCATION",
+    "GEODESY",
+    "GEOPHYSICS",
+    "GUIDANCE & PSYCHOLOGICAL COUNSELING",
+    "HISTORY",
+    "HUMANITIES COURSES COORDINATOR",
+    "INDUSTRIAL ENGINEERING",
+    "INTERNATIONAL RELATIONS:TURKEY,EUROPE AND THE MIDDLE EAST",
+    "INTERNATIONAL TRADE",
+    "INTERNATIONAL TRADE MANAGEMENT",
+    "LAW",
+    "LEARNING SCIENCES",
+    "LINGUISTICS",
+    "MANAGEMENT",
+    "MANAGEMENT INFORMATION SYSTEMS",
+    "MATHEMATICS",
+    "MATHEMATICS AND SCIENCE EDUCATION",
+    "MECHANICAL ENGINEERING",
+    "MOLECULAR BIOLOGY & GENETICS",
+    "PEDAGOGICAL FORMATION CERTIFICATE PROGRAM",
+    "PHILOSOPHY",
+    "PHYSICAL EDUCATION",
+    "PHYSICS",
+    "POLITICAL SCIENCE&INTERNATIONAL RELATIONS",
+    "PSYCHOLOGY",
+    "SCHOOL OF FOREIGN LANGUAGES",
+    "SOCIOLOGY",
+    "SOFTWARE ENGINEERING",
+    "SUSTAINABLE TOURISM MANAGEMENT",
+    "SYSTEMS & CONTROL ENGINEERING",
+    "TOURISM MANAGEMENT",
+    "TRANSLATION",
+    "TRANSLATION AND INTERPRETING STUDIES",
+    "TURKISH COURSES COORDINATOR (TK)",
+    "TURKISH LANGUAGE & LITERATURE",
+    "UNDERGRADUATE PROGRAM IN PRESCHOOL EDUCATION",
+    "WESTERN LANGUAGES & LITERATURES"
+];
 
 const AcademicReviews: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'courses' | 'instructors'>('courses');
@@ -370,6 +438,20 @@ const AcademicReviews: React.FC = () => {
                                             <h3 className="font-serif font-bold text-xl text-stone-900 leading-tight group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-stone-900 group-hover:to-stone-600 transition-all line-clamp-2">
                                                 {activeTab === 'courses' ? (item as Course).name : (item as Instructor).name}
                                             </h3>
+
+                                            {activeTab === 'courses' && (item as Course).avgDifficulty && (
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <div className="h-1.5 w-16 bg-stone-100 rounded-full overflow-hidden">
+                                                        <div
+                                                            className={cn("h-full rounded-full", (item as Course).avgDifficulty! > 7 ? "bg-red-400" : (item as Course).avgDifficulty! > 4 ? "bg-amber-400" : "bg-emerald-400")}
+                                                            style={{ width: `${((item as Course).avgDifficulty || 0) * 10}%` }}
+                                                        />
+                                                    </div>
+                                                    <span className="text-[10px] font-bold text-stone-400">
+                                                        Zorluk: <span className="text-stone-600">{(item as Course).avgDifficulty?.toFixed(1)}</span>
+                                                    </span>
+                                                </div>
+                                            )}
 
                                             <div className="flex items-center justify-between pt-4 mt-2 border-t border-stone-50">
                                                 <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">

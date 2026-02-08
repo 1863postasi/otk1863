@@ -57,6 +57,9 @@ export const ClubsPanel = ({ setSelectedItemId }: { setSelectedItemId?: (id: str
                     clubType: club.type || 'Kültür & Sanat',
                     clubFounded: club.founded,
                     clubWeb: club.website,
+                    address: club.address || '',
+                    instagram: club.instagram || '',
+                    twitter: club.twitter || '',
                     clubDesc: club.description,
                     locX: club.location?.x || 50,
                     locY: club.location?.y || 50,
@@ -276,6 +279,9 @@ export const ClubsPanel = ({ setSelectedItemId }: { setSelectedItemId?: (id: str
                 founded: formData.clubFounded || "2000",
                 description: formData.clubDesc,
                 website: formData.clubWeb || "",
+                address: formData.address || "",
+                instagram: formData.instagram || "",
+                twitter: formData.twitter || "",
                 logoUrl: logoUrl,
                 bannerUrl: bannerUrl,
                 location: {
@@ -388,7 +394,13 @@ export const ClubsPanel = ({ setSelectedItemId }: { setSelectedItemId?: (id: str
                             <Input label="Kulüp Adı" placeholder="Müzik Kulübü" value={formData['clubName'] || ""} onChange={(v: string) => handleInputChange('clubName', v)} />
                             <Input label="Tam Adı (Resmi)" placeholder="Boğaziçi Üniversitesi Müzik Kulübü" value={formData['clubFull'] || ""} onChange={(v: string) => handleInputChange('clubFull', v)} />
                             <Input label="Kategori" placeholder="Kültür & Sanat" value={formData['clubType'] || ""} onChange={(v: string) => handleInputChange('clubType', v)} />
-                            <Input label="Web Sitesi / Instagram" placeholder="https://..." value={formData['clubWeb'] || ''} onChange={(v: string) => handleInputChange('clubWeb', v)} />
+                            <TextArea label="Adres" placeholder="Kuzey Kampüs, 1. Yurt Altı..." className="h-20" value={formData['address'] || ''} onChange={(v: string) => handleInputChange('address', v)} />
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <Input label="Web Sitesi" placeholder="https://..." value={formData['clubWeb'] || ''} onChange={(v: string) => handleInputChange('clubWeb', v)} />
+                                <Input label="Instagram" placeholder="kullaniciadi (veya link)" value={formData['instagram'] || ''} onChange={(v: string) => handleInputChange('instagram', v)} />
+                                <Input label="Twitter (X)" placeholder="kullaniciadi (veya link)" value={formData['twitter'] || ''} onChange={(v: string) => handleInputChange('twitter', v)} />
+                            </div>
                             <TextArea label="Tanıtım Yazısı" placeholder="Kulüp hakkında genel bilgi..." className="h-32" value={formData['clubDesc'] || ''} onChange={(v: string) => handleInputChange('clubDesc', v)} />
 
                             {/* --- ADVANCED CONTENT MANAGEMENT --- */}

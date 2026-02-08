@@ -83,7 +83,7 @@ const ProductCard = React.memo(({ item, onSelect }: { item: Listing, onSelect: (
             <h3 className="font-bold text-stone-800 text-sm leading-tight mb-1 line-clamp-2">{item.title}</h3>
             <div className="mt-auto flex items-center gap-1 text-[10px] text-stone-500">
                 <MapPin size={10} />
-                <span>Kuzey Kampüs</span>
+                <span>{item.location || "Kampüs İçi"}</span>
             </div>
         </div>
     </motion.div>
@@ -102,7 +102,7 @@ const ProductSheet = ({ item, onClose, onContact }: { item: Listing, onClose: ()
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-end justify-center sm:items-center bg-black/60 backdrop-blur-sm p-0 sm:p-4"
+            className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center bg-black/60 backdrop-blur-sm p-0 sm:p-4"
             onClick={onClose}
         >
             <motion.div
@@ -157,7 +157,7 @@ const ProductSheet = ({ item, onClose, onContact }: { item: Listing, onClose: ()
                         <div className="flex-1">
                             <div className="font-bold text-stone-900 text-sm">{item.sellerName || "İsimsiz Satıcı"}</div>
                             <div className="text-xs text-stone-500 flex items-center gap-1">
-                                <MapPin size={10} /> Kampüs İçi
+                                <MapPin size={10} /> {item.location || "Kampüs İçi"}
                             </div>
                         </div>
                     </div>
@@ -403,13 +403,14 @@ export default function Marketplace() {
                 title: formData.get('title') as string,
                 description: formData.get('description') as string,
                 price: Number(formData.get('price')),
+                location: formData.get('location') as string || "Kampüs İçi",
                 currency: '₺',
                 category: formData.get('category') as string,
                 condition: formData.get('condition') as any,
                 images: imageURL ? [imageURL] : [],
                 sellerId: currentUser.uid,
                 sellerName: userProfile.username || 'Anonim',
-                sellerPhotoUrl: userProfile.photoUrl || undefined,
+                sellerPhotoUrl: userProfile.photoUrl || null,
                 contact: {
                     whatsapp: formattedWa,
                     phone: formData.get('phone') as string
@@ -448,16 +449,11 @@ export default function Marketplace() {
                     {/* Desktop Header */}
                     <div className="hidden md:flex items-center justify-between mb-4">
                         <h1 className="text-xl font-bold font-serif text-stone-800">Kampüs Pazarı</h1>
-                        <button className="p-2 bg-stone-100 rounded-full hover:bg-stone-200 transition-colors"><Filter size={18} /></button>
                     </div>
 
                     {/* Mobile Header (Centered Title) */}
                     <div className="md:hidden h-14 flex items-center justify-center relative border-b border-stone-100/50">
                         <h1 className="text-lg font-bold font-serif text-stone-900 tracking-tight">Kampüs Pazarı</h1>
-                        {/* Mobile Filter Button (Absolute Right) */}
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                            <button className="p-2 text-stone-500 hover:bg-stone-100 rounded-full transition-colors"><Filter size={18} /></button>
-                        </div>
                     </div>
 
                     {/* Categories */}
@@ -544,6 +540,11 @@ export default function Marketplace() {
                                     </div>
                                     <form onSubmit={handleCreateSubmit} className="p-6 overflow-y-auto space-y-4">
                                         <input name="title" placeholder="Başlık" className="w-full border p-3 rounded-lg" required />
+
+                                        <div className="relative">
+                                            <MapPin className="absolute left-3 top-3.5 text-stone-400" size={18} />
+                                            <input name="location" placeholder="Konum (Opsiyonel, Örn: Kuzey Kampüs)" className="w-full border p-3 pl-10 rounded-lg" />
+                                        </div>
 
                                         <div className="grid grid-cols-2 gap-4">
                                             <input name="price" type="number" placeholder="Fiyat (TL)" className="w-full border p-3 rounded-lg" required />

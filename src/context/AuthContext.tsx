@@ -13,15 +13,18 @@ export interface UserProfile {
   department: string;
   role: 'student' | 'admin' | 'moderator';
   photoUrl?: string; // R2 URL
-  
+
   // Roles & Badges
   clubRoles?: Record<string, string>; // e.g., { "compec": "admin" }
   badges?: string[];
-  
+
   // Bookmarks
   savedEventIds?: string[];
   savedRootIds?: string[];
   savedLectureNoteIds?: string[];
+
+  // Notifications
+  fcmTokens?: string[];
 
   // Boundle (Game Stats)
   boundleTotalPoints?: number; // All time total
@@ -70,13 +73,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
       setCurrentUser(user);
-      
+
       if (user) {
         await fetchUserProfile(user.uid);
       } else {
         setUserProfile(null);
       }
-      
+
       setLoading(false);
     });
 
@@ -96,17 +99,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const toggleBookmark = async (type: 'event' | 'story' | 'resource', itemId: string) => {
-      if (!currentUser || !userProfile) return;
-      
-      let isSaved = false;
-      if (type === 'event') isSaved = userProfile.savedEventIds?.includes(itemId) || false;
-      else if (type === 'story') isSaved = userProfile.savedRootIds?.includes(itemId) || false;
-      else if (type === 'resource') isSaved = userProfile.savedLectureNoteIds?.includes(itemId) || false;
+    if (!currentUser || !userProfile) return;
 
-      // Optimistic Update (Optional, but good for UI)
-      // For now, we wait for DB + Refresh for consistency
-      await toggleUserBookmark(currentUser.uid, type, itemId, isSaved);
-      await refreshProfile();
+    let isSaved = false;
+    if (type === 'event') isSaved = userProfile.savedEventIds?.includes(itemId) || false;
+    else if (type === 'story') isSaved = userProfile.savedRootIds?.includes(itemId) || false;
+    else if (type === 'resource') isSaved = userProfile.savedLectureNoteIds?.includes(itemId) || false;
+
+    // Optimistic Update (Optional, but good for UI)
+    // For now, we wait for DB + Refresh for consistency
+    await toggleUserBookmark(currentUser.uid, type, itemId, isSaved);
+    await refreshProfile();
   };
 
   return (

@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     ArrowLeft, Calendar, MapPin, Globe, Users,
     Instagram, Mail, ExternalLink, ChevronRight,
-    Clock, Heart, Share2, Info, AlertTriangle
+    Clock, Heart, Share2, Info, AlertTriangle, Twitter, Check, Link as LinkIcon
 } from 'lucide-react';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
@@ -44,6 +44,60 @@ export default function ClubDetail() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'about' | 'events' | 'board'>('about');
+    const [boardMembers, setBoardMembers] = useState<any[]>([]);
+    const [isCopied, setIsCopied] = useState(false);
+
+    const handleShare = async () => {
+        const url = window.location.href;
+        if (navigator.share) {
+            try {
+                await navigator.share({ title: club?.name, url });
+            } catch (err) {
+                console.log('Share cancelled');
+            }
+        } else {
+            await navigator.clipboard.writeText(url);
+            setIsCopied(true);
+            setTimeout(() => setIsCopied(false), 2000);
+        }
+    };
+
+    const normalizeUrl = (url: string) => {
+        if (!url) return '';
+        return url.startsWith('http') ? url : `https://${url}`;
+    };
+
+    // Board Members Fetcher
+    useEffect(() => {
+        if (activeTab === 'board' && club?.clubRoles) {
+            const fetchBoard = async () => {
+                const userIds = Object.keys(club.clubRoles!);
+                if (userIds.length === 0) return;
+
+                try {
+                    const promises = userIds.map(async (uid) => {
+                        const snap = await getDoc(doc(db, "users", uid));
+                        if (snap.exists()) {
+                            const uData = snap.data();
+                            return {
+                                id: snap.id,
+                                name: uData.displayName || "İsimsiz",
+                                photoUrl: uData.photoURL,
+                                role: club.clubRoles![uid]
+                            };
+                        }
+                        return null;
+                    });
+
+                    const results = await Promise.all(promises);
+                    setBoardMembers(results.filter(r => r !== null));
+                } catch (e) {
+                    console.error("Board fetch error", e);
+                }
+            };
+            fetchBoard();
+        }
+    }, [activeTab, club]);
 
     // Fetch Logic
     useEffect(() => {
@@ -182,8 +236,8 @@ export default function ClubDetail() {
                     </button>
 
                     <div className="flex gap-2">
-                        <button className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all active:scale-90">
-                            <Share2 size={18} />
+                        <button onClick={handleShare} className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all active:scale-90">
+                            {isCopied ? <Check size={18} /> : <Share2 size={18} />}
                         </button>
                     </div>
                 </div>
@@ -245,20 +299,13 @@ export default function ClubDetail() {
                     {/* Stats */}
                     <div className="flex items-center gap-6 shrink-0">
                         <div className="flex items-center gap-2 text-stone-600">
-                            <Users size={16} className="text-stone-400" />
-                            <span className="text-sm font-bold">{club.memberCount || "150+"} Üye</span>
-                        </div>
-                        <div className="w-px h-4 bg-stone-200" />
-                        <div className="flex items-center gap-2 text-stone-600">
                             <Calendar size={16} className="text-stone-400" />
                             <span className="text-sm font-bold">Est. {club.founded || "2000"}</span>
                         </div>
                     </div>
 
-                    {/* Action Button */}
-                    <button className="flex items-center gap-2 bg-boun-blue text-white px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wide hover:bg-blue-800 transition-colors shadow-blue-200 shadow-md shrink-0">
-                        <Users size={14} /> Üye Ol
-                    </button>
+                    {/* Action Button Removed as per request */}
+                    <div></div>
                 </div>
             </div>
 
@@ -345,13 +392,7 @@ export default function ClubDetail() {
                                                     {isPast && <span className="inline-block px-2 py-0.5 bg-stone-100 text-stone-500 text-[10px] font-bold rounded">GEÇMİŞ</span>}
                                                 </div>
 
-                                                {!isPast && (
-                                                    <div className="flex flex-col items-center justify-center">
-                                                        <button className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center text-stone-400 hover:text-boun-red hover:bg-red-50 transition-colors">
-                                                            <Heart size={16} />
-                                                        </button>
-                                                    </div>
-                                                )}
+
                                             </div>
                                         );
                                     })
@@ -368,14 +409,25 @@ export default function ClubDetail() {
 
                         {activeTab === 'board' && (
                             <motion.div key="board" {...fadeInUp}>
-                                <div className="bg-white rounded-xl border border-stone-200 p-8 text-center">
-                                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-stone-50 mb-4 text-stone-300">
-                                        <Users size={32} />
+                                <motion.div key="board" {...fadeInUp}>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        {boardMembers.length > 0 ? boardMembers.map((member: any) => (
+                                            <div key={member.id} className="bg-white p-4 rounded-xl border border-stone-200 flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded-full bg-stone-100 overflow-hidden border border-stone-200 flex items-center justify-center text-stone-300">
+                                                    {member.photoUrl ? <img src={member.photoUrl} className="w-full h-full object-cover" /> : <Users size={20} />}
+                                                </div>
+                                                <div>
+                                                    <div className="font-bold text-stone-900 text-sm">{member.name}</div>
+                                                    <div className="text-xs text-boun-blue font-bold uppercase tracking-wide">{member.role}</div>
+                                                </div>
+                                            </div>
+                                        )) : (
+                                            <div className="col-span-full text-center py-8 text-stone-400 text-sm">
+                                                Yönetim kurulu bilgisi girilmemiştir.
+                                            </div>
+                                        )}
                                     </div>
-                                    <h3 className="text-lg font-bold text-stone-900">Yönetim Kurulu</h3>
-                                    <p className="text-stone-500 text-sm mt-2">Bu bilgi sadece kulüp üyelerine açıktır.</p>
-                                    <button className="mt-6 text-xs font-bold text-boun-blue underline">Üyelik Başvurusu Yap</button>
-                                </div>
+                                </motion.div>
                             </motion.div>
                         )}
                     </AnimatePresence>
@@ -387,29 +439,49 @@ export default function ClubDetail() {
                     <div className="bg-white rounded-2xl border border-stone-200 p-6 shadow-sm sticky top-24">
                         <h3 className="font-serif font-bold text-lg text-stone-900 mb-4 border-b border-stone-100 pb-2">İletişim</h3>
                         <div className="space-y-4">
+                            {/* Address (Moved here or below) */}
+
                             {club.email && (
                                 <a href={`mailto:${club.email}`} className="flex items-center gap-3 text-sm text-stone-600 hover:text-stone-900 transition-colors">
                                     <div className="w-8 h-8 rounded-full bg-stone-50 flex items-center justify-center border border-stone-100"><Mail size={14} /></div>
                                     <span className="truncate">{club.email}</span>
                                 </a>
                             )}
-                            {/* Mock Social */}
-                            <div className="flex items-center gap-3 text-sm text-stone-600 cursor-pointer hover:text-pink-600 transition-colors">
-                                <div className="w-8 h-8 rounded-full bg-stone-50 flex items-center justify-center border border-stone-100"><Instagram size={14} /></div>
-                                <span className="truncate">@{safeShortName.toLowerCase()}bogazici</span>
-                            </div>
+
+                            {club.website && (
+                                <a href={normalizeUrl(club.website)} target="_blank" rel="noreferrer" className="flex items-center gap-3 text-sm text-stone-600 hover:text-boun-blue transition-colors">
+                                    <div className="w-8 h-8 rounded-full bg-stone-50 flex items-center justify-center border border-stone-100"><Globe size={14} /></div>
+                                    <span className="truncate">Resmi Web Sitesi</span>
+                                </a>
+                            )}
+
+                            {club.instagram && (
+                                <a href={normalizeUrl(club.instagram.includes('instagram.com') ? club.instagram : `instagram.com/${club.instagram}`)} target="_blank" rel="noreferrer" className="flex items-center gap-3 text-sm text-stone-600 hover:text-pink-600 transition-colors">
+                                    <div className="w-8 h-8 rounded-full bg-stone-50 flex items-center justify-center border border-stone-100"><Instagram size={14} /></div>
+                                    <span className="truncate">Instagram</span>
+                                </a>
+                            )}
+
+                            {club.twitter && (
+                                <a href={normalizeUrl(club.twitter.includes('twitter.com') || club.twitter.includes('x.com') ? club.twitter : `twitter.com/${club.twitter}`)} target="_blank" rel="noreferrer" className="flex items-center gap-3 text-sm text-stone-600 hover:text-stone-900 transition-colors">
+                                    <div className="w-8 h-8 rounded-full bg-stone-50 flex items-center justify-center border border-stone-100"><Twitter size={14} /></div>
+                                    <span className="truncate">Twitter (X)</span>
+                                </a>
+                            )}
                         </div>
 
                         <div className="mt-6 pt-6 border-t border-stone-100">
                             <h4 className="font-bold text-xs uppercase text-stone-400 tracking-wider mb-3">Kulüp Odası</h4>
-                            <div className="flex items-start gap-2 text-sm text-stone-700">
-                                <MapPin size={16} className="text-boun-red mt-0.5 shrink-0" />
-                                <span className="leading-snug">
-                                    Kuzey Kampüs,<br />
-                                    1. Yurt Altı<br />
-                                    34342 Bebek/İstanbul
-                                </span>
-                            </div>
+                            {club.address ? (
+                                <div className="flex items-start gap-2 text-sm text-stone-700">
+                                    <MapPin size={16} className="text-boun-red mt-0.5 shrink-0" />
+                                    <span className="leading-snug whitespace-pre-line">
+                                        {club.address}
+                                    </span>
+                                </div>
+                            ) : (
+                                <div className="text-sm text-stone-400 italic">Adres girilmemiş.</div>
+                            )}
                         </div>
                     </div>
                 </div>

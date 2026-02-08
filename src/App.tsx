@@ -74,7 +74,30 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   );
 };
 
+import { useFcmToken } from './hooks/useFcmToken';
+import { messaging } from './lib/firebase';
+import { onMessage } from 'firebase/messaging';
+
 const App: React.FC = () => {
+  const { token } = useFcmToken();
+
+  React.useEffect(() => {
+    // Handle foreground messages
+    const unsubscribe = onMessage(messaging, (payload) => {
+      console.log('Message received. ', payload);
+      // TODO: Implement a custom toast or notification UI
+      // For now, we rely on system notifications if we are in background,
+      // or just console log in foreground.
+      if (payload.notification) {
+        // Determine if we should show a custom UI
+        // For now, simple alert or custom div/modal could handle this
+        // alert(payload.notification.title + "\n" + payload.notification.body);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [token]);
+
   return (
     <Layout>
       <AnimatePresence mode="wait">
@@ -254,9 +277,9 @@ const App: React.FC = () => {
               </ProtectedRoute>
             }
           />
-        </Routes>
-      </AnimatePresence>
-    </Layout>
+        </Routes >
+      </AnimatePresence >
+    </Layout >
   );
 };
 

@@ -169,7 +169,7 @@ const EventCard = React.memo(({ event, isExpanded, onClick }: { event: Firestore
                                 {/* Poster Image */}
                                 {event.posterUrl && (
                                     <div className="my-4 rounded-xl overflow-hidden bg-stone-100 border border-stone-200">
-                                        <img src={event.posterUrl} alt="Event Poster" className="w-full h-auto object-cover max-h-80" />
+                                        <img src={event.posterUrl} alt="Event Poster" className="w-full h-auto object-contain max-h-80 bg-stone-900/5" />
                                     </div>
                                 )}
 

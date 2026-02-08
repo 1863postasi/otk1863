@@ -17,7 +17,8 @@ export interface Course {
     department: string;
     // Offerings are dynamic, but we might want to cache the "latest" or "all" instructors
     instructorIds: string[]; // List of Instructor IDs
-    rating: number;
+    rating: number; // Average rating
+    avgDifficulty?: number; // Average difficulty (1-10)
     reviewCount: number;
 }
 
@@ -41,6 +42,7 @@ export interface Review {
     userPhotoUrl?: string; // Store snapshot or link to profile
     userBadge?: string; // e.g. "Senior", "Verified"
     rating: number;
+    difficulty?: number; // 1-10 scale for courses
     comment: string;
     timestamp: any; // Firestore Timestamp
     likes: number;
@@ -108,6 +110,7 @@ export interface Listing {
     tags: string[];
     views: number;
     likes: number;
+    location?: string;
 }
 
 export interface ForumComment {
@@ -138,4 +141,7 @@ export interface Club {
     clubRoles?: Record<string, string>; // userId -> role
     contents?: any[]; // Archive contents
     email?: string;
+    address?: string;
+    instagram?: string;
+    twitter?: string;
 }

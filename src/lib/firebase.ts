@@ -2,6 +2,7 @@ import firebase from "firebase/compat/app";
 import "firebase/compat/auth";
 import { getFirestore } from "firebase/firestore";
 import { getFunctions } from "firebase/functions";
+import { getMessaging } from "firebase/messaging";
 
 // Cast import.meta to any to avoid TypeScript errors with Vite env variables
 const env = (import.meta as any).env;
@@ -21,5 +22,6 @@ const app = firebase.apps.length ? firebase.app() : firebase.initializeApp(fireb
 export const auth = firebase.auth();
 export const db = getFirestore(app);
 export const functions = getFunctions(app); // Default region is us-central1
+export const messaging = getMessaging(app);
 
 export default app;

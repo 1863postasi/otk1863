@@ -19,7 +19,12 @@ const CourseDetail: React.FC = () => {
     const [loading, setLoading] = useState(true);
 
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
-    const [reviewData, setReviewData] = useState({ rating: 5, comment: '', isAnonymous: false });
+    const [reviewData, setReviewData] = useState<{ rating: number, comment: string, isAnonymous: boolean, difficulty?: number }>({
+        rating: 5,
+        comment: '',
+        isAnonymous: false,
+        difficulty: 5
+    });
     const [submitting, setSubmitting] = useState(false);
 
     // Link Instructor Modal
@@ -58,9 +63,12 @@ const CourseDetail: React.FC = () => {
                 }
 
                 // Fetch Reviews (General Course Reviews)
+                // Fix: Order by timestamp
                 const reviewsQ = query(collection(db, 'reviews'), where('type', '==', 'course'), where('targetId', '==', courseData.id));
                 const reviewsSnap = await getDocs(reviewsQ);
                 const reviewsData = reviewsSnap.docs.map(d => ({ id: d.id, ...d.data() })) as Review[];
+                // Client side sort for now as index might be needed
+                reviewsData.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
                 setReviews(reviewsData);
 
             } catch (e) {
@@ -86,22 +94,29 @@ const CourseDetail: React.FC = () => {
                 userDisplayName: reviewData.isAnonymous ? 'Anonim Öğrenci' : (userProfile.username || 'Öğrenci'),
                 userPhotoUrl: reviewData.isAnonymous ? null : userProfile.photoUrl,
                 isAnonymous: reviewData.isAnonymous, rating: reviewData.rating, comment: reviewData.comment,
+                difficulty: reviewData.difficulty || 5,
                 likes: 0, timestamp: serverTimestamp()
             };
             await addDoc(collection(db, "reviews"), newReview);
 
-            // Update Course Stats (simple increment, real avg calculation would need all reviews)
+            // Update Course Stats
             const newCount = (course.reviewCount || 0) + 1;
             const newRating = ((course.rating || 0) * (course.reviewCount || 0) + reviewData.rating) / newCount;
+
+            // Calculate new average difficulty
+            const currentDiffSum = (course.avgDifficulty || 0) * (course.reviewCount || 0);
+            const newDiff = (currentDiffSum + (reviewData.difficulty || 5)) / newCount;
+
             await updateDoc(doc(db, 'courses', course.id), {
                 reviewCount: newCount,
-                rating: newRating
+                rating: newRating,
+                avgDifficulty: newDiff
             });
 
             setReviews([{ ...newReview, id: 'temp-' + Date.now(), timestamp: { seconds: Date.now() / 1000 } }, ...reviews]);
-            setCourse({ ...course, reviewCount: newCount, rating: newRating });
+            setCourse({ ...course, reviewCount: newCount, rating: newRating, avgDifficulty: newDiff });
             setIsReviewModalOpen(false);
-            setReviewData({ rating: 5, comment: '', isAnonymous: false });
+            setReviewData({ rating: 5, comment: '', isAnonymous: false, difficulty: 5 });
         } catch (e) { console.error(e); alert("Hata"); } finally { setSubmitting(false); }
     };
 
@@ -213,19 +228,28 @@ const CourseDetail: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Difficulty Gauge (Visual only) */}
+                            {/* Difficulty Gauge (Real Data) */}
                             <div className="bg-stone-50 p-4 rounded-xl border border-stone-100 w-full md:w-auto min-w-[180px]">
                                 <div className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2">Zorluk Seviyesi</div>
                                 <div className="h-2 w-full bg-stone-200 rounded-full overflow-hidden mb-1">
                                     <motion.div
                                         initial={{ width: 0 }}
-                                        animate={{ width: '85%' }}
-                                        className="h-full bg-red-400 rounded-full"
+                                        animate={{ width: `${(course.avgDifficulty || 0) * 10}%` }}
+                                        className={cn(
+                                            "h-full rounded-full transition-all duration-500",
+                                            (course.avgDifficulty || 0) > 7 ? "bg-red-400" :
+                                                (course.avgDifficulty || 0) > 4 ? "bg-amber-400" : "bg-emerald-400"
+                                        )}
                                     />
                                 </div>
                                 <div className="flex justify-between text-xs font-bold">
-                                    <span className="text-red-500">Yüksek</span>
-                                    <span className="text-stone-300">8.5/10</span>
+                                    <span className={cn(
+                                        (course.avgDifficulty || 0) > 7 ? "text-red-500" :
+                                            (course.avgDifficulty || 0) > 4 ? "text-amber-500" : "text-emerald-500"
+                                    )}>
+                                        {(course.avgDifficulty || 0) > 7 ? "Yüksek" : (course.avgDifficulty || 0) > 4 ? "Orta" : "Düşük"}
+                                    </span>
+                                    <span className="text-stone-300">{course.avgDifficulty?.toFixed(1) || 0}/10</span>
                                 </div>
                             </div>
                         </div>
@@ -288,28 +312,74 @@ const CourseDetail: React.FC = () => {
 
                     {/* RIGHT COL: REVIEWS */}
                     <div className="md:col-span-2 space-y-6">
-                        <div className="bg-white rounded-2xl p-10 text-center border border-dashed border-stone-300">
-                            <div className="w-16 h-16 bg-stone-100 rounded-full flex items-center justify-center mx-auto mb-4 text-stone-400">
-                                <MessageSquare size={24} />
-                            </div>
-                            <h3 className="font-serif font-bold text-xl text-stone-700 mb-2">Değerlendirmeleri Görüntüle</h3>
-                            <p className="text-stone-500 text-sm max-w-md mx-auto mb-6 leading-relaxed">
-                                Bu dersin yorumlarını ve not dağılımlarını görmek için lütfen soldaki listeden <strong>dersi aldığınız hocayı</strong> seçin.
-                            </p>
-                            <div className="inline-flex items-center gap-2 px-4 py-2 bg-stone-50 rounded-full text-xs font-bold text-stone-400">
-                                <AlertCircle size={14} />
-                                <span>Doğru hoca seçimi, doğru bilgi demektir.</span>
-                            </div>
+                        <div className="flex items-center justify-between">
+                            <h3 className="font-serif font-bold text-xl text-stone-800">Ders Yorumları</h3>
+                            <span className="text-xs font-bold text-stone-400 bg-stone-100 px-2 py-1 rounded-md">{reviews.length} Görüş</span>
                         </div>
 
-                        {/* Legacy Reviews (Optional - Hidden for now or "Genel Yorumlar" if needed) */}
+                        {reviews.length === 0 ? (
+                            <div className="bg-white rounded-2xl p-10 text-center border border-dashed border-stone-300">
+                                <div className="w-16 h-16 bg-stone-100 rounded-full flex items-center justify-center mx-auto mb-4 text-stone-400">
+                                    <MessageSquare size={24} />
+                                </div>
+                                <h3 className="font-serif font-bold text-xl text-stone-700 mb-2">Henüz Yorum Yok</h3>
+                                <p className="text-stone-500 text-sm max-w-md mx-auto mb-6 leading-relaxed">
+                                    Bu ders için henüz genel bir değerlendirme yapılmamış. İlk yorumu sen yaparak arkadaşlarına yardımcı ol!
+                                </p>
+                                <button
+                                    onClick={() => setIsReviewModalOpen(true)}
+                                    className="inline-flex items-center gap-2 px-6 py-3 bg-stone-900 text-white rounded-xl text-sm font-bold hover:bg-black transition-colors"
+                                >
+                                    İlk Değerlendirmeyi Yap
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {reviews.map((review) => (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        key={review.id}
+                                        className="bg-white p-5 rounded-2xl border border-stone-100 shadow-sm hover:shadow-md transition-shadow"
+                                    >
+                                        <div className="flex justify-between items-start mb-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-full bg-stone-100 flex items-center justify-center text-stone-500 font-bold text-sm">
+                                                    {review.isAnonymous ? <User size={18} /> : (review.userPhotoUrl ? <img src={review.userPhotoUrl} className="w-full h-full rounded-full object-cover" /> : review.userDisplayName?.charAt(0))}
+                                                </div>
+                                                <div>
+                                                    <div className="text-sm font-bold text-stone-800">
+                                                        {review.isAnonymous ? "Anonim Öğrenci" : review.userDisplayName}
+                                                    </div>
+                                                    <div className="text-[10px] text-stone-400">
+                                                        {review.timestamp?.seconds ? new Date(review.timestamp.seconds * 1000).toLocaleDateString("tr-TR") : "Az önce"}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col items-end gap-1">
+                                                <div className="flex items-center gap-1 bg-amber-50 text-amber-600 px-2 py-1 rounded-lg border border-amber-100">
+                                                    <Star size={12} fill="currentColor" />
+                                                    <span className="text-xs font-black">{review.rating}</span>
+                                                </div>
+                                                {review.difficulty && (
+                                                    <div className="text-[10px] font-bold text-stone-400">
+                                                        Zorluk: <span className="text-stone-600">{review.difficulty}/10</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <p className="text-sm text-stone-600 leading-relaxed whitespace-pre-wrap">{review.comment}</p>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                 </div>
 
             </div>
 
-            {/* REVIEW MODAL (Same component structure as Instructor) */}
+            {/* REVIEW MODAL */}
             <AnimatePresence>
                 {isReviewModalOpen && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-stone-900/40 backdrop-blur-sm p-4">
@@ -317,9 +387,9 @@ const CourseDetail: React.FC = () => {
                             initial={{ opacity: 0, scale: 0.95, y: 10 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                            className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden"
+                            className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
                         >
-                            <div className="px-6 py-4 border-b border-stone-100 flex justify-between items-center bg-stone-50/50">
+                            <div className="px-6 py-4 border-b border-stone-100 flex justify-between items-center bg-stone-50/50 sticky top-0 backdrop-blur-md z-10">
                                 <h3 className="font-serif font-bold text-lg text-stone-800">
                                     Değerlendir: {course.code}
                                 </h3>
@@ -328,16 +398,17 @@ const CourseDetail: React.FC = () => {
                                 </button>
                             </div>
 
-                            <div className="p-6 space-y-6">
+                            <div className="p-6 space-y-8">
                                 {/* INFO ALERT */}
                                 <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                                     <p className="text-xs text-blue-800 leading-relaxed">
-                                        <strong>Not:</strong> Bu yorum <strong>hocadan bağımsız</strong> olarak dersin genel içeriğini değerlendirir. Spesifik bir hoca deneyimi paylaşmak için lütfen "Veren Hocalar" listesinden seçim yapın.
+                                        <strong>Not:</strong> Bu yorum, hocadan bağımsız olarak <strong>dersin içeriğini ve zorluğunu</strong> değerlendirir.
                                     </p>
                                 </div>
 
+                                {/* Rating */}
                                 <div>
-                                    <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-3">Puanın</label>
+                                    <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-3 text-center">Genel Memnuniyet</label>
                                     <div className="flex justify-center gap-3">
                                         {[1, 2, 3, 4, 5].map(star => (
                                             <button
@@ -355,11 +426,40 @@ const CourseDetail: React.FC = () => {
                                             </button>
                                         ))}
                                     </div>
+                                    <div className="text-center mt-2 text-xs font-bold text-amber-500">
+                                        {reviewData.rating === 1 ? "Çok Kötü" : reviewData.rating === 5 ? "Mükemmel" : `${reviewData.rating} Puan`}
+                                    </div>
+                                </div>
+
+                                {/* Difficulty Slider */}
+                                <div>
+                                    <div className="flex justify-between items-end mb-4">
+                                        <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest">Ders Zorluğu</label>
+                                        <span className={cn(
+                                            "text-sm font-black px-2 py-0.5 rounded-md",
+                                            (reviewData.difficulty || 5) > 7 ? "bg-red-50 text-red-600" : (reviewData.difficulty || 5) > 4 ? "bg-amber-50 text-amber-600" : "bg-emerald-50 text-emerald-600"
+                                        )}>
+                                            {reviewData.difficulty || 5}/10
+                                        </span>
+                                    </div>
+                                    <input
+                                        type="range"
+                                        min="1"
+                                        max="10"
+                                        step="0.5"
+                                        value={reviewData.difficulty || 5}
+                                        onChange={(e) => setReviewData(p => ({ ...p, difficulty: parseFloat(e.target.value) }))}
+                                        className="w-full h-2 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-stone-900"
+                                    />
+                                    <div className="flex justify-between mt-2 text-[10px] font-bold text-stone-400 uppercase">
+                                        <span>Çok Kolay</span>
+                                        <span>Çok Zor</span>
+                                    </div>
                                 </div>
 
                                 <TextArea
                                     label="Deneyimin"
-                                    placeholder="Dersin konuları, zorluk seviyesi, genel tavsiyelerin..."
+                                    placeholder="Dersin konuları nasıldı? Sınavları zor muydu? Gelecek öğrencilere tavsiyelerin neler?"
                                     className="h-32 text-sm"
                                     value={reviewData.comment}
                                     onChange={(v: string) => setReviewData({ ...reviewData, comment: v })}

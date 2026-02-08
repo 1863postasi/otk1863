@@ -146,11 +146,24 @@ const Campus: React.FC = () => {
         }
     };
 
+    // Modal Render Optimization: Delay heavy content rendering
+    const [isContentVisible, setIsContentVisible] = useState(false);
+
+    useEffect(() => {
+        if (selectedClub) {
+            setIsContentVisible(false);
+            const timer = setTimeout(() => {
+                setIsContentVisible(true);
+            }, 400); // Wait for modal animation to complete
+            return () => clearTimeout(timer);
+        }
+    }, [selectedClub]);
+
     return (
-        <div className="relative w-full h-full flex flex-col md:flex-row bg-[#f5f5f4] overflow-hidden min-h-[calc(100vh-64px)]">
+        <div className="relative w-full flex flex-col md:flex-row bg-[#f5f5f4] md:h-full md:overflow-hidden min-h-[calc(100vh-64px)] pb-24 md:pb-0">
 
             {/* 1. LEFT PANEL: DIRECTORY */}
-            <div className="w-full md:w-80 flex flex-col border-r border-stone-300 bg-white z-20 shadow-xl md:shadow-none h-[40vh] md:h-full order-2 md:order-1 shrink-0">
+            <div className="w-full md:w-80 flex flex-col border-r border-stone-300 bg-white z-20 shadow-xl md:shadow-none h-auto md:h-full order-2 md:order-1 shrink-0">
                 {/* Header */}
                 <div className="p-4 border-b border-stone-200 bg-stone-50">
                     <button
@@ -178,7 +191,7 @@ const Campus: React.FC = () => {
                 </div>
 
                 {/* List */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
+                <div className="flex-1 md:overflow-y-auto custom-scrollbar p-2 space-y-1">
                     {loading && <div className="p-8 text-center text-stone-400 text-sm italic">Yükleniyor...</div>}
 
                     {filteredClubs.map(club => (
@@ -212,8 +225,7 @@ const Campus: React.FC = () => {
             </div>
 
             {/* 2. RIGHT PANEL: INTERACTIVE MAP */}
-            {/* 2. RIGHT PANEL: INTERACTIVE MAP */}
-            <div className="flex-1 relative bg-[#e0ded8] overflow-hidden order-1 md:order-2 h-[60vh] md:h-full border-b md:border-b-0 md:border-l border-stone-300 flex items-center justify-center p-0 md:p-8">
+            <div className="flex-1 relative bg-[#e0ded8] overflow-hidden order-1 md:order-2 h-auto min-h-[40vh] md:h-full border-b md:border-b-0 md:border-l border-stone-300 flex items-center justify-center p-0 md:p-8">
 
                 {/* HUD Badge (Fixed to Panel) */}
                 <div className="absolute top-16 md:top-4 right-4 bg-white/90 backdrop-blur px-3 py-1.5 rounded text-xs font-bold text-stone-600 uppercase tracking-widest border border-stone-200 shadow-sm flex items-center gap-2 z-20 pointer-events-none">
@@ -224,7 +236,7 @@ const Campus: React.FC = () => {
                 <div className="relative inline-block shadow-lg rounded-xl overflow-hidden bg-stone-200 group cursor-grab active:cursor-grabbing">
                     <img
                         src="https://cdn.1863postasi.org/kulupler-arsivi/kroki.png"
-                        className="block max-h-[55vh] md:max-h-[85vh] w-auto max-w-full object-contain select-none pointer-events-none mix-blend-multiply opacity-90"
+                        className="block w-full h-auto md:max-h-[85vh] md:w-auto md:max-w-full object-contain select-none pointer-events-none mix-blend-multiply opacity-90"
                         alt="Kampüs Krokisi"
                     />
 
@@ -307,7 +319,8 @@ const Campus: React.FC = () => {
                             transition={{ type: "spring", damping: 25, stiffness: 300 }}
                             className="relative w-full max-w-5xl bg-[#f0eadd] rounded-xl shadow-2xl overflow-hidden flex flex-col md:flex-row max-h-[90vh] pointer-events-auto border border-stone-400"
                             style={{
-                                backgroundImage: 'url("https://www.transparenttextures.com/patterns/cream-paper.png")'
+                                backgroundImage: 'url("https://www.transparenttextures.com/patterns/cream-paper.png")',
+                                willChange: 'transform, opacity'
                             }}
                         >
                             {/* Close Button */}
@@ -361,95 +374,102 @@ const Campus: React.FC = () => {
                                 </div>
 
                                 {/* CONTENT - PINTEREST STYLE WITH ACCORDION */}
-                                {Object.keys(groupedContents).length > 0 && (
-                                    <LayoutGroup>
-                                        <div className="space-y-4 pb-8">
-                                            {Object.entries(groupedContents).map(([year, items]) => {
-                                                const files = items as ClubContent[];
-                                                const isExpanded = expandedYears.includes(year);
+                                {/* OPTIMIZATION: Only render heavy content after animation completes */}
+                                {isContentVisible ? (
+                                    Object.keys(groupedContents).length > 0 && (
+                                        <LayoutGroup>
+                                            <div className="space-y-4 pb-8">
+                                                {Object.entries(groupedContents).map(([year, items]) => {
+                                                    const files = items as ClubContent[];
+                                                    const isExpanded = expandedYears.includes(year);
 
-                                                return (
-                                                    <motion.div
-                                                        layout
-                                                        key={year}
-                                                        className="border border-stone-200 rounded-lg bg-white/60 overflow-hidden"
-                                                        initial={{ borderRadius: 8 }}
-                                                    >
-                                                        {/* Accordion Header */}
-                                                        <motion.button
-                                                            layout="position"
-                                                            onClick={() => toggleYear(year)}
-                                                            className="w-full flex items-center justify-between p-4 bg-stone-50 hover:bg-stone-100 transition-colors"
+                                                    return (
+                                                        <motion.div
+                                                            layout
+                                                            key={year}
+                                                            className="border border-stone-200 rounded-lg bg-white/60 overflow-hidden"
+                                                            initial={{ borderRadius: 8 }}
                                                         >
-                                                            <h3 className="font-serif text-xl font-bold text-stone-800 flex items-center gap-2">
-                                                                <span className="text-stone-300">#</span> {year}
-                                                            </h3>
-                                                            <motion.div
-                                                                animate={{ rotate: isExpanded ? 180 : 0 }}
-                                                                transition={{ duration: 0.3 }}
+                                                            {/* Accordion Header */}
+                                                            <motion.button
+                                                                layout="position"
+                                                                onClick={() => toggleYear(year)}
+                                                                className="w-full flex items-center justify-between p-4 bg-stone-50 hover:bg-stone-100 transition-colors"
                                                             >
-                                                                <ChevronDown size={20} className="text-stone-400" />
-                                                            </motion.div>
-                                                        </motion.button>
-
-                                                        {/* Grid Content */}
-                                                        <AnimatePresence mode="sync">
-                                                            {isExpanded && (
+                                                                <h3 className="font-serif text-xl font-bold text-stone-800 flex items-center gap-2">
+                                                                    <span className="text-stone-300">#</span> {year}
+                                                                </h3>
                                                                 <motion.div
-                                                                    key={`content-${year}`}
-                                                                    initial={{ height: 0, opacity: 0 }}
-                                                                    animate={{ height: "auto", opacity: 1 }}
-                                                                    exit={{ height: 0, opacity: 0 }}
-                                                                    transition={{ duration: 0.3, ease: "easeInOut" }}
-                                                                    style={{ overflow: 'hidden' }}
+                                                                    animate={{ rotate: isExpanded ? 180 : 0 }}
+                                                                    transition={{ duration: 0.3 }}
                                                                 >
-                                                                    <div className="p-4 columns-2 md:columns-3 gap-4 space-y-4">
-                                                                        {files.map((file, idx) => (
-                                                                            <motion.div
-                                                                                key={idx}
-                                                                                initial={{ opacity: 0, y: 20 }}
-                                                                                animate={{ opacity: 1, y: 0 }}
-                                                                                transition={{ delay: Math.min(idx, 12) * 0.05 }}
-                                                                                onClick={(e) => handleContentClick(file, e)}
-                                                                                className="break-inside-avoid bg-white border border-stone-200 rounded-lg overflow-hidden hover:shadow-lg transition-all group cursor-pointer relative mb-4"
-                                                                            >
-                                                                                {/* PREVIEW AREA */}
-                                                                                <div className="aspect-[4/3] bg-stone-100 relative flex items-center justify-center overflow-hidden">
-                                                                                    {file.subType.includes('image') ? (
-                                                                                        <img src={file.url} alt={file.title} className="w-full h-full object-cover" />
-                                                                                    ) : file.subType.includes('video') ? (
-                                                                                        <div className="bg-stone-900 w-full h-full flex items-center justify-center text-white"><Film size={32} /></div>
-                                                                                    ) : file.subType.includes('pdf') ? (
-                                                                                        <div className="bg-red-50 w-full h-full flex items-center justify-center text-red-400"><FileText size={40} /></div>
-                                                                                    ) : (
-                                                                                        <div className="bg-stone-50 w-full h-full flex items-center justify-center text-stone-300"><Folder size={40} /></div>
-                                                                                    )}
-
-                                                                                    {/* Overlay Icon */}
-                                                                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                                                                        <Eye className="text-white drop-shadow-md" size={32} />
-                                                                                    </div>
-                                                                                </div>
-
-                                                                                {/* INFO AREA */}
-                                                                                <div className="p-3">
-                                                                                    <h4 className="font-sans font-bold text-stone-800 text-xs leading-tight mb-1">{file.title || file.fileName}</h4>
-                                                                                    <div className="flex items-center justify-between">
-                                                                                        <span className="text-[10px] text-stone-400 bg-stone-100 px-1.5 py-0.5 rounded uppercase tracking-wider">{file.subType}</span>
-                                                                                        <span className="text-[10px] text-stone-400">{file.date}</span>
-                                                                                    </div>
-                                                                                </div>
-                                                                            </motion.div>
-                                                                        ))}
-                                                                    </div>
+                                                                    <ChevronDown size={20} className="text-stone-400" />
                                                                 </motion.div>
-                                                            )}
-                                                        </AnimatePresence>
-                                                    </motion.div>
-                                                );
-                                            })}
-                                        </div>
-                                    </LayoutGroup>
+                                                            </motion.button>
+
+                                                            {/* Grid Content */}
+                                                            <AnimatePresence mode="sync">
+                                                                {isExpanded && (
+                                                                    <motion.div
+                                                                        key={`content-${year}`}
+                                                                        initial={{ height: 0, opacity: 0 }}
+                                                                        animate={{ height: "auto", opacity: 1 }}
+                                                                        exit={{ height: 0, opacity: 0 }}
+                                                                        transition={{ duration: 0.3, ease: "easeInOut" }}
+                                                                        style={{ overflow: 'hidden' }}
+                                                                    >
+                                                                        <div className="p-4 columns-2 md:columns-3 gap-4 space-y-4">
+                                                                            {files.map((file, idx) => (
+                                                                                <motion.div
+                                                                                    key={idx}
+                                                                                    initial={{ opacity: 0, y: 20 }}
+                                                                                    animate={{ opacity: 1, y: 0 }}
+                                                                                    transition={{ delay: Math.min(idx, 12) * 0.05 }}
+                                                                                    onClick={(e) => handleContentClick(file, e)}
+                                                                                    className="break-inside-avoid bg-white border border-stone-200 rounded-lg overflow-hidden hover:shadow-lg transition-all group cursor-pointer relative mb-4"
+                                                                                >
+                                                                                    {/* PREVIEW AREA */}
+                                                                                    <div className="aspect-[4/3] bg-stone-100 relative flex items-center justify-center overflow-hidden">
+                                                                                        {file.subType.includes('image') ? (
+                                                                                            <img src={file.url} alt={file.title} className="w-full h-full object-cover" />
+                                                                                        ) : file.subType.includes('video') ? (
+                                                                                            <div className="bg-stone-900 w-full h-full flex items-center justify-center text-white"><Film size={32} /></div>
+                                                                                        ) : file.subType.includes('pdf') ? (
+                                                                                            <div className="bg-red-50 w-full h-full flex items-center justify-center text-red-400"><FileText size={40} /></div>
+                                                                                        ) : (
+                                                                                            <div className="bg-stone-50 w-full h-full flex items-center justify-center text-stone-300"><Folder size={40} /></div>
+                                                                                        )}
+
+                                                                                        {/* Overlay Icon */}
+                                                                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                                                            <Eye className="text-white drop-shadow-md" size={32} />
+                                                                                        </div>
+                                                                                    </div>
+
+                                                                                    {/* INFO AREA */}
+                                                                                    <div className="p-3">
+                                                                                        <h4 className="font-sans font-bold text-stone-800 text-xs leading-tight mb-1">{file.title || file.fileName}</h4>
+                                                                                        <div className="flex items-center justify-between">
+                                                                                            <span className="text-[10px] text-stone-400 bg-stone-100 px-1.5 py-0.5 rounded uppercase tracking-wider">{file.subType}</span>
+                                                                                            <span className="text-[10px] text-stone-400">{file.date}</span>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </motion.div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </motion.div>
+                                                                )}
+                                                            </AnimatePresence>
+                                                        </motion.div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </LayoutGroup>
+                                    )
+                                ) : (
+                                    <div className="flex items-center justify-center py-20">
+                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-stone-900"></div>
+                                    </div>
                                 )}
 
                                 {/* Links Footer */}

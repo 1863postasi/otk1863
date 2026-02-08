@@ -207,15 +207,62 @@ const InstructorDetail: React.FC = () => {
 
                     {/* RIGHT COL: REVIEWS */}
                     <div className="md:col-span-2 space-y-6">
-                        <div className="bg-white rounded-2xl p-10 text-center border border-dashed border-stone-300">
-                            <div className="w-16 h-16 bg-stone-100 rounded-full flex items-center justify-center mx-auto mb-4 text-stone-400">
-                                <MessageSquare size={24} />
-                            </div>
-                            <h3 className="font-serif font-bold text-xl text-stone-700 mb-2">Yorumları Görüntüle</h3>
-                            <p className="text-stone-500 text-sm max-w-md mx-auto mb-6 leading-relaxed">
-                                {instructor.name} hocanın değerlendirmelerini görmek için lütfen soldaki listeden <strong>verdiği dersi</strong> seçin.
-                            </p>
+                        <div className="flex items-center justify-between">
+                            <h3 className="font-serif font-bold text-xl text-stone-800">Hoca Değerlendirmeleri</h3>
+                            <span className="text-xs font-bold text-stone-400 bg-stone-100 px-2 py-1 rounded-md">{reviews.length} Görüş</span>
                         </div>
+
+                        {reviews.length === 0 ? (
+                            <div className="bg-white rounded-2xl p-10 text-center border border-dashed border-stone-300">
+                                <div className="w-16 h-16 bg-stone-100 rounded-full flex items-center justify-center mx-auto mb-4 text-stone-400">
+                                    <MessageSquare size={24} />
+                                </div>
+                                <h3 className="font-serif font-bold text-xl text-stone-700 mb-2">Henüz Yorum Yok</h3>
+                                <p className="text-stone-500 text-sm max-w-md mx-auto mb-6 leading-relaxed">
+                                    Bu hoca için henüz genel bir değerlendirme yapılmamış. İlk yorumu sen yaparak arkadaşlarına yardımcı ol!
+                                </p>
+                                <button
+                                    onClick={() => setIsReviewModalOpen(true)}
+                                    className="inline-flex items-center gap-2 px-6 py-3 bg-stone-900 text-white rounded-xl text-sm font-bold hover:bg-black transition-colors"
+                                >
+                                    İlk Değerlendirmeyi Yap
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {reviews.map((review) => (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        key={review.id}
+                                        className="bg-white p-5 rounded-2xl border border-stone-100 shadow-sm hover:shadow-md transition-shadow"
+                                    >
+                                        <div className="flex justify-between items-start mb-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-full bg-stone-100 flex items-center justify-center text-stone-500 font-bold text-sm">
+                                                    {review.isAnonymous ? <User size={18} /> : (review.userPhotoUrl ? <img src={review.userPhotoUrl} className="w-full h-full rounded-full object-cover" /> : review.userDisplayName?.charAt(0))}
+                                                </div>
+                                                <div>
+                                                    <div className="text-sm font-bold text-stone-800">
+                                                        {review.isAnonymous ? "Anonim Öğrenci" : review.userDisplayName}
+                                                    </div>
+                                                    <div className="text-[10px] text-stone-400">
+                                                        {review.timestamp?.seconds ? new Date(review.timestamp.seconds * 1000).toLocaleDateString("tr-TR") : "Az önce"}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col items-end gap-1">
+                                                <div className="flex items-center gap-1 bg-amber-50 text-amber-600 px-2 py-1 rounded-lg border border-amber-100">
+                                                    <Star size={12} fill="currentColor" />
+                                                    <span className="text-xs font-black">{review.rating}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <p className="text-sm text-stone-600 leading-relaxed whitespace-pre-wrap">{review.comment}</p>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                 </div>
