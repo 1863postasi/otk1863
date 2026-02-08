@@ -114,20 +114,24 @@ const AnnouncementsSection: React.FC<AnnouncementsSectionProps> = ({ onBack }) =
     // Fetch Data with Cache (10 Minutes)
     useEffect(() => {
         const fetchData = async () => {
-            // 1. ANNOUNCEMENTS
+            // 1. ANNOUNCEMENTS (Stale-While-Revalidate Strategy)
             const cachedAnnouncements = cache.get(CACHE_KEYS.ANNOUNCEMENTS);
             if (cachedAnnouncements) {
                 setAnnouncements(cachedAnnouncements);
-            } else {
-                try {
-                    const q = query(collection(db, "announcements"));
-                    const snapshot = await getDocs(q);
-                    const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Announcement[];
-                    setAnnouncements(data);
-                    cache.set(CACHE_KEYS.ANNOUNCEMENTS, data, CACHE_TTL.LONG);
-                } catch (error) {
-                    console.error("Error fetching announcements:", error);
-                }
+            }
+
+            // Always fetch fresh data to ensure updates are seen
+            try {
+                const q = query(collection(db, "announcements"));
+                const snapshot = await getDocs(q);
+                const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Announcement[];
+
+                // Update state with fresh data
+                setAnnouncements(data);
+                // Update cache
+                cache.set(CACHE_KEYS.ANNOUNCEMENTS, data, CACHE_TTL.SHORT);
+            } catch (error) {
+                console.error("Error fetching announcements:", error);
             }
 
             // 2. LOST ITEMS

@@ -6,7 +6,7 @@ import {
     Instagram, Mail, ExternalLink, ChevronRight,
     Clock, Heart, Share2, Info, AlertTriangle, Twitter, Check, Link as LinkIcon
 } from 'lucide-react';
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, FieldPath } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { formatDate, cn } from '../../lib/utils';
 import { Club } from './types';
@@ -67,37 +67,47 @@ export default function ClubDetail() {
         return url.startsWith('http') ? url : `https://${url}`;
     };
 
-    // Board Members Fetcher
+    // Board Members Fetcher (Query Users Collection)
     useEffect(() => {
-        if (activeTab === 'board' && club?.clubRoles) {
+        if (activeTab === 'board' && id) {
             const fetchBoard = async () => {
-                const userIds = Object.keys(club.clubRoles!);
-                if (userIds.length === 0) return;
-
                 try {
-                    const promises = userIds.map(async (uid) => {
-                        const snap = await getDoc(doc(db, "users", uid));
-                        if (snap.exists()) {
-                            const uData = snap.data();
-                            return {
-                                id: snap.id,
-                                name: uData.displayName || "İsimsiz",
-                                photoUrl: uData.photoURL,
-                                role: club.clubRoles![uid]
-                            };
-                        }
-                        return null;
+                    setLoading(true);
+                    // Query users who have a role for this club ID
+                    // We check if clubRoles.[id] exists and is a non-empty string
+                    const usersRef = collection(db, "users");
+                    // Using FieldPath to safely query nested map field with dynamic key
+                    const q = query(usersRef, where(new FieldPath('clubRoles', id), '>=', ''));
+
+                    const snapshot = await getDocs(q);
+
+                    if (snapshot.empty) {
+                        setBoardMembers([]);
+                        return;
+                    }
+
+                    const members = snapshot.docs.map(doc => {
+                        const data = doc.data();
+                        return {
+                            id: doc.id,
+                            name: data.username || data.displayName || "İsimsiz", // Prioritize username as per usage elsewhere
+                            photoUrl: data.photoUrl,
+                            role: data.clubRoles?.[id] || "Yetkili" // Get specific role for this club
+                        };
                     });
 
-                    const results = await Promise.all(promises);
-                    setBoardMembers(results.filter(r => r !== null));
+                    setBoardMembers(members);
                 } catch (e) {
-                    console.error("Board fetch error", e);
+                    console.error("Board fetch error:", e);
+                } finally {
+                    setLoading(false); // Only stop loading for this section, but main loading is handled by other effect. 
+                    // Actually, main 'loading' state is for the whole page. We might want a local loading state for tab, 
+                    // but for now this is fine, or we just don't touch main 'loading' here to avoid flickering current view.
                 }
             };
             fetchBoard();
         }
-    }, [activeTab, club]);
+    }, [activeTab, id]);
 
     // Fetch Logic
     useEffect(() => {

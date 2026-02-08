@@ -2,12 +2,15 @@ import { useEffect, useState } from 'react';
 import { getToken, Unsubscribe } from 'firebase/messaging';
 import { messaging, db, auth } from '../lib/firebase';
 import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { useAuth } from '../context/AuthContext';
 
 export const useFcmToken = () => {
     const [token, setToken] = useState<string | null>(null);
     const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(
         Notification.permission
     );
+
+    const { currentUser } = useAuth(); // Get current user from context
 
     useEffect(() => {
         const retrieveToken = async () => {
@@ -17,16 +20,19 @@ export const useFcmToken = () => {
                     setNotificationPermission(permission);
 
                     if (permission === 'granted') {
+                        // Wait for Service Worker to be ready
+                        const registration = await navigator.serviceWorker.ready;
+
                         const currentToken = await getToken(messaging, {
-                            vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY
+                            vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
+                            serviceWorkerRegistration: registration, // Explicitly pass registration
                         });
 
                         if (currentToken) {
                             setToken(currentToken);
                             // Save token to user profile if authenticated
-                            const user = auth.currentUser;
-                            if (user) {
-                                await saveTokenToDatabase(user.uid, currentToken);
+                            if (currentUser) {
+                                await saveTokenToDatabase(currentUser.uid, currentToken);
                             }
                         } else {
                             console.log('No registration token available. Request permission to generate one.');
@@ -39,7 +45,7 @@ export const useFcmToken = () => {
         };
 
         retrieveToken();
-    }, []);
+    }, [currentUser]); // Re-run when user logs in
 
     const saveTokenToDatabase = async (uid: string, token: string) => {
         try {
