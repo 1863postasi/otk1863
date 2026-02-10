@@ -63,7 +63,12 @@ const SecretDiaryButton = () => {
     const [isUNLOCKED, setIsUNLOCKED] = useState(false);
     const navigate = useNavigate();
 
+    // REVOKE ACCESS FLAG
+    const IS_ACTIVE = false;
+
     const handleClick = () => {
+        if (!IS_ACTIVE) return;
+
         if (!isUNLOCKED) {
             setIsUNLOCKED(true);
         } else {
@@ -73,7 +78,7 @@ const SecretDiaryButton = () => {
 
     return (
         <div className="flex flex-col items-center justify-center py-12">
-            <h2 className="text-3xl font-serif font-bold text-stone-900 mb-8 tracking-tight">Özel</h2>
+            <h2 className="text-3xl font-serif font-bold text-stone-900 mb-8 tracking-tight opacity-50">Özel</h2>
 
             <motion.div
                 layout
@@ -82,6 +87,8 @@ const SecretDiaryButton = () => {
                 animate={{
                     width: isUNLOCKED ? '320px' : '64px',
                     backgroundColor: isUNLOCKED ? '#0c0a09' : '#1c1917',
+                    opacity: IS_ACTIVE ? 1 : 0.3,
+                    filter: IS_ACTIVE ? 'none' : 'grayscale(100%)',
                 }}
                 transition={{
                     type: "spring",
@@ -90,7 +97,7 @@ const SecretDiaryButton = () => {
                     mass: 0.8
                 }}
                 style={{ willChange: "width, background-color" }}
-                className={`h-16 rounded-full flex items-center justify-center cursor-pointer shadow-2xl relative overflow-hidden group ${isUNLOCKED ? 'hover:scale-105' : 'hover:scale-110'}`}
+                className={`h-16 rounded-full flex items-center justify-center shadow-2xl relative overflow-hidden group ${IS_ACTIVE ? 'cursor-pointer hover:scale-110' : 'cursor-not-allowed'}`}
             >
                 {/* Background Animation on Unlocked */}
                 <AnimatePresence>

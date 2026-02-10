@@ -20,15 +20,18 @@ export const useFcmToken = () => {
                     setNotificationPermission(permission);
 
                     if (permission === 'granted') {
-                        // Wait for Service Worker to be ready
-                        const registration = await navigator.serviceWorker.ready;
+                        // Register the Service Worker explicitly for FCM
+                        const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
+                            scope: '/firebase-cloud-messaging-push-scope'
+                        });
 
                         const currentToken = await getToken(messaging, {
                             vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
-                            serviceWorkerRegistration: registration, // Explicitly pass registration
+                            serviceWorkerRegistration: registration,
                         });
 
                         if (currentToken) {
+                            console.log('FCM Token:', currentToken);
                             setToken(currentToken);
                             // Save token to user profile if authenticated
                             if (currentUser) {

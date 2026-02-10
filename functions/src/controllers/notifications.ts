@@ -36,15 +36,17 @@ export const onAnnouncementCreated = functions.firestore
             },
             // Web specific
             webpush: {
+                headers: {
+                    image: "https://pwa-icon.png" // Placeholder, actually icon is handled in notification object
+                },
                 notification: {
                     icon: '/pwa-icon.png',
                     badge: '/pwa-icon.png',
-                    actions: [
-                        { action: 'open', title: 'Görüntüle' }
-                    ]
+                    // click_action is often ignored by generic web push but useful for some implementations
+                    // We handle click in SW.
                 },
                 fcmOptions: {
-                    link: "/" // Opens app root, or we can use specific link if SW handles it
+                    link: link // This is used if the notification is received while app is in background/closed and system handles it directly (though onBackgroundMessage overrides this usually)
                 }
             },
             tokens: [] // Will be filled
