@@ -64,8 +64,8 @@ const Archive: React.FC = () => {
   return (
     <div className="h-dvh md:h-[calc(100vh-56px)] bg-[#f5f5f4] font-sans relative overflow-hidden flex flex-col items-center justify-center">
 
-      {/* DEV WARNING BUTTON */}
-      <div className="absolute top-4 right-4 md:top-8 md:right-8 z-50">
+      {/* DEV WARNING BUTTON (Desktop Only) */}
+      <div className="hidden md:block absolute top-4 right-4 md:top-8 md:right-8 z-50">
         <button
           onClick={() => setShowWarning(!showWarning)}
           className="p-2 md:p-3 rounded-full bg-amber-100/80 text-amber-700 hover:bg-amber-200 transition-all shadow-sm flex items-center gap-2 backdrop-blur-sm"
@@ -75,7 +75,7 @@ const Archive: React.FC = () => {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 md:h-2.5 md:w-2.5 bg-amber-600"></span>
           </span>
-          <span className="font-bold text-[10px] md:text-xs uppercase tracking-wide hidden md:block">Bilgi</span>
+          <span className="font-bold text-[10px] md:text-xs uppercase tracking-wide">Bilgi</span>
         </button>
 
         <AnimatePresence>
@@ -99,7 +99,32 @@ const Archive: React.FC = () => {
       <div className="w-full max-w-3xl px-6 md:px-8 space-y-10 md:space-y-12 -mt-16 md:-mt-0">
 
         {/* HEADER */}
-        <div className="text-center flex flex-col items-center">
+        <div className="text-center flex flex-col items-center relative">
+
+          {/* MOBILE WARNING BUTTON (Hidden on Desktop) */}
+          <div className="md:hidden mb-6 w-full flex flex-col items-center justify-center relative z-50">
+            <button
+              onClick={() => setShowWarning(!showWarning)}
+              className="animate-pulse px-6 py-2 rounded-full bg-red-100 text-red-700 border border-red-200 shadow-sm flex items-center gap-2"
+            >
+              <Info size={18} className="text-red-600" />
+              <span className="font-bold text-xs uppercase tracking-widest">DİKKAT</span>
+            </button>
+            <AnimatePresence>
+              {showWarning && (
+                <motion.div
+                  initial={{ opacity: 0, y: 5, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 5, scale: 0.95 }}
+                  className="absolute top-12 w-64 p-4 bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-stone-200 text-sm font-serif text-stone-600 z-50 text-left"
+                >
+                  <p>Veri yüklemesine site geliştirme aşamasından çıktıktan sonra başlanacaktır.</p>
+                  <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white border-t border-l border-stone-200 transform rotate-45"></div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
