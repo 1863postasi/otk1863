@@ -80,25 +80,45 @@ const ForumHub: React.FC = () => {
                         >
                             <Link
                                 to={cat.path}
-                                className="group relative flex items-center gap-4 p-3 md:p-5 rounded-xl transition-all duration-300 hover:bg-stone-200/50 text-left border border-transparent hover:border-stone-200/50"
+                                className={cn(
+                                    "group relative flex items-center gap-4 p-3 md:p-5 rounded-xl transition-all duration-300 text-left border border-transparent",
+                                    cat.id === 'community'
+                                        ? "opacity-40 pointer-events-none grayscale bg-stone-100" // Disabled state
+                                        : "hover:bg-stone-200/50 hover:border-stone-200/50" // Normal hover state
+                                )}
+                                aria-disabled={cat.id === 'community'}
                             >
                                 {/* Icon Container - Smaller on mobile */}
-                                <div className="p-2.5 md:p-3 rounded-full bg-stone-200/50 group-hover:bg-white transition-colors shrink-0 text-stone-600 group-hover:text-black shadow-none group-hover:shadow-sm">
+                                <div className={cn(
+                                    "p-2.5 md:p-3 rounded-full transition-colors shrink-0 text-stone-600 shadow-none",
+                                    cat.id === 'community'
+                                        ? "bg-transparent"
+                                        : "bg-stone-200/50 group-hover:bg-white group-hover:text-black group-hover:shadow-sm"
+                                )}>
                                     <cat.icon size={20} className="md:w-6 md:h-6" strokeWidth={1.5} />
                                 </div>
 
                                 {/* Text Content */}
                                 <div className="flex-1 min-w-0">
-                                    <h3 className="font-serif text-sm md:text-base font-bold text-stone-700 group-hover:text-black uppercase tracking-wide transition-colors truncate">
+                                    <h3 className={cn(
+                                        "font-serif text-sm md:text-base font-bold text-stone-700 uppercase tracking-wide transition-colors truncate",
+                                        cat.id !== 'community' && "group-hover:text-black"
+                                    )}>
                                         {cat.title}
                                     </h3>
-                                    <p className="text-[10px] md:text-xs text-stone-400 group-hover:text-stone-500 transition-colors truncate font-medium">
+                                    <p className={cn(
+                                        "text-[10px] md:text-xs text-stone-400 transition-colors truncate font-medium",
+                                        cat.id !== 'community' && "group-hover:text-stone-500"
+                                    )}>
                                         {cat.desc}
                                     </p>
                                 </div>
 
                                 {/* Arrow - Subtle Reveal */}
-                                <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 transform -translate-x-2 group-hover:translate-x-0 text-stone-400">
+                                <div className={cn(
+                                    "transition-all duration-300 transform -translate-x-2 text-stone-400",
+                                    cat.id === 'community' ? "opacity-0" : "opacity-0 group-hover:opacity-100 group-hover:translate-x-0"
+                                )}>
                                     <ArrowRight size={16} className="md:w-5 md:h-5" />
                                 </div>
                             </Link>

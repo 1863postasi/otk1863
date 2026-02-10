@@ -37,6 +37,8 @@ import RequireProfileSetup from './components/Auth/RequireProfileSetup'; // Onbo
 const { Routes, Route, useLocation, Link } = router;
 
 import MobileBottomNav from './components/PWA/MobileBottomNav';
+import GlobalLoader from './components/Shared/GlobalLoader';
+import { useAuth } from './context/AuthContext';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
@@ -98,188 +100,205 @@ const App: React.FC = () => {
     return () => unsubscribe();
   }, [token]);
 
+  const { loading: authLoading } = useAuth();
+  const [minLoadFinished, setMinLoadFinished] = React.useState(false);
+
+  React.useEffect(() => {
+    // Force a minimum loading time to prevent flickering and allow "heavy" home page to become interactive
+    const timer = setTimeout(() => {
+      setMinLoadFinished(true);
+    }, 1500); // 1.5 seconds minimum load time
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  const isAppReady = minLoadFinished && !authLoading;
+
   return (
-    <Layout>
-      <AnimatePresence mode="wait">
-        <Routes location={location} key={location.pathname}>
-          {/* --- GRUP A: HERKESE AÇIK (Public) --- */}
-          <Route path="/" element={<Home />} />
-          <Route path="/otk" element={<OTK />} />
-          <Route path="/hakkinda" element={<About />} />
-          <Route path="/yayinlar" element={<PublicationsPage />} />
-          <Route path="/yayinlar/:id" element={<PublicationDetail />} />
-          <Route path="/yayinlar-gunluk" element={<DiaryPage />} />
+    <div className="contents">
+      <GlobalLoader isLoading={!isAppReady} />
+      <Layout>
+        <AnimatePresence mode="wait">
+          <Routes location={location} key={location.pathname}>
+            {/* --- GRUP A: HERKESE AÇIK (Public) --- */}
+            <Route path="/" element={<Home />} />
+            <Route path="/otk" element={<OTK />} />
+            <Route path="/hakkinda" element={<About />} />
+            <Route path="/yayinlar" element={<PublicationsPage />} />
+            <Route path="/yayinlar/:id" element={<PublicationDetail />} />
+            <Route path="/yayinlar-gunluk" element={<DiaryPage />} />
 
-          {/* Auth Pages */}
-          <Route path="/auth/login" element={<StudentLogin />} />
-          <Route path="/auth/register" element={<Register />} />
+            {/* Auth Pages */}
+            <Route path="/auth/login" element={<StudentLogin />} />
+            <Route path="/auth/register" element={<Register />} />
 
-          {/* Admin Login (Must be public to allow entry) */}
-          <Route path="/admin/login" element={<AdminLogin />} />
-
-
-          {/* --- GRUP B: SADECE ÜYELERE (Logged In) --- */}
-          <Route
-            path="/arsiv"
-            element={
-              <ProtectedRoute requireAdmin={false}>
-                <Archive />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/arsiv/kokenler"
-            element={
-              <ProtectedRoute requireAdmin={false}>
-                <Roots />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/arsiv/kampus"
-            element={
-              <ProtectedRoute requireAdmin={false}>
-                <Campus />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/arsiv/direnis"
-            element={
-              <ProtectedRoute requireAdmin={false}>
-                <Resistance />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/arsiv/belgeler"
-            element={
-              <ProtectedRoute requireAdmin={false}>
-                <Institutional />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute requireAdmin={false}>
-                <Profile />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/boundle"
-            element={
-              <ProtectedRoute requireAdmin={false}>
-                <Boundle />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Forum Routes */}
-          <Route
-            path="/forum"
-            element={
-              <ProtectedRoute requireAdmin={false}>
-                <Forum />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/forum/akademik"
-            element={
-              <ProtectedRoute requireAdmin={false}>
-                <AcademicReviews />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/forum/ders/:courseCode"
-            element={
-              <ProtectedRoute requireAdmin={false}>
-                <CourseDetail />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/forum/hoca/:instructorId"
-            element={
-              <ProtectedRoute requireAdmin={false}>
-                <InstructorDetail />
-              </ProtectedRoute>
-            }
-          />
-          {/* NEW: Course-Instructor Pairing Route */}
-          <Route
-            path="/forum/degerlendirme/:courseCode/:instructorId"
-            element={
-              <ProtectedRoute requireAdmin={false}>
-                <CourseInstructorDetail />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/forum/kulupler"
-            element={
-              <ProtectedRoute requireAdmin={false}>
-                <ClubReviews />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/forum/kulupler/:clubId"
-            element={
-              <ProtectedRoute requireAdmin={false}>
-                <ClubDetail />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/forum/topluluk"
-            element={
-              <ProtectedRoute requireAdmin={false}>
-                <Community />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/forum/topluluk/:id"
-            element={
-              <ProtectedRoute requireAdmin={false}>
-                <ThreadDetail />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/forum/pazar"
-            element={
-              <ProtectedRoute requireAdmin={false}>
-                <Marketplace />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/yonetim"
-            element={
-              <ProtectedRoute requireAdmin={false}>
-                <ManagerPanel />
-              </ProtectedRoute>
-            }
-          />
+            {/* Admin Login (Must be public to allow entry) */}
+            <Route path="/admin/login" element={<AdminLogin />} />
 
 
-          {/* --- GRUP C: SADECE ADMIN (Admin Only) --- */}
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute requireAdmin={true}>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-        </Routes >
-      </AnimatePresence >
-    </Layout >
+            {/* --- GRUP B: SADECE ÜYELERE (Logged In) --- */}
+            <Route
+              path="/arsiv"
+              element={
+                <ProtectedRoute requireAdmin={false}>
+                  <Archive />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/arsiv/kokenler"
+              element={
+                <ProtectedRoute requireAdmin={false}>
+                  <Roots />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/arsiv/kampus"
+              element={
+                <ProtectedRoute requireAdmin={false}>
+                  <Campus />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/arsiv/direnis"
+              element={
+                <ProtectedRoute requireAdmin={false}>
+                  <Resistance />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/arsiv/belgeler"
+              element={
+                <ProtectedRoute requireAdmin={false}>
+                  <Institutional />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute requireAdmin={false}>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/boundle"
+              element={
+                <ProtectedRoute requireAdmin={false}>
+                  <Boundle />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Forum Routes */}
+            <Route
+              path="/forum"
+              element={
+                <ProtectedRoute requireAdmin={false}>
+                  <Forum />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/forum/akademik"
+              element={
+                <ProtectedRoute requireAdmin={false}>
+                  <AcademicReviews />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/forum/ders/:courseCode"
+              element={
+                <ProtectedRoute requireAdmin={false}>
+                  <CourseDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/forum/hoca/:instructorId"
+              element={
+                <ProtectedRoute requireAdmin={false}>
+                  <InstructorDetail />
+                </ProtectedRoute>
+              }
+            />
+            {/* NEW: Course-Instructor Pairing Route */}
+            <Route
+              path="/forum/degerlendirme/:courseCode/:instructorId"
+              element={
+                <ProtectedRoute requireAdmin={false}>
+                  <CourseInstructorDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/forum/kulupler"
+              element={
+                <ProtectedRoute requireAdmin={false}>
+                  <ClubReviews />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/forum/kulupler/:clubId"
+              element={
+                <ProtectedRoute requireAdmin={false}>
+                  <ClubDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/forum/topluluk"
+              element={
+                <ProtectedRoute requireAdmin={false}>
+                  <Community />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/forum/topluluk/:id"
+              element={
+                <ProtectedRoute requireAdmin={false}>
+                  <ThreadDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/forum/pazar"
+              element={
+                <ProtectedRoute requireAdmin={false}>
+                  <Marketplace />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/yonetim"
+              element={
+                <ProtectedRoute requireAdmin={false}>
+                  <ManagerPanel />
+                </ProtectedRoute>
+              }
+            />
+
+
+            {/* --- GRUP C: SADECE ADMIN (Admin Only) --- */}
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute requireAdmin={true}>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+          </Routes >
+        </AnimatePresence >
+      </Layout >
+    </div>
   );
 };
 

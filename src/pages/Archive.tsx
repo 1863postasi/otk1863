@@ -1,12 +1,13 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Scroll, Users, Building2, Megaphone, ArrowRight } from 'lucide-react';
+import { Scroll, Users, Building2, Megaphone, ArrowRight, Info } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 
 const Archive: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const [showWarning, setShowWarning] = React.useState(false);
 
   // Handle Legacy Redirects & Deep Links
   useEffect(() => {
@@ -34,34 +35,66 @@ const Archive: React.FC = () => {
       id: 'roots',
       path: '/arsiv/kokenler',
       title: "KÖKLER VE HİKAYELER",
-      desc: "RC Yıllıkları, Padişah Mektupları, Boğaziçi Memories anlatıları ve kampüs efsaneleri.",
+      desc: "BoğaziçiMemories anlatıları ve efsaneler.",
       icon: Scroll
     },
     {
       id: 'campus',
       path: '/arsiv/kampus',
       title: "KULÜPLER ARŞİVİ",
-      desc: "Öğrenci kulüplerinin tarihi, logoları, yayınları ve yerleşke haritasındaki konumları.",
+      desc: "Öğrenci kulüplerinin tarihi.",
       icon: Users
     },
     {
       id: 'institutional',
       path: '/arsiv/belgeler',
       title: "ÖTK VE AKADEMİ",
-      desc: "Ders notları havuzu, çıkmış sorular, ÖTK tutanakları ve kurumsal belgeler.",
+      desc: "Ders notu havuzu ve ÖTK belgeleri.",
       icon: Building2
     },
     {
       id: 'resistance',
       path: '/arsiv/direnis',
       title: "DİRENİŞ HAFIZASI",
-      desc: "1976'dan bugüne, akademik özgürlük mücadelesinin görsel ve yazılı kronolojisi.",
+      desc: "Mücadelenin görsel ve yazılı kronolojisi.",
       icon: Megaphone
     }
   ];
 
   return (
     <div className="h-dvh md:h-[calc(100vh-56px)] bg-[#f5f5f4] font-sans relative overflow-hidden flex flex-col items-center justify-center">
+
+      {/* DEV WARNING BUTTON */}
+      <div className="absolute top-4 right-4 md:top-8 md:right-8 z-50">
+        <button
+          onClick={() => setShowWarning(!showWarning)}
+          className="p-2 md:p-3 rounded-full bg-amber-100/80 text-amber-700 hover:bg-amber-200 transition-all shadow-sm flex items-center gap-2 backdrop-blur-sm"
+        >
+          {/* Pulsing Dot */}
+          <span className="relative flex h-2 w-2 md:h-2.5 md:w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 md:h-2.5 md:w-2.5 bg-amber-600"></span>
+          </span>
+          <span className="font-bold text-[10px] md:text-xs uppercase tracking-wide hidden md:block">Bilgi</span>
+        </button>
+
+        <AnimatePresence>
+          {showWarning && (
+            <motion.div
+              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.95 }}
+              className="absolute top-12 right-0 w-64 p-4 bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-stone-200 text-sm font-serif text-stone-600 z-50"
+            >
+              <div className="flex items-start gap-3">
+                <Info size={18} className="text-amber-600 shrink-0 mt-0.5" />
+                <p>Veri yüklemesine site geliştirme aşamasından çıktıktan sonra başlanacaktır.</p>
+              </div>
+              <div className="absolute -top-2 right-4 w-4 h-4 bg-white border-t border-l border-stone-200 transform rotate-45"></div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
       <div className="w-full max-w-3xl px-6 md:px-8 space-y-10 md:space-y-12 -mt-16 md:-mt-0">
 
