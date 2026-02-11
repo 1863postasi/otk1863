@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 export const useFcmToken = () => {
     const [token, setToken] = useState<string | null>(null);
     const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(
-        Notification.permission
+        typeof Notification !== 'undefined' ? Notification.permission : 'default'
     );
 
     const { currentUser } = useAuth(); // Get current user from context
