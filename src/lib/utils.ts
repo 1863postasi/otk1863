@@ -6,12 +6,32 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatDate(dateString: string): string {
+  // Safari/iOS fixes for date parsing
+  const safeDate = new Date(dateString.replace(/-/g, '/')); // Replace dashes with slashes for Safari compatibility
   const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long', weekday: 'long' };
-  return new Date(dateString).toLocaleDateString('tr-TR', options);
+
+  // Try parsing, if invalid use original string
+  if (isNaN(safeDate.getTime())) {
+    // Fallback: try original, or return string as is if valid date
+    const originalDate = new Date(dateString);
+    if (!isNaN(originalDate.getTime())) {
+      return originalDate.toLocaleDateString('tr-TR', options);
+    }
+    return dateString;
+  }
+  return safeDate.toLocaleDateString('tr-TR', options);
 }
 
 export function formatTime(dateString: string): string {
-  return new Date(dateString).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+  const safeDate = new Date(dateString.replace(/-/g, '/'));
+  if (isNaN(safeDate.getTime())) {
+    const originalDate = new Date(dateString);
+    if (!isNaN(originalDate.getTime())) {
+      return originalDate.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+    }
+    return "";
+  }
+  return safeDate.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
 }
 
 /**
