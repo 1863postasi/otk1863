@@ -74,20 +74,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Safety timeout: If Firebase auth takes too long (e.g. network issues on iOS), 
     // force loading to false so the app AT LEAST opens.
     // User requested 2-3 seconds max wait.
-    const safetyTimeout = setTimeout(() => {
-      setLoading((prev) => {
-        if (prev) {
-          console.warn("Auth check timed out (safety fallback), forcing app load.");
-          return false;
-        }
-        return prev;
-      });
-    }, 2500);
-
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
-      // Clear safety timeout as we got a response
-      clearTimeout(safetyTimeout);
-
       setCurrentUser(user);
 
       if (user) {
@@ -98,7 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setTimeout(() => {
             console.warn("User profile fetch timed out, proceeding without profile.");
             resolve();
-          }, 2000);
+          }, 3000); // 3 seconds grace period for profile
         });
 
         await Promise.race([profilePromise, timeoutPromise]);
@@ -111,7 +98,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => {
       unsubscribe();
-      clearTimeout(safetyTimeout);
     };
   }, []);
 

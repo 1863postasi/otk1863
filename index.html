@@ -53,6 +53,45 @@
 </head>
 
 <body>
+  <script>
+    // GLOBAL ERROR HANDLER FOR DEBUGGING
+    window.onerror = function (msg, url, lineNo, columnNo, error) {
+      const errorDiv = document.createElement('div');
+      errorDiv.style.position = 'fixed';
+      errorDiv.style.top = '0';
+      errorDiv.style.left = '0';
+      errorDiv.style.width = '100%';
+      errorDiv.style.background = 'red';
+      errorDiv.style.color = 'white';
+      errorDiv.style.zIndex = '999999';
+      errorDiv.style.padding = '20px';
+      errorDiv.style.fontSize = '14px';
+      errorDiv.style.wordBreak = 'break-word';
+      errorDiv.innerHTML = '<h3>CRITICAL ERROR</h3>' +
+        '<p>' + msg + '</p>' +
+        '<p>Line: ' + lineNo + '</p>' +
+        '<p>URL: ' + url + '</p>';
+      document.body.appendChild(errorDiv);
+      return false;
+    };
+
+    window.onunhandledrejection = function (event) {
+      const errorDiv = document.createElement('div');
+      errorDiv.style.position = 'fixed';
+      errorDiv.style.bottom = '0';
+      errorDiv.style.left = '0';
+      errorDiv.style.width = '100%';
+      errorDiv.style.background = 'darkred';
+      errorDiv.style.color = 'white';
+      errorDiv.style.zIndex = '999999';
+      errorDiv.style.padding = '20px';
+      errorDiv.style.fontSize = '14px';
+      errorDiv.style.wordBreak = 'break-word';
+      errorDiv.innerHTML = '<h3>PROMISE REJECTION</h3>' +
+        '<p>' + event.reason + '</p>';
+      document.body.appendChild(errorDiv);
+    };
+  </script>
   <div id="initial-loader" style="
     position: fixed; 
     top: 0; 

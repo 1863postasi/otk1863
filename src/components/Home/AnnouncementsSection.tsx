@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Pin, ArrowLeft, Search, MapPin, Calendar, CheckCircle, HelpCircle, Archive, Camera, Plus, X, Upload, Instagram, Mail, AlertTriangle, Send, Megaphone, ExternalLink, Phone, Loader2, EyeOff, MessageCircle, Lock } from 'lucide-react';
-import { formatDate, cn } from '../../lib/utils';
+import { formatDate, safeDate, cn } from '../../lib/utils';
 import { motion as m, AnimatePresence } from 'framer-motion';
 import { db } from '../../lib/firebase';
 import { collection, query, where, addDoc, serverTimestamp, updateDoc, doc, arrayUnion, getDocs, onSnapshot } from 'firebase/firestore';
@@ -206,7 +206,7 @@ const AnnouncementsSection: React.FC<AnnouncementsSectionProps> = ({ onBack }) =
     }).sort((a, b) => {
         if (a.isPinned && !b.isPinned) return -1;
         if (!a.isPinned && b.isPinned) return 1;
-        return new Date(b.date).getTime() - new Date(a.date).getTime();
+        return safeDate(b.date).getTime() - safeDate(a.date).getTime();
     }), [announcements, announcementFilter, searchQuery]);
 
     const filteredLostItems = React.useMemo(() => lostItems.filter(item => {

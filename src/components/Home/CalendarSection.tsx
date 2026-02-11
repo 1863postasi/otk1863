@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { formatDate, formatTime } from '../../lib/utils';
+import { formatDate, formatTime, safeDate } from '../../lib/utils';
 import { MapPin, ChevronDown, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, Link as LinkIcon, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { collection, query, getDocs } from 'firebase/firestore';
@@ -122,10 +122,10 @@ const EventCard = React.memo(({ event, isExpanded, onClick }: { event: Firestore
                     {/* Time Column */}
                     <div className="flex flex-col items-center justify-center w-14 shrink-0 border-r border-stone-100 pr-4">
                         <span className="text-lg font-bold font-serif text-stone-900 leading-none">
-                            {new Date(event.startDate).getHours().toString().padStart(2, '0')}
+                            {safeDate(event.startDate).getHours().toString().padStart(2, '0')}
                         </span>
                         <span className="text-xs text-stone-400 font-mono">
-                            {new Date(event.startDate).getMinutes().toString().padStart(2, '0')}
+                            {safeDate(event.startDate).getMinutes().toString().padStart(2, '0')}
                         </span>
                     </div>
 
@@ -255,10 +255,10 @@ const CalendarSection: React.FC<CalendarSectionProps> = ({ onBack }) => {
         return events
             .filter(e => {
                 if (!e.startDate) return false;
-                const d = new Date(e.startDate);
+                const d = safeDate(e.startDate);
                 return d.toDateString() === selectedDate.toDateString();
             })
-            .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+            .sort((a, b) => safeDate(a.startDate).getTime() - safeDate(b.startDate).getTime());
     }, [events, selectedDate]);
 
     // Derived Data: Days for the Current View Month

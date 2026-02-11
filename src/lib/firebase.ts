@@ -22,6 +22,13 @@ const app = firebase.apps.length ? firebase.app() : firebase.initializeApp(fireb
 export const auth = firebase.auth();
 export const db = getFirestore(app);
 export const functions = getFunctions(app); // Default region is us-central1
-export const messaging = getMessaging(app);
+let messaging: ReturnType<typeof getMessaging> | null = null;
+try {
+  messaging = getMessaging(app);
+} catch (error) {
+  console.warn("Firebase Messaging is not supported in this environment:", error);
+}
+
+export { messaging };
 
 export default app;

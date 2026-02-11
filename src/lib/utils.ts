@@ -5,33 +5,50 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatDate(dateString: string): string {
-  // Safari/iOS fixes for date parsing
-  const safeDate = new Date(dateString.replace(/-/g, '/')); // Replace dashes with slashes for Safari compatibility
-  const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long', weekday: 'long' };
+export function safeDate(dateInput: string | Date | number | any): Date {
+  if (!dateInput) return new Date();
+  if (dateInput instanceof Date) return dateInput;
+  if (typeof dateInput === 'number') return new Date(dateInput);
 
-  // Try parsing, if invalid use original string
-  if (isNaN(safeDate.getTime())) {
-    // Fallback: try original, or return string as is if valid date
-    const originalDate = new Date(dateString);
-    if (!isNaN(originalDate.getTime())) {
-      return originalDate.toLocaleDateString('tr-TR', options);
-    }
-    return dateString;
+  // Handle Firestore Timestamp (has seconds/nanoseconds)
+  if (typeof dateInput === 'object' && 'seconds' in dateInput) {
+    return new Date(dateInput.seconds * 1000);
   }
-  return safeDate.toLocaleDateString('tr-TR', options);
+
+  if (typeof dateInput === 'string') {
+    // Fix iOS/Safari issue with dashes in dates by replacing with slashes
+    // Fix "YYYY-MM-DD HH:MM:SS" -> "YYYY/MM/DD HH:MM:SS" or "YYYY-MM-DDT..."
+    // If it contains dashes and no T, and looks like a date
+    let formatted = dateInput;
+    if (formatted.includes('-') && !formatted.includes('T') && formatted.includes(':')) {
+      // Likely YYYY-MM-DD HH:MM:SS format which Safari hates. Convert space to T?
+      // Or just replace dashes with slashes.
+      formatted = formatted.replace(/-/g, '/');
+    } else if (formatted.includes('-') && !formatted.includes('T') && !formatted.includes('/')) {
+      // Plain YYYY-MM-DD
+      formatted = formatted.replace(/-/g, '/');
+    }
+
+    const d = new Date(formatted);
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  // Fallback
+  return new Date();
 }
 
-export function formatTime(dateString: string): string {
-  const safeDate = new Date(dateString.replace(/-/g, '/'));
-  if (isNaN(safeDate.getTime())) {
-    const originalDate = new Date(dateString);
-    if (!isNaN(originalDate.getTime())) {
-      return originalDate.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
-    }
-    return "";
-  }
-  return safeDate.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+export function formatDate(dateString: string | any): string {
+  const date = safeDate(dateString);
+  const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long', weekday: 'long' };
+
+  if (isNaN(date.getTime())) return "Tarih Yok";
+  return date.toLocaleDateString('tr-TR', options);
+}
+
+export function formatTime(dateString: string | any): string {
+  const date = safeDate(dateString);
+  if (isNaN(date.getTime())) return "";
+  return date.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
 }
 
 /**

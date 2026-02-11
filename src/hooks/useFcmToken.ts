@@ -15,30 +15,34 @@ export const useFcmToken = () => {
     useEffect(() => {
         const retrieveToken = async () => {
             try {
-                if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+                if (typeof window !== 'undefined' && 'serviceWorker' in navigator && typeof Notification !== 'undefined') {
                     const permission = await Notification.requestPermission();
                     setNotificationPermission(permission);
 
-                    if (permission === 'granted') {
-                        // Register the Service Worker explicitly for FCM
-                        const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
-                            scope: '/firebase-cloud-messaging-push-scope'
-                        });
+                    if (permission === 'granted' && messaging) {
+                        try {
+                            // Register the Service Worker explicitly for FCM
+                            const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
+                                scope: '/firebase-cloud-messaging-push-scope'
+                            });
 
-                        const currentToken = await getToken(messaging, {
-                            vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
-                            serviceWorkerRegistration: registration,
-                        });
+                            const currentToken = await getToken(messaging, {
+                                vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
+                                serviceWorkerRegistration: registration,
+                            });
 
-                        if (currentToken) {
-                            console.log('FCM Token:', currentToken);
-                            setToken(currentToken);
-                            // Save token to user profile if authenticated
-                            if (currentUser) {
-                                await saveTokenToDatabase(currentUser.uid, currentToken);
+                            if (currentToken) {
+                                console.log('FCM Token:', currentToken);
+                                setToken(currentToken);
+                                // Save token to user profile if authenticated
+                                if (currentUser) {
+                                    await saveTokenToDatabase(currentUser.uid, currentToken);
+                                }
+                            } else {
+                                console.log('No registration token available. Request permission to generate one.');
                             }
-                        } else {
-                            console.log('No registration token available. Request permission to generate one.');
+                        } catch (err) {
+                            console.warn("FCM Token retrieval failed (might be unsupported env):", err);
                         }
                     }
                 }
