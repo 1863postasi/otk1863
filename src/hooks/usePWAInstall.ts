@@ -5,6 +5,8 @@ export const usePWAInstall = () => {
     const [promptInstall, setPromptInstall] = useState<any>(null);
     const [isInstalled, setIsInstalled] = useState(false);
 
+    const [isIOS, setIsIOS] = useState(false);
+
     useEffect(() => {
         // Check if already installed (Standalone mode)
         const checkStandalone = () => {
@@ -15,6 +17,15 @@ export const usePWAInstall = () => {
 
         checkStandalone();
         window.matchMedia('(display-mode: standalone)').addEventListener('change', checkStandalone);
+
+        // Check availability
+        const userAgent = window.navigator.userAgent.toLowerCase();
+        const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
+        setIsIOS(isIosDevice);
+
+        if (isIosDevice && !isInstalled) {
+            setSupportsPWA(true);
+        }
 
         // Capture the event
         const handler = (e: any) => {
@@ -37,7 +48,7 @@ export const usePWAInstall = () => {
             window.removeEventListener('beforeinstallprompt', handler);
             window.matchMedia('(display-mode: standalone)').removeEventListener('change', checkStandalone);
         };
-    }, []);
+    }, [isInstalled]); // Re-run if installed state changes
 
     const install = async () => {
         if (!promptInstall) return;
@@ -51,5 +62,6 @@ export const usePWAInstall = () => {
         }
     };
 
-    return { supportsPWA, isInstalled, install };
+    return { supportsPWA, isInstalled, install, isIOS };
 };
+

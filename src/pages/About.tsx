@@ -193,11 +193,19 @@ const About: React.FC = () => {
 
                     {/* FOOTER */}
                     <div className="mt-12 pt-8 border-t border-stone-200 text-center space-y-4">
-                        <div className="flex justify-center items-center gap-2 text-stone-600 hover:text-boun-blue transition-colors">
-                            <Mail size={16} />
-                            <a href="mailto:bogaziciuniversitesiotk@gmail.com" className="text-sm font-medium hover:underline">
-                                bogaziciuniversitesiotk@gmail.com
-                            </a>
+                        <div className="flex flex-col items-center gap-1">
+                            <div className="flex justify-center items-center gap-2 text-stone-600 hover:text-boun-blue transition-colors">
+                                <Mail size={16} />
+                                <a href="mailto:bogaziciuniversitesiotk@gmail.com" className="text-sm font-medium hover:underline">
+                                    bogaziciuniversitesiotk@gmail.com
+                                </a>
+                            </div>
+                            <div className="flex justify-center items-center gap-2 text-stone-600 hover:text-boun-blue transition-colors">
+                                <Mail size={16} />
+                                <a href="mailto:kolektifhamlin@gmail.com" className="text-sm font-medium hover:underline">
+                                    kolektifhamlin@gmail.com
+                                </a>
+                            </div>
                         </div>
                         <div className="text-xs text-stone-400 font-serif">
                             <p className="font-bold mb-1">Sürüm: v1.0.0 - "Kamusal, Nitelikli, Özgür."</p>

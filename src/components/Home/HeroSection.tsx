@@ -3,6 +3,7 @@ import { HERO_IMAGES, MOCK_ANNOUNCEMENTS } from '../../lib/data';
 import { Calendar, Bell, ArrowLeft, ArrowRight, Instagram, Twitter, Download } from 'lucide-react';
 import { motion as m, AnimatePresence } from 'framer-motion';
 import { usePWAInstall } from '../../hooks/usePWAInstall';
+import IOSInstallModal from '../PWA/IOSInstallModal';
 
 const motion = m as any;
 
@@ -13,7 +14,8 @@ interface HeroSectionProps {
 const HeroSection: React.FC<HeroSectionProps> = ({ onNavigate }) => {
   const [bgImage, setBgImage] = useState(HERO_IMAGES[0]);
   const [hasUnread, setHasUnread] = useState(false);
-  const { supportsPWA, isInstalled, install } = usePWAInstall();
+  const { supportsPWA, isInstalled, install, isIOS } = usePWAInstall();
+  const [showIOSModal, setShowIOSModal] = useState(false);
 
   useEffect(() => {
     // Select random image on mount
@@ -120,7 +122,13 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onNavigate }) => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 10 }}
                 transition={{ delay: 1.2, duration: 0.5 }}
-                onClick={install}
+                onClick={() => {
+                  if (isIOS) {
+                    setShowIOSModal(true);
+                  } else {
+                    install();
+                  }
+                }}
                 className="flex items-center gap-2 px-6 py-3 bg-white/10 backdrop-blur-md border border-stone-400/50 text-stone-100 rounded-full font-sans text-sm font-medium hover:bg-white/20 transition-all active:scale-95 shadow-lg"
               >
                 <Download size={16} />
@@ -158,6 +166,11 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onNavigate }) => {
           </a>
         </motion.div>
       </div>
+
+      <IOSInstallModal
+        isOpen={showIOSModal}
+        onClose={() => setShowIOSModal(false)}
+      />
     </div>
   );
 };

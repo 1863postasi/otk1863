@@ -68,8 +68,8 @@ const Header: React.FC = () => {
               />
               <div className="h-4 md:h-6 w-px bg-stone-300"></div>
               <img
-                src="https://cdn.1863postasi.org/bg/otk-arsiv.png"
-                alt="ÖTK Arşiv Logo"
+                src="https://cdn.1863postasi.org/bg/kh-logo.png"
+                alt="KH Logo"
                 className="md:h-9 w-auto object-contain flex-shrink-0"
               />
             </Link>
