@@ -101,40 +101,46 @@ export const useReview = ({ type, targetId, secondaryTargetId }: UseReviewProps)
 
         setSubmitting(true);
         try {
-            const reviewData = {
+            // Prepare base review data
+            // Firestore does NOT accept 'undefined', so we must be careful.
+            const baseData: any = {
                 rating: data.rating,
                 comment: data.comment,
                 isAnonymous: data.isAnonymous,
-                difficulty: data.difficulty,
-                // User info snapshot
+                // User info
                 userDisplayName: data.isAnonymous ? 'Anonim Öğrenci' : (userProfile.username || 'Öğrenci'),
-                userPhotoUrl: data.isAnonymous ? null : userProfile.photoUrl,
+                userPhotoUrl: data.isAnonymous ? null : (userProfile.photoUrl || null), // Ensure null if undefined
                 userId: userProfile.uid,
                 // Target info
                 type,
                 targetId,
                 // Metadata
-                ...(data.courseCode && { courseCode: data.courseCode }),
+                updatedAt: serverTimestamp() // Track updates
             };
 
-            // Add optional fields only if they exist
-            if (secondaryTargetId) {
-                (reviewData as any).secondaryTargetId = secondaryTargetId;
+            // Conditionally add optional fields
+            if (data.difficulty !== undefined && data.difficulty !== null) {
+                baseData.difficulty = data.difficulty;
             }
-            if (data.difficulty !== undefined) {
-                (reviewData as any).difficulty = data.difficulty;
+
+            if (data.courseCode) {
+                baseData.courseCode = data.courseCode;
+            }
+
+            if (secondaryTargetId) {
+                baseData.secondaryTargetId = secondaryTargetId;
             }
 
             if (userReview) {
                 // UPDATE
                 await updateDoc(doc(db, 'reviews', userReview.id), {
-                    ...reviewData,
+                    ...baseData,
                     editedAt: serverTimestamp()
                 });
             } else {
                 // CREATE
                 await addDoc(collection(db, 'reviews'), {
-                    ...reviewData,
+                    ...baseData,
                     likes: 0,
                     timestamp: serverTimestamp()
                 });
