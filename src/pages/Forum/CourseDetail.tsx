@@ -9,29 +9,66 @@ import { Course, Review, Instructor } from './types';
 import { TextArea } from '../../pages/Admin/components/SharedUI';
 import { cn } from '../../lib/utils';
 
+import { useReview } from '../../hooks/useReview';
+import ReviewModal from '../../components/Shared/ReviewModal';
+
 const CourseDetail: React.FC = () => {
     const { courseCode } = useParams<{ courseCode: string }>();
     const { userProfile } = useAuth();
 
+    // Custom Hook
+    const {
+        reviews,
+        userReview,
+        loading: reviewsLoading,
+        submitReview,
+        deleteReview,
+        submitting: reviewSubmitting,
+        deleting: reviewDeleting
+    } = useReview({
+        type: 'course',
+        targetId: '' // Will set this effectively by not fetching until course is loaded, but hook depends on it. 
+        // Wait, hook needs targetId. But course.id is not available yet.
+        // I should use a state or let hook handle empty targetId (it does, returns empty/loading false).
+    });
+
+    // We need to pass course.id to useReview. But we don't have it yet.
+    // Solution: We can't effectively use the hook at top level with course.id variable if it's null.
+    // However, hooks cannot be conditional.
+    // So we pass course?.id || '' to the hook.
+
     const [course, setCourse] = useState<Course | null>(null);
     const [instructors, setInstructors] = useState<Instructor[]>([]);
-    const [reviews, setReviews] = useState<Review[]>([]);
+    // const [reviews, setReviews] = useState<Review[]>([]); // Removed
     const [loading, setLoading] = useState(true);
 
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
-    const [reviewData, setReviewData] = useState<{ rating: number, comment: string, isAnonymous: boolean, difficulty?: number }>({
-        rating: 5,
-        comment: '',
-        isAnonymous: false,
-        difficulty: 5
-    });
-    const [submitting, setSubmitting] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    // const [reviewData, setReviewData] = ... // Removed
+    // const [submitting, setSubmitting] = ... // Removed
 
     // Link Instructor Modal
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
     const [allInstructors, setAllInstructors] = useState<Instructor[]>([]);
     const [searchInstructor, setSearchInstructor] = useState('');
     const [linking, setLinking] = useState(false);
+
+    // Re-declare hook with correct targetId dependency
+    // Actually I can't redeclare. I should pass `course ? course.id : ''` to the top level hook.
+    // Triggering re-fetch when course.id changes is handled by dependency array in hook.
+
+    const reviewHook = useReview({
+        type: 'course',
+        targetId: course ? course.id : ''
+    });
+    // Destructure from valid hook instance
+    const {
+        reviews: hookReviews,
+        userReview: hookUserReview,
+        loading: hookReviewsLoading,
+        submitReview: hookSubmitReview,
+        deleteReview: hookDeleteReview
+    } = reviewHook;
 
     useEffect(() => {
         const fetchData = async () => {
@@ -62,14 +99,7 @@ const CourseDetail: React.FC = () => {
                     setInstructors([]);
                 }
 
-                // Fetch Reviews (General Course Reviews)
-                // Fix: Order by timestamp
-                const reviewsQ = query(collection(db, 'reviews'), where('type', '==', 'course'), where('targetId', '==', courseData.id));
-                const reviewsSnap = await getDocs(reviewsQ);
-                const reviewsData = reviewsSnap.docs.map(d => ({ id: d.id, ...d.data() })) as Review[];
-                // Client side sort for now as index might be needed
-                reviewsData.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
-                setReviews(reviewsData);
+                // Reviews fetched by hook when course state updates
 
             } catch (e) {
                 console.error(e);
@@ -80,47 +110,59 @@ const CourseDetail: React.FC = () => {
         fetchData();
     }, [courseCode]);
 
-    const handleSubmitReview = async () => {
-        if (!userProfile) {
-            alert("Yorum yapmak için giriş yapmalısınız.");
-            return;
-        }
+    const handleReviewSubmit = async (data: any) => {
         if (!course) return;
 
-        setSubmitting(true);
         try {
-            const newReview: any = {
-                type: 'course', targetId: course.id, userId: userProfile.uid,
-                userDisplayName: reviewData.isAnonymous ? 'Anonim Öğrenci' : (userProfile.username || 'Öğrenci'),
-                userPhotoUrl: reviewData.isAnonymous ? null : userProfile.photoUrl,
-                isAnonymous: reviewData.isAnonymous, rating: reviewData.rating, comment: reviewData.comment,
-                difficulty: reviewData.difficulty || 5,
-                likes: 0, timestamp: serverTimestamp()
-            };
-            await addDoc(collection(db, "reviews"), newReview);
+            await hookSubmitReview(data);
 
-            // Update Course Stats
-            const newCount = (course.reviewCount || 0) + 1;
-            const newRating = ((course.rating || 0) * (course.reviewCount || 0) + reviewData.rating) / newCount;
+            // Optimistic Update
+            if (!hookUserReview) {
+                // Create
+                const newCount = (course.reviewCount || 0) + 1;
+                const newRating = ((course.rating || 0) * (course.reviewCount || 0) + data.rating) / newCount;
+                const newDiff = ((course.avgDifficulty || 0) * (course.reviewCount || 0) + (data.difficulty || 5)) / newCount;
 
-            // Calculate new average difficulty
-            const currentDiffSum = (course.avgDifficulty || 0) * (course.reviewCount || 0);
-            const newDiff = (currentDiffSum + (reviewData.difficulty || 5)) / newCount;
+                setCourse({ ...course, reviewCount: newCount, rating: newRating, avgDifficulty: newDiff });
+            } else {
+                // Edit
+                const count = course.reviewCount || 1;
+                const totalRating = (course.rating || 0) * count;
+                const totalDiff = (course.avgDifficulty || 0) * count;
 
-            // REMOVED: updateDoc call. Handled by Cloud Function 'onReviewCreated' securely.
-            /* 
-            await updateDoc(doc(db, 'courses', course.id), {
-                reviewCount: newCount,
-                rating: newRating,
-                avgDifficulty: newDiff
-            });
-            */
+                const newRating = (totalRating - hookUserReview.rating + data.rating) / count;
+                const newDiff = (totalDiff - (hookUserReview.difficulty || 5) + (data.difficulty || 5)) / count;
 
-            setReviews([{ ...newReview, id: 'temp-' + Date.now(), timestamp: { seconds: Date.now() / 1000 } }, ...reviews]);
-            setCourse({ ...course, reviewCount: newCount, rating: newRating, avgDifficulty: newDiff });
-            setIsReviewModalOpen(false);
-            setReviewData({ rating: 5, comment: '', isAnonymous: false, difficulty: 5 });
-        } catch (e) { console.error(e); alert("Hata"); } finally { setSubmitting(false); }
+                setCourse({ ...course, rating: newRating, avgDifficulty: newDiff });
+            }
+        } catch (e) {
+            console.error(e);
+            alert("İşlem başarısız.");
+        }
+    };
+
+    const handleReviewDelete = async () => {
+        if (!course || !hookUserReview) return;
+        try {
+            await hookDeleteReview();
+
+            // Optimistic Update
+            const count = course.reviewCount || 0;
+            if (count <= 1) {
+                setCourse({ ...course, reviewCount: 0, rating: 0, avgDifficulty: 0 });
+            } else {
+                const totalRating = (course.rating || 0) * count;
+                const totalDiff = (course.avgDifficulty || 0) * count;
+
+                const newRating = (totalRating - hookUserReview.rating) / (count - 1);
+                const newDiff = (totalDiff - (hookUserReview.difficulty || 5)) / (count - 1);
+
+                setCourse({ ...course, reviewCount: count - 1, rating: newRating, avgDifficulty: newDiff });
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Silme başarısız.");
+        }
     };
 
     const handleLinkInstructor = async (instructorId: string) => {
@@ -194,10 +236,13 @@ const CourseDetail: React.FC = () => {
                             <span className="text-sm font-bold text-stone-900">{course.rating?.toFixed(1) || '—'}</span>
                         </div>
                         <button
-                            onClick={() => setIsReviewModalOpen(true)}
+                            onClick={() => {
+                                setIsEditing(!!hookUserReview);
+                                setIsReviewModalOpen(true);
+                            }}
                             className="bg-stone-900 text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-black transition-colors"
                         >
-                            Değerlendir
+                            {hookReviewsLoading ? <Loader2 size={12} className="animate-spin" /> : (hookUserReview ? 'Değerlendirmeyi Düzenle' : 'Değerlendir')}
                         </button>
                     </div>
                 </div>
@@ -317,10 +362,10 @@ const CourseDetail: React.FC = () => {
                     <div className="md:col-span-2 space-y-6">
                         <div className="flex items-center justify-between">
                             <h3 className="font-serif font-bold text-xl text-stone-800">Ders Yorumları</h3>
-                            <span className="text-xs font-bold text-stone-400 bg-stone-100 px-2 py-1 rounded-md">{reviews.length} Görüş</span>
+                            <span className="text-xs font-bold text-stone-400 bg-stone-100 px-2 py-1 rounded-md">{hookReviews.length} Görüş</span>
                         </div>
 
-                        {reviews.length === 0 ? (
+                        {hookReviews.length === 0 ? (
                             <div className="bg-white rounded-2xl p-10 text-center border border-dashed border-stone-300">
                                 <div className="w-16 h-16 bg-stone-100 rounded-full flex items-center justify-center mx-auto mb-4 text-stone-400">
                                     <MessageSquare size={24} />
@@ -330,7 +375,10 @@ const CourseDetail: React.FC = () => {
                                     Bu ders için henüz genel bir değerlendirme yapılmamış. İlk yorumu sen yaparak arkadaşlarına yardımcı ol!
                                 </p>
                                 <button
-                                    onClick={() => setIsReviewModalOpen(true)}
+                                    onClick={() => {
+                                        setIsEditing(false);
+                                        setIsReviewModalOpen(true);
+                                    }}
                                     className="inline-flex items-center gap-2 px-6 py-3 bg-stone-900 text-white rounded-xl text-sm font-bold hover:bg-black transition-colors"
                                 >
                                     İlk Değerlendirmeyi Yap
@@ -338,7 +386,7 @@ const CourseDetail: React.FC = () => {
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                {reviews.map((review) => (
+                                {hookReviews.map((review) => (
                                     <motion.div
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
@@ -353,9 +401,13 @@ const CourseDetail: React.FC = () => {
                                                 <div>
                                                     <div className="text-sm font-bold text-stone-800">
                                                         {review.isAnonymous ? "Anonim Öğrenci" : review.userDisplayName}
+                                                        {userProfile && review.userId === userProfile.uid && (
+                                                            <span className="ml-2 text-[10px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded font-bold">SEN</span>
+                                                        )}
                                                     </div>
                                                     <div className="text-[10px] text-stone-400">
                                                         {review.timestamp?.seconds ? new Date(review.timestamp.seconds * 1000).toLocaleDateString("tr-TR") : "Az önce"}
+                                                        {review.editedAt && <span className="ml-1 italic">(düzenlendi)</span>}
                                                     </div>
                                                 </div>
                                             </div>
@@ -367,6 +419,20 @@ const CourseDetail: React.FC = () => {
                                                 {review.difficulty && (
                                                     <div className="text-[10px] font-bold text-stone-400">
                                                         Zorluk: <span className="text-stone-600">{review.difficulty}/10</span>
+                                                    </div>
+                                                )}
+                                                {/* Edit/Delete Buttons for Review Owner */}
+                                                {userProfile && review.userId === userProfile.uid && (
+                                                    <div className="flex gap-2 mt-1">
+                                                        <button
+                                                            onClick={() => {
+                                                                setIsEditing(true);
+                                                                setIsReviewModalOpen(true);
+                                                            }}
+                                                            className="text-[10px] text-stone-400 hover:text-stone-900 font-bold transition-colors"
+                                                        >
+                                                            Düzenle
+                                                        </button>
                                                     </div>
                                                 )}
                                             </div>
@@ -383,117 +449,17 @@ const CourseDetail: React.FC = () => {
             </div>
 
             {/* REVIEW MODAL */}
-            <AnimatePresence>
-                {isReviewModalOpen && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-stone-900/40 backdrop-blur-sm p-4">
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                            className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
-                        >
-                            <div className="px-6 py-4 border-b border-stone-100 flex justify-between items-center bg-stone-50/50 sticky top-0 backdrop-blur-md z-10">
-                                <h3 className="font-serif font-bold text-lg text-stone-800">
-                                    Değerlendir: {course.code}
-                                </h3>
-                                <button onClick={() => setIsReviewModalOpen(false)} className="p-1 rounded-full hover:bg-stone-200 transition-colors">
-                                    <X size={20} className="text-stone-400" />
-                                </button>
-                            </div>
-
-                            <div className="p-6 space-y-8">
-                                {/* INFO ALERT */}
-                                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                                    <p className="text-xs text-blue-800 leading-relaxed">
-                                        <strong>Not:</strong> Bu yorum, hocadan bağımsız olarak <strong>dersin içeriğini ve zorluğunu</strong> değerlendirir.
-                                    </p>
-                                </div>
-
-                                {/* Rating */}
-                                <div>
-                                    <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-3 text-center">Genel Memnuniyet</label>
-                                    <div className="flex justify-center gap-3">
-                                        {[1, 2, 3, 4, 5].map(star => (
-                                            <button
-                                                key={star}
-                                                onMouseEnter={() => setReviewData(p => ({ ...p, rating: star }))}
-                                                className="group p-2 transition-transform hover:scale-110 focus:outline-none"
-                                            >
-                                                <Star
-                                                    size={36}
-                                                    className={cn(
-                                                        "transition-colors duration-200",
-                                                        star <= reviewData.rating ? "fill-amber-400 text-amber-400" : "fill-stone-100 text-stone-200"
-                                                    )}
-                                                />
-                                            </button>
-                                        ))}
-                                    </div>
-                                    <div className="text-center mt-2 text-xs font-bold text-amber-500">
-                                        {reviewData.rating === 1 ? "Çok Kötü" : reviewData.rating === 5 ? "Mükemmel" : `${reviewData.rating} Puan`}
-                                    </div>
-                                </div>
-
-                                {/* Difficulty Slider */}
-                                <div>
-                                    <div className="flex justify-between items-end mb-4">
-                                        <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest">Ders Zorluğu</label>
-                                        <span className={cn(
-                                            "text-sm font-black px-2 py-0.5 rounded-md",
-                                            (reviewData.difficulty || 5) > 7 ? "bg-red-50 text-red-600" : (reviewData.difficulty || 5) > 4 ? "bg-amber-50 text-amber-600" : "bg-emerald-50 text-emerald-600"
-                                        )}>
-                                            {reviewData.difficulty || 5}/10
-                                        </span>
-                                    </div>
-                                    <input
-                                        type="range"
-                                        min="1"
-                                        max="10"
-                                        step="0.5"
-                                        value={reviewData.difficulty || 5}
-                                        onChange={(e) => setReviewData(p => ({ ...p, difficulty: parseFloat(e.target.value) }))}
-                                        className="w-full h-2 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-stone-900"
-                                    />
-                                    <div className="flex justify-between mt-2 text-[10px] font-bold text-stone-400 uppercase">
-                                        <span>Çok Kolay</span>
-                                        <span>Çok Zor</span>
-                                    </div>
-                                </div>
-
-                                <TextArea
-                                    label="Deneyimin"
-                                    placeholder="Dersin konuları nasıldı? Sınavları zor muydu? Gelecek öğrencilere tavsiyelerin neler?"
-                                    className="h-32 text-sm"
-                                    value={reviewData.comment}
-                                    onChange={(v: string) => setReviewData({ ...reviewData, comment: v })}
-                                />
-
-                                <div
-                                    className="flex items-center gap-3 p-3 rounded-lg border border-stone-200 cursor-pointer hover:bg-stone-50 transition-colors select-none"
-                                    onClick={() => setReviewData(p => ({ ...p, isAnonymous: !p.isAnonymous }))}
-                                >
-                                    <div className={cn(
-                                        "w-5 h-5 rounded border flex items-center justify-center transition-colors",
-                                        reviewData.isAnonymous ? "bg-stone-900 border-stone-900" : "bg-white border-stone-300"
-                                    )}>
-                                        {reviewData.isAnonymous && <div className="w-2 h-2 bg-white rounded-full" />}
-                                    </div>
-                                    <span className="text-sm font-medium text-stone-600">Bu yorumu <strong>anonim</strong> olarak paylaş</span>
-                                </div>
-
-                                <button
-                                    onClick={handleSubmitReview}
-                                    disabled={submitting}
-                                    className="w-full bg-stone-900 text-white py-3 rounded-xl font-bold text-sm hover:bg-black transition-all shadow-lg shadow-stone-900/20 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                                >
-                                    {submitting && <Loader2 size={16} className="animate-spin" />}
-                                    {submitting ? 'Gönderiliyor...' : 'Yorumu Gönder'}
-                                </button>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
+            <ReviewModal
+                isOpen={isReviewModalOpen}
+                onClose={() => setIsReviewModalOpen(false)}
+                onSubmit={handleReviewSubmit}
+                onDelete={handleReviewDelete}
+                initialData={isEditing && hookUserReview ? hookUserReview : undefined}
+                isEditing={isEditing}
+                title={course.code}
+                includeDifficulty={true}
+                warningMessage={<p><strong>Not:</strong> Bu yorum, hocadan bağımsız olarak <strong>dersin içeriğini ve zorluğunu</strong> değerlendirir.</p>}
+            />
 
             {/* LINK INSTRUCTOR MODAL */}
             <AnimatePresence>

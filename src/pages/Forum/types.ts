@@ -52,6 +52,7 @@ export interface Review {
     courseCode?: string;
     instructorId?: string;
     instructorName?: string;
+    editedAt?: any;
 }
 
 export interface ForumThread {

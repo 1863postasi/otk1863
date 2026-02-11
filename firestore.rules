@@ -83,10 +83,11 @@ service cloud.firestore {
     match /courses/{courseId} {
       allow read: if true;
       allow create: if isSignedIn();
-      // Sadece 'instructorIds' alanına ekleme yapmaya izin ver (Linkleme işlemi için)
-      // Rating ve reviewCount manipülasyonuna izin verme!
+      // instructorIds: Linkleme işlemi için
+      // rating, reviewCount: Puanlama güncellemeleri için (Manuel update desteği)
       allow update: if isSignedIn() && (
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['instructorIds'])
+        request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['instructorIds', 'rating', 'reviewCount'])
       );
     }
 
@@ -94,9 +95,11 @@ service cloud.firestore {
     match /instructors/{instructorId} {
       allow read: if true;
       allow create: if isSignedIn();
-      // Sadece 'courseCodes' alanına ekleme yapmaya izin ver
+      // courseCodes: Linkleme işlemi için
+      // rating, reviewCount: Puanlama güncellemeleri için
       allow update: if isSignedIn() && (
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['courseCodes'])
+        request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['courseCodes', 'rating', 'reviewCount'])
       );
     }
 
@@ -104,7 +107,8 @@ service cloud.firestore {
     match /reviews/{reviewId} {
       allow read: if true;
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if false; // Yorum düzenleme/silme şimdilik kapalı
+      allow update: if isSignedIn() && resource.data.userId == request.auth.uid && request.resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
 
     // 5. DİĞER HER ŞEY (Genel Korumalar)

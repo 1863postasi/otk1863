@@ -1,14 +1,59 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Search, Plus, BookOpen, GraduationCap, ArrowRight, Star,
-    Loader2, X, ChevronDown
+    Loader2, X, ChevronDown, Filter
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { Course, Instructor } from './types';
 import { cn, normalizeCourseCode, normalizeName, toTitleCase } from '../../lib/utils';
+
+// ========== CACHE UTILITIES ==========
+const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
+const COURSES_CACHE_KEY = 'otk1863_courses_v1';
+const INSTRUCTORS_CACHE_KEY = 'otk1863_instructors_v1';
+
+interface CachedData<T> {
+    data: T[];
+    timestamp: number;
+}
+
+const getCachedData = <T,>(key: string): T[] | null => {
+    try {
+        const cached = localStorage.getItem(key);
+        if (!cached) return null;
+
+        const parsed: CachedData<T> = JSON.parse(cached);
+        const now = Date.now();
+
+        // Check if cache is still valid
+        if (now - parsed.timestamp < CACHE_DURATION) {
+            return parsed.data;
+        }
+
+        // Cache expired, remove it
+        localStorage.removeItem(key);
+        return null;
+    } catch (e) {
+        console.error('Cache read error:', e);
+        return null;
+    }
+};
+
+const setCachedData = <T,>(key: string, data: T[]) => {
+    try {
+        const cacheData: CachedData<T> = {
+            data,
+            timestamp: Date.now()
+        };
+        localStorage.setItem(key, JSON.stringify(cacheData));
+    } catch (e) {
+        console.error('Cache write error:', e);
+    }
+};
+
 
 const MOCK_DEPARTMENTS = [
     "ASIAN STUDIES",
@@ -83,6 +128,8 @@ const MOCK_DEPARTMENTS = [
 const AcademicReviews: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'courses' | 'instructors'>('courses');
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+    const [departmentFilter, setDepartmentFilter] = useState('');
     const [loading, setLoading] = useState(true);
     const [courses, setCourses] = useState<Course[]>([]);
     const [instructors, setInstructors] = useState<Instructor[]>([]);
@@ -97,45 +144,85 @@ const AcademicReviews: React.FC = () => {
     const [instructorName, setInstructorName] = useState('');
     const [department, setDepartment] = useState('');
 
-    // Fetch data
+    // Debounce Search Input (300ms)
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearchTerm(searchTerm);
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
+
+    // Fetch data with Cache-First Strategy (Stale-While-Revalidate)
     useEffect(() => {
         const fetchData = async () => {
-            setLoading(true);
+            // 1. Try to load from cache first (instant!)
+            const cachedCourses = getCachedData<Course>(COURSES_CACHE_KEY);
+            const cachedInstructors = getCachedData<Instructor>(INSTRUCTORS_CACHE_KEY);
+
+            if (cachedCourses && cachedInstructors) {
+                // We have cache! Show it immediately
+                setCourses(cachedCourses);
+                setInstructors(cachedInstructors);
+                setLoading(false);
+
+                // Background refresh (stale-while-revalidate)
+                fetchAndCache();
+            } else {
+                // No cache, show loading and fetch
+                setLoading(true);
+                await fetchAndCache();
+            }
+        };
+
+        const fetchAndCache = async () => {
             try {
                 const coursesSnap = await getDocs(collection(db, 'courses'));
                 const coursesData = coursesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Course[];
-                setCourses(coursesData);
 
                 const instructorsSnap = await getDocs(collection(db, 'instructors'));
                 const instructorsData = instructorsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Instructor[];
+
+                // Update state
+                setCourses(coursesData);
                 setInstructors(instructorsData);
+
+                // Update cache
+                setCachedData(COURSES_CACHE_KEY, coursesData);
+                setCachedData(INSTRUCTORS_CACHE_KEY, instructorsData);
             } catch (e) {
                 console.error(e);
             } finally {
                 setLoading(false);
             }
         };
+
         fetchData();
     }, []);
 
-    // Search results
+
+    // Search results (with debounced search)
     const results = useMemo(() => {
         const items = activeTab === 'courses' ? courses : instructors;
-        if (!searchTerm) return items;
+        if (!debouncedSearchTerm && !departmentFilter) return items;
 
-        const term = searchTerm.toLowerCase();
+        const term = debouncedSearchTerm.toLowerCase();
         return items.filter(item => {
             if (activeTab === 'courses') {
                 const c = item as Course;
                 return c.code.toLowerCase().includes(term) || c.name.toLowerCase().includes(term);
             } else {
                 const i = item as Instructor;
-                return i.name.toLowerCase().includes(term);
+                // First apply search filter
+                const matchesSearch = !debouncedSearchTerm || i.name.toLowerCase().includes(term);
+                // Then apply department filter
+                const matchesDepartment = !departmentFilter || i.department === departmentFilter;
+                return matchesSearch && matchesDepartment;
             }
         });
-    }, [activeTab, courses, instructors, searchTerm]);
+    }, [activeTab, courses, instructors, debouncedSearchTerm, departmentFilter]);
 
-    const handleCreateCourse = async () => {
+    const handleCreateCourse = useCallback(async () => {
         if (!courseDept || !courseNumber || !courseName) {
             alert('Lütfen tüm alanları doldurun.');
             return;
@@ -164,9 +251,11 @@ const AcademicReviews: React.FC = () => {
                 instructorIds: []
             });
 
-            // Refresh
+            // Refresh and invalidate cache
             const coursesSnap = await getDocs(collection(db, 'courses'));
-            setCourses(coursesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Course[]);
+            const newCourses = coursesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Course[];
+            setCourses(newCourses);
+            setCachedData(COURSES_CACHE_KEY, newCourses); // Update cache
 
             setIsCreateModalOpen(false);
             setCourseDept('');
@@ -179,9 +268,9 @@ const AcademicReviews: React.FC = () => {
         } finally {
             setCreating(false);
         }
-    };
+    }, [courseDept, courseNumber, courseName, courses]);
 
-    const handleCreateInstructor = async () => {
+    const handleCreateInstructor = useCallback(async () => {
         if (!instructorName || !department) {
             alert('Lütfen tüm alanları doldurun.');
             return;
@@ -208,9 +297,11 @@ const AcademicReviews: React.FC = () => {
                 courseCodes: []
             });
 
-            // Refresh
+            // Refresh and invalidate cache
             const instructorsSnap = await getDocs(collection(db, 'instructors'));
-            setInstructors(instructorsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Instructor[]);
+            const newInstructors = instructorsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Instructor[];
+            setInstructors(newInstructors);
+            setCachedData(INSTRUCTORS_CACHE_KEY, newInstructors); // Update cache
 
             setIsCreateModalOpen(false);
             setInstructorName('');
@@ -222,7 +313,7 @@ const AcademicReviews: React.FC = () => {
         } finally {
             setCreating(false);
         }
-    };
+    }, [instructorName, department, instructors]);
 
     const handleCreate = () => {
         if (activeTab === 'courses') {
@@ -298,6 +389,59 @@ const AcademicReviews: React.FC = () => {
                             </div>
                         </div>
 
+                        {/* Department Filter (Only for Instructors Tab) */}
+                        <AnimatePresence>
+                            {activeTab === 'instructors' && (
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.9, x: -10 }}
+                                    animate={{ opacity: 1, scale: 1, x: 0 }}
+                                    exit={{ opacity: 0, scale: 0.9, x: -10 }}
+                                    transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                                    className="relative group w-auto"
+                                >
+                                    <div className={cn(
+                                        "flex items-center bg-white border border-stone-200 rounded-xl px-3 py-2 transition-all duration-300",
+                                        "w-48 hover:border-stone-400 hover:shadow-md",
+                                        departmentFilter && "border-emerald-500 bg-emerald-50/50"
+                                    )}>
+                                        <Filter className={cn(
+                                            "shrink-0 transition-colors",
+                                            departmentFilter ? "text-emerald-600" : "text-stone-400"
+                                        )} size={16} />
+                                        <select
+                                            value={departmentFilter}
+                                            onChange={(e) => setDepartmentFilter(e.target.value)}
+                                            className={cn(
+                                                "w-full bg-transparent border-none text-sm font-bold outline-none px-2 cursor-pointer appearance-none",
+                                                departmentFilter ? "text-emerald-700" : "text-stone-800"
+                                            )}
+                                        >
+                                            <option value="">Tüm Bölümler</option>
+                                            {MOCK_DEPARTMENTS.map(dept => (
+                                                <option key={dept} value={dept}>{dept}</option>
+                                            ))}
+                                        </select>
+                                        {departmentFilter && (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setDepartmentFilter('');
+                                                }}
+                                                className="shrink-0 p-1 hover:bg-emerald-100 rounded-full transition-all active:scale-90"
+                                            >
+                                                <X size={14} className="text-emerald-600" />
+                                            </button>
+                                        )}
+                                        <ChevronDown className={cn(
+                                            "shrink-0 pointer-events-none transition-transform",
+                                            departmentFilter ? "text-emerald-600" : "text-stone-400"
+                                        )} size={16} />
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+
                         <button
                             onClick={() => setIsCreateModalOpen(true)}
                             className="bg-stone-900 hover:bg-black text-white px-4 py-2 rounded-xl flex items-center gap-2 transition-transform active:scale-95 shadow-lg shadow-stone-900/20"
@@ -366,6 +510,53 @@ const AcademicReviews: React.FC = () => {
                         </button>
                     </div>
                 </div>
+
+                {/* --- MOBILE DEPARTMENT FILTER (Only for Instructors) --- */}
+                <AnimatePresence>
+                    {activeTab === 'instructors' && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0, y: -10 }}
+                            animate={{ opacity: 1, height: 'auto', y: 0 }}
+                            exit={{ opacity: 0, height: 0, y: -10 }}
+                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                            className="md:hidden px-4 pb-3 overflow-hidden"
+                        >
+                            <div className={cn(
+                                "flex items-center gap-2 bg-white border border-stone-200 rounded-xl px-3 py-2.5 shadow-sm transition-all",
+                                departmentFilter && "border-emerald-500 bg-emerald-50/50"
+                            )}>
+                                <Filter className={cn(
+                                    "shrink-0 transition-colors",
+                                    departmentFilter ? "text-emerald-600" : "text-stone-400"
+                                )} size={16} />
+                                <select
+                                    value={departmentFilter}
+                                    onChange={(e) => setDepartmentFilter(e.target.value)}
+                                    className={cn(
+                                        "flex-1 bg-transparent border-none text-sm font-bold outline-none cursor-pointer appearance-none",
+                                        departmentFilter ? "text-emerald-700" : "text-stone-800"
+                                    )}
+                                >
+                                    <option value="">Tüm Bölümler</option>
+                                    {MOCK_DEPARTMENTS.map(dept => (
+                                        <option key={dept} value={dept}>{dept}</option>
+                                    ))}
+                                </select>
+                                {departmentFilter ? (
+                                    <button
+                                        onClick={() => setDepartmentFilter('')}
+                                        className="shrink-0 p-1.5 hover:bg-emerald-100 rounded-full transition-all active:scale-90"
+                                    >
+                                        <X size={16} className="text-emerald-600" />
+                                    </button>
+                                ) : (
+                                    <ChevronDown className="shrink-0 text-stone-400 pointer-events-none" size={16} />
+                                )}
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
             </div>
 
             {/* --- MAIN CONTENT GRID --- */}
@@ -388,7 +579,11 @@ const AcademicReviews: React.FC = () => {
                                     initial={{ opacity: 0, y: 20, scale: 0.9 }}
                                     animate={{ opacity: 1, y: 0, scale: 1 }}
                                     exit={{ opacity: 0, scale: 0.9 }}
-                                    transition={{ duration: 0.4, delay: idx * 0.05, type: "spring" }}
+                                    transition={{
+                                        duration: 0.4,
+                                        delay: idx < 20 ? idx * 0.05 : 0, // Only first 20 items get stagger animation
+                                        type: "spring"
+                                    }}
                                 >
                                     <Link
                                         to={activeTab === 'courses' ? `/forum/ders/${(item as Course).code}` : `/forum/hoca/${item.id}`}
