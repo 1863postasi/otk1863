@@ -12,51 +12,25 @@ import { cn } from '../../lib/utils';
 import { useReview } from '../../hooks/useReview';
 import ReviewModal from '../../components/Shared/ReviewModal';
 import AdminDataControls from '../../components/Shared/AdminDataControls';
+import { recalculateCourseStats } from '../../lib/statUtils';
 
 const CourseDetail: React.FC = () => {
     const { courseCode } = useParams<{ courseCode: string }>();
     const { userProfile } = useAuth();
 
     // Custom Hook
-    const {
-        reviews,
-        userReview,
-        loading: reviewsLoading,
-        submitReview,
-        deleteReview,
-        submitting: reviewSubmitting,
-        deleting: reviewDeleting
-    } = useReview({
-        type: 'course',
-        targetId: '' // Will set this effectively by not fetching until course is loaded, but hook depends on it. 
-        // Wait, hook needs targetId. But course.id is not available yet.
-        // I should use a state or let hook handle empty targetId (it does, returns empty/loading false).
-    });
-
-    // We need to pass course.id to useReview. But we don't have it yet.
-    // Solution: We can't effectively use the hook at top level with course.id variable if it's null.
-    // However, hooks cannot be conditional.
-    // So we pass course?.id || '' to the hook.
-
     const [course, setCourse] = useState<Course | null>(null);
     const [instructors, setInstructors] = useState<Instructor[]>([]);
-    // const [reviews, setReviews] = useState<Review[]>([]); // Removed
     const [loading, setLoading] = useState(true);
 
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
-    // const [reviewData, setReviewData] = ... // Removed
-    // const [submitting, setSubmitting] = ... // Removed
 
     // Link Instructor Modal
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
     const [allInstructors, setAllInstructors] = useState<Instructor[]>([]);
     const [searchInstructor, setSearchInstructor] = useState('');
     const [linking, setLinking] = useState(false);
-
-    // Re-declare hook with correct targetId dependency
-    // Actually I can't redeclare. I should pass `course ? course.id : ''` to the top level hook.
-    // Triggering re-fetch when course.id changes is handled by dependency array in hook.
 
     const reviewHook = useReview({
         type: 'course',
@@ -115,43 +89,21 @@ const CourseDetail: React.FC = () => {
         if (!course) return;
 
         try {
-            await hookSubmitReview(data);
+            await hookSubmitReview({
+                ...data,
+                courseCode: course.code // Explicitly pass courseCode for metadata!
+            });
 
-            // Optimistic & Manual Update
-            const currentCount = course.reviewCount || 0;
-            const currentRating = course.rating || 0;
-            const currentDiff = course.avgDifficulty || 0;
+            // Recalculate Stats from Scratch (Self-healing & Retroactive Fix)
+            const newStats = await recalculateCourseStats(course.id, course.code);
 
-            if (!hookUserReview) {
-                // Create
-                const newCount = currentCount + 1;
-                const newRating = (currentRating * currentCount + data.rating) / newCount;
-                const newDiff = (currentDiff * currentCount + (data.difficulty || 5)) / newCount;
+            setCourse(prev => prev ? {
+                ...prev,
+                rating: newStats.rating,
+                reviewCount: newStats.count,
+                avgDifficulty: newStats.difficulty
+            } : null);
 
-                setCourse({ ...course, reviewCount: newCount, rating: newRating, avgDifficulty: newDiff });
-
-                await updateDoc(doc(db, 'courses', course.id), {
-                    reviewCount: newCount,
-                    rating: newRating,
-                    avgDifficulty: newDiff
-                });
-            } else {
-                // Edit
-                if (currentCount > 0) {
-                    const totalRating = currentRating * currentCount;
-                    const totalDiff = currentDiff * currentCount;
-
-                    const newRating = (totalRating - hookUserReview.rating + data.rating) / currentCount;
-                    const newDiff = (totalDiff - (hookUserReview.difficulty || 5) + (data.difficulty || 5)) / currentCount;
-
-                    setCourse({ ...course, rating: newRating, avgDifficulty: newDiff });
-
-                    await updateDoc(doc(db, 'courses', course.id), {
-                        rating: newRating,
-                        avgDifficulty: newDiff
-                    });
-                }
-            }
         } catch (e) {
             console.error(e);
             alert("İşlem başarısız.");
@@ -163,30 +115,16 @@ const CourseDetail: React.FC = () => {
         try {
             await hookDeleteReview();
 
-            // Optimistic & Manual Update
-            const count = course.reviewCount || 0;
-            if (count <= 1) {
-                setCourse({ ...course, reviewCount: 0, rating: 0, avgDifficulty: 0 });
-                await updateDoc(doc(db, 'courses', course.id), {
-                    reviewCount: 0,
-                    rating: 0,
-                    avgDifficulty: 0
-                });
-            } else {
-                const totalRating = (course.rating || 0) * count;
-                const totalDiff = (course.avgDifficulty || 0) * count;
+            // Recalculate Stats from Scratch
+            const newStats = await recalculateCourseStats(course.id, course.code);
 
-                const newRating = (totalRating - hookUserReview.rating) / (count - 1);
-                const newDiff = (totalDiff - (hookUserReview.difficulty || 5)) / (count - 1);
+            setCourse(prev => prev ? {
+                ...prev,
+                rating: newStats.rating,
+                reviewCount: newStats.count,
+                avgDifficulty: newStats.difficulty
+            } : null);
 
-                setCourse({ ...course, reviewCount: count - 1, rating: newRating, avgDifficulty: newDiff });
-
-                await updateDoc(doc(db, 'courses', course.id), {
-                    reviewCount: count - 1,
-                    rating: newRating,
-                    avgDifficulty: newDiff
-                });
-            }
         } catch (e) {
             console.error(e);
             alert("Silme başarısız.");

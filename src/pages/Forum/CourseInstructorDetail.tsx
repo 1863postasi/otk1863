@@ -14,6 +14,7 @@ import { cn } from '../../lib/utils';
 import { useReview } from '../../hooks/useReview';
 import ReviewModal from '../../components/Shared/ReviewModal';
 import AdminDataControls from '../../components/Shared/AdminDataControls';
+import { recalculateCourseStats, recalculateInstructorStats } from '../../lib/statUtils';
 
 const CourseInstructorDetail: React.FC = () => {
     const { courseCode, instructorId } = useParams<{ courseCode: string, instructorId: string }>();
@@ -120,68 +121,23 @@ const CourseInstructorDetail: React.FC = () => {
                 courseCodes: arrayUnion(course.code)
             });
 
-            // Optimistic Updates for Course & Instructor Global Stats
+            // Recalculate Stats (Self-healing & Retroactive Fix)
+            const newCourseStats = await recalculateCourseStats(course.id, course.code);
+            const newInstStats = await recalculateInstructorStats(instructor.id);
 
-            // Check if we need to initialize stats if they are undefined
-            const currentCourseCount = course.reviewCount || 0;
-            const currentCourseRating = course.rating || 0;
-            const currentCourseDiff = course.avgDifficulty || 0;
+            // Update Local State with Perfect Data
+            setCourse(prev => prev ? {
+                ...prev,
+                rating: newCourseStats.rating,
+                reviewCount: newCourseStats.count,
+                avgDifficulty: newCourseStats.difficulty
+            } : null);
 
-            const currentInstCount = instructor.reviewCount || 0;
-            const currentInstRating = instructor.rating || 0;
-
-            if (!userReview) {
-                // --- CREATE CASE ---
-
-                // Update Course Stats
-                const newCourseCount = currentCourseCount + 1;
-                const newCourseRating = (currentCourseRating * currentCourseCount + data.rating) / newCourseCount;
-                // Default difficulty to 5 if not provided (though it should be)
-                const newCourseDiff = (currentCourseDiff * currentCourseCount + (data.difficulty || 5)) / newCourseCount;
-
-                await updateDoc(doc(db, 'courses', course.id), {
-                    reviewCount: newCourseCount,
-                    rating: newCourseRating,
-                    avgDifficulty: newCourseDiff
-                });
-
-                // Update Instructor Stats
-                const newInstructorCount = currentInstCount + 1;
-                const newInstructorRating = (currentInstRating * currentInstCount + data.rating) / newInstructorCount;
-
-                await updateDoc(doc(db, 'instructors', instructor.id), {
-                    reviewCount: newInstructorCount,
-                    rating: newInstructorRating
-                });
-
-            } else {
-                // --- EDIT CASE ---
-
-                // Update Course Stats
-                // Count doesn't change
-                if (currentCourseCount > 0) {
-                    const totalCourseRating = currentCourseRating * currentCourseCount;
-                    const totalCourseDiff = currentCourseDiff * currentCourseCount;
-
-                    const newCourseRating = (totalCourseRating - userReview.rating + data.rating) / currentCourseCount;
-                    const newCourseDiff = (totalCourseDiff - (userReview.difficulty || 5) + (data.difficulty || 5)) / currentCourseCount;
-
-                    await updateDoc(doc(db, 'courses', course.id), {
-                        rating: newCourseRating,
-                        avgDifficulty: newCourseDiff
-                    });
-                }
-
-                // Update Instructor Stats
-                if (currentInstCount > 0) {
-                    const totalInstRating = currentInstRating * currentInstCount;
-                    const newInstructorRating = (totalInstRating - userReview.rating + data.rating) / currentInstCount;
-
-                    await updateDoc(doc(db, 'instructors', instructor.id), {
-                        rating: newInstructorRating
-                    });
-                }
-            }
+            setInstructor(prev => prev ? {
+                ...prev,
+                rating: newInstStats.rating,
+                reviewCount: newInstStats.count
+            } : null);
 
             setIsReviewModalOpen(false);
         } catch (e) {
@@ -191,59 +147,27 @@ const CourseInstructorDetail: React.FC = () => {
     };
 
     const handleReviewDelete = async () => {
+        if (!course || !instructor) return;
         try {
             await deleteReview();
-            // Stats update via useEffect
 
-            // Manual Global Stats Update (Decrement)
-            if (userReview) {
-                const currentCourseCount = course.reviewCount || 0;
-                const currentCourseRating = course.rating || 0;
-                const currentCourseDiff = course.avgDifficulty || 0;
+            // Recalculate Stats for Consistency
+            const newCourseStats = await recalculateCourseStats(course.id, course.code);
+            const newInstStats = await recalculateInstructorStats(instructor.id);
 
-                const currentInstCount = instructor.reviewCount || 0;
-                const currentInstRating = instructor.rating || 0;
+            setCourse(prev => prev ? {
+                ...prev,
+                rating: newCourseStats.rating,
+                reviewCount: newCourseStats.count,
+                avgDifficulty: newCourseStats.difficulty
+            } : null);
 
-                // Update Course (Decrement)
-                if (currentCourseCount > 1) {
-                    const newCourseCount = currentCourseCount - 1;
-                    const totalCourseRating = currentCourseRating * currentCourseCount;
-                    const totalCourseDiff = currentCourseDiff * currentCourseCount;
+            setInstructor(prev => prev ? {
+                ...prev,
+                rating: newInstStats.rating,
+                reviewCount: newInstStats.count
+            } : null);
 
-                    const newCourseRating = (totalCourseRating - userReview.rating) / newCourseCount;
-                    const newCourseDiff = (totalCourseDiff - (userReview.difficulty || 5)) / newCourseCount;
-
-                    await updateDoc(doc(db, 'courses', course.id), {
-                        reviewCount: newCourseCount,
-                        rating: newCourseRating,
-                        avgDifficulty: newCourseDiff
-                    });
-                } else if (currentCourseCount === 1) {
-                    // Reset to 0
-                    await updateDoc(doc(db, 'courses', course.id), {
-                        reviewCount: 0,
-                        rating: 0,
-                        avgDifficulty: 0
-                    });
-                }
-
-                // Update Instructor (Decrement)
-                if (currentInstCount > 1) {
-                    const newInstructorCount = currentInstCount - 1;
-                    const totalInstRating = currentInstRating * currentInstCount;
-                    const newInstructorRating = (totalInstRating - userReview.rating) / newInstructorCount;
-
-                    await updateDoc(doc(db, 'instructors', instructor.id), {
-                        reviewCount: newInstructorCount,
-                        rating: newInstructorRating
-                    });
-                } else if (currentInstCount === 1) {
-                    await updateDoc(doc(db, 'instructors', instructor.id), {
-                        reviewCount: 0,
-                        rating: 0
-                    });
-                }
-            }
         } catch (e) {
             console.error(e);
             alert("Silme başarısız.");

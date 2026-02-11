@@ -2,13 +2,15 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Search, Plus, BookOpen, GraduationCap, ArrowRight, Star,
-    Loader2, X, ChevronDown, Filter
+    Loader2, X, ChevronDown, Filter, RefreshCcw
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { Course, Instructor } from './types';
 import { cn, normalizeCourseCode, normalizeName, toTitleCase } from '../../lib/utils';
+import { useAuth } from '../../context/AuthContext';
+import { syncAllStats } from '../../lib/statUtils';
 
 // ========== CACHE UTILITIES ==========
 const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
@@ -133,6 +135,9 @@ const AcademicReviews: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [courses, setCourses] = useState<Course[]>([]);
     const [instructors, setInstructors] = useState<Instructor[]>([]);
+    const { userProfile } = useAuth();
+    const [isSyncing, setIsSyncing] = useState(false);
+    const [syncProgress, setSyncProgress] = useState('');
 
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [creating, setCreating] = useState(false);
@@ -355,6 +360,24 @@ const AcademicReviews: React.FC = () => {
         }
     };
 
+    const handleSync = async () => {
+        if (!window.confirm("Tüm istatistikleri sıfırdan hesaplamak istediğinize emin misiniz? Bu işlem biraz zaman alabilir.")) {
+            return;
+        }
+        setIsSyncing(true);
+        try {
+            await syncAllStats((msg) => setSyncProgress(msg));
+            alert("İstatistikler başarıyla yenilendi! Verileri tazelemek için sayfayı yenileyebilirsiniz.");
+            window.location.reload(); // Refresh to clear cache and see new stats
+        } catch (e) {
+            console.error(e);
+            alert("Hata oluştu.");
+        } finally {
+            setIsSyncing(false);
+            setSyncProgress('');
+        }
+    };
+
     return (
         <div className="min-h-screen flex flex-col bg-[#f0f0f0] font-sans selection:bg-stone-900 selection:text-white overflow-x-hidden">
 
@@ -474,6 +497,28 @@ const AcademicReviews: React.FC = () => {
                         </AnimatePresence>
 
 
+
+                        {/* Admin Sync Button */}
+                        {userProfile?.role === 'admin' && (
+                            <button
+                                onClick={handleSync}
+                                disabled={isSyncing}
+                                className={cn(
+                                    "p-2 rounded-xl transition-all relative flex items-center gap-2",
+                                    isSyncing ? "bg-amber-100 text-amber-600" : "bg-white border border-stone-200 text-stone-400 hover:text-amber-500 hover:border-amber-200 hover:shadow-md"
+                                )}
+                                title="Tüm İstatistikleri Sıfırla/Yenile"
+                            >
+                                <RefreshCcw size={18} className={cn(isSyncing && "animate-spin")} />
+                                {isSyncing && (
+                                    <div className="absolute top-full right-0 mt-2 w-48 bg-white p-3 rounded-lg shadow-xl border border-stone-100 text-[10px] font-bold text-stone-600 z-50 text-right">
+                                        {syncProgress || "Hesaplanıyor..."}
+                                    </div>
+                                )}
+                                <span className="text-xs font-bold hidden lg:inline">Senkronize Et</span>
+                            </button>
+                        )}
+
                         <button
                             onClick={() => setIsCreateModalOpen(true)}
                             className="bg-stone-900 hover:bg-black text-white px-4 py-2 rounded-xl flex items-center gap-2 transition-transform active:scale-95 shadow-lg shadow-stone-900/20"
@@ -485,7 +530,7 @@ const AcademicReviews: React.FC = () => {
                 </div>
 
                 {/* MOBILE SUB-HEADER: Search & Add (Below Title Bar) */}
-                <div className="md:hidden px-4 pb-3 flex items-center gap-3">
+                <div className="md:hidden px-4 pb-3 flex items-center gap-2">
                     <div className="flex-1 flex items-center bg-white border border-stone-200 rounded-xl px-3 py-2.5 shadow-sm">
                         <Search className="text-stone-400 shrink-0" size={16} />
                         <input
@@ -496,6 +541,20 @@ const AcademicReviews: React.FC = () => {
                             className="w-full bg-transparent border-none text-sm font-bold text-stone-800 placeholder:text-stone-400 focus:ring-0 px-2 outline-none"
                         />
                     </div>
+
+                    {userProfile?.role === 'admin' && (
+                        <button
+                            onClick={handleSync}
+                            disabled={isSyncing}
+                            className={cn(
+                                "p-2.5 rounded-xl shadow-md active:scale-95 flex items-center justify-center transition-all",
+                                isSyncing ? "bg-amber-100 text-amber-600 border-amber-200" : "bg-white border border-stone-200 text-stone-400"
+                            )}
+                        >
+                            <RefreshCcw size={18} className={cn(isSyncing && "animate-spin")} />
+                        </button>
+                    )}
+
                     <button
                         onClick={() => setIsCreateModalOpen(true)}
                         className="bg-stone-900 text-white p-2.5 rounded-xl shadow-md active:scale-95"

@@ -87,7 +87,7 @@ service cloud.firestore {
       // rating, reviewCount: Puanlama güncellemeleri için (Manuel update desteği)
       allow update: if isSignedIn() && (
         request.resource.data.diff(resource.data).affectedKeys()
-        .hasOnly(['instructorIds', 'rating', 'reviewCount'])
+        .hasOnly(['instructorIds', 'rating', 'reviewCount', 'avgDifficulty'])
       );
     }
 
