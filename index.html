@@ -83,6 +83,18 @@
     }
   </style>
 
+  <script>
+    // Failsafe: Remove loader after 5 seconds if app hangs or crashes
+    setTimeout(() => {
+      const loader = document.getElementById('initial-loader');
+      if (loader) {
+        console.warn('App took too long to load, forcing loader removal');
+        loader.style.opacity = '0';
+        setTimeout(() => loader.remove(), 500);
+      }
+    }, 5000);
+  </script>
+
   <div id="root"></div>
   <script type="module" src="/src/index.tsx"></script>
 </body>

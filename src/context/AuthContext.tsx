@@ -82,7 +82,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         return prev;
       });
-    }, 3000);
+    }, 2500);
 
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
       // Clear safety timeout as we got a response

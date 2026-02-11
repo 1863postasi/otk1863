@@ -101,18 +101,8 @@ const App: React.FC = () => {
   }, [token]);
 
   const { loading: authLoading } = useAuth();
-  const [minLoadFinished, setMinLoadFinished] = React.useState(false);
-
-  React.useEffect(() => {
-    // Force a minimum loading time to prevent flickering and allow "heavy" home page to become interactive
-    const timer = setTimeout(() => {
-      setMinLoadFinished(true);
-    }, 1500); // 1.5 seconds minimum load time
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  const isAppReady = minLoadFinished && !authLoading;
+  // Optimized loading state: No artificial delay
+  const isAppReady = !authLoading;
 
   return (
     <div className="contents">
