@@ -11,6 +11,7 @@ import { cn } from '../../lib/utils';
 
 import { useReview } from '../../hooks/useReview';
 import ReviewModal from '../../components/Shared/ReviewModal';
+import AdminDataControls from '../../components/Shared/AdminDataControls';
 
 const InstructorDetail: React.FC = () => {
     const { instructorId } = useParams<{ instructorId: string }>();
@@ -150,6 +151,9 @@ const InstructorDetail: React.FC = () => {
 
                     {/* Quick Stats in Header (Optional but nice) */}
                     <div className="flex items-center gap-4">
+                        {/* Admin Controls */}
+                        {instructor && <AdminDataControls type="instructor" data={instructor} />}
+
                         <div className="flex items-center gap-1.5 bg-white px-3 py-1 rounded-full border border-stone-100 shadow-sm">
                             <Star size={14} className="fill-amber-400 text-amber-400" />
                             <span className="text-sm font-bold text-stone-900">{instructor.rating?.toFixed(1) || '—'}</span>

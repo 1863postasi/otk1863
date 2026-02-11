@@ -11,6 +11,7 @@ import { cn } from '../../lib/utils';
 
 import { useReview } from '../../hooks/useReview';
 import ReviewModal from '../../components/Shared/ReviewModal';
+import AdminDataControls from '../../components/Shared/AdminDataControls';
 
 const CourseDetail: React.FC = () => {
     const { courseCode } = useParams<{ courseCode: string }>();
@@ -231,6 +232,9 @@ const CourseDetail: React.FC = () => {
                     </Link>
 
                     <div className="flex items-center gap-4">
+                        {/* Admin Controls */}
+                        {course && <AdminDataControls type="course" data={course} />}
+
                         <div className="flex items-center gap-1.5 bg-white px-3 py-1 rounded-full border border-stone-100 shadow-sm">
                             <Star size={14} className="fill-amber-400 text-amber-400" />
                             <span className="text-sm font-bold text-stone-900">{course.rating?.toFixed(1) || '—'}</span>
