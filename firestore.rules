@@ -77,7 +77,37 @@ service cloud.firestore {
       allow update, delete: if isAdmin() || isClubOfficial(resource.data.clubId);
     }
 
-    // 4. DİĞER HER ŞEY (Genel Korumalar)
+    // 4. FORUM (Dersler, Hocalar, Yorumlar)
+    
+    // Dersler
+    match /courses/{courseId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      // Sadece 'instructorIds' alanına ekleme yapmaya izin ver (Linkleme işlemi için)
+      // Rating ve reviewCount manipülasyonuna izin verme!
+      allow update: if isSignedIn() && (
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['instructorIds'])
+      );
+    }
+
+    // Hocalar
+    match /instructors/{instructorId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      // Sadece 'courseCodes' alanına ekleme yapmaya izin ver
+      allow update: if isSignedIn() && (
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['courseCodes'])
+      );
+    }
+
+    // Yorumlar
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false; // Yorum düzenleme/silme şimdilik kapalı
+    }
+
+    // 5. DİĞER HER ŞEY (Genel Korumalar)
     match /{collectionName}/{document=**} {
       allow read: if true;
       allow write: if isAdmin(); 

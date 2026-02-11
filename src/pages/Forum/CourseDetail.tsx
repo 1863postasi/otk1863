@@ -107,11 +107,14 @@ const CourseDetail: React.FC = () => {
             const currentDiffSum = (course.avgDifficulty || 0) * (course.reviewCount || 0);
             const newDiff = (currentDiffSum + (reviewData.difficulty || 5)) / newCount;
 
+            // REMOVED: updateDoc call. Handled by Cloud Function 'onReviewCreated' securely.
+            /* 
             await updateDoc(doc(db, 'courses', course.id), {
                 reviewCount: newCount,
                 rating: newRating,
                 avgDifficulty: newDiff
             });
+            */
 
             setReviews([{ ...newReview, id: 'temp-' + Date.now(), timestamp: { seconds: Date.now() / 1000 } }, ...reviews]);
             setCourse({ ...course, reviewCount: newCount, rating: newRating, avgDifficulty: newDiff });

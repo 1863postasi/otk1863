@@ -23,10 +23,16 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.checkDailyWord = void 0;
+exports.onReviewCreated = exports.onAnnouncementCreated = exports.checkDailyWord = void 0;
 const admin = __importStar(require("firebase-admin"));
 const boundleController = __importStar(require("./controllers/boundle"));
+const notificationsController = __importStar(require("./controllers/notifications"));
 admin.initializeApp();
 // Export the Boundle daily word check function
 exports.checkDailyWord = boundleController.checkDailyWord;
+// Export Notification Trigger
+exports.onAnnouncementCreated = notificationsController.onAnnouncementCreated;
+// Export Forum Trigger
+const forumController = __importStar(require("./controllers/forum"));
+exports.onReviewCreated = forumController.onReviewCreated;
 //# sourceMappingURL=index.js.map

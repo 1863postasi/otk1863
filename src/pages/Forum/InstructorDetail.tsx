@@ -89,10 +89,14 @@ const InstructorDetail: React.FC = () => {
             // Update Instructor Stats
             const newCount = (instructor.reviewCount || 0) + 1;
             const newRating = ((instructor.rating || 0) * (instructor.reviewCount || 0) + reviewData.rating) / newCount;
+
+            // REMOVED: updateDoc call. Handled by Cloud Function.
+            /*
             await updateDoc(doc(db, 'instructors', instructor.id), {
                 reviewCount: newCount,
                 rating: newRating
             });
+            */
 
             // Optimistic update
             setReviews([{ ...newReview, id: 'temp-' + Date.now(), timestamp: { seconds: Date.now() / 1000 } }, ...reviews]);

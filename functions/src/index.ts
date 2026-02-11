@@ -9,3 +9,7 @@ export const checkDailyWord = boundleController.checkDailyWord;
 
 // Export Notification Trigger
 export const onAnnouncementCreated = notificationsController.onAnnouncementCreated;
+
+// Export Forum Trigger
+import * as forumController from './controllers/forum';
+export const onReviewCreated = forumController.onReviewCreated;
