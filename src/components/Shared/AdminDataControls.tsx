@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../../context/AuthContext';
 import { doc, deleteDoc, updateDoc, arrayRemove, getDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
@@ -123,116 +124,122 @@ export default function AdminDataControls({ type, data, secondaryId, onSuccess }
                 </button>
             </div>
 
-            {/* --- DELETE CONFIRMATION MODAL --- */}
-            <AnimatePresence>
-                {isDeleteConfirmOpen && (
-                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 overflow-hidden"
-                        >
-                            <div className="flex flex-col items-center text-center gap-4">
-                                <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center">
-                                    <AlertTriangle size={24} />
-                                </div>
-                                <div>
-                                    <h3 className="text-xl font-bold text-stone-900">
-                                        {type === 'course-instruction' ? 'Eşleşmeyi Kaldır?' : 'Kayıt Silinecek'}
-                                    </h3>
-                                    <p className="text-sm text-stone-500 mt-2">
-                                        {type === 'course-instruction'
-                                            ? 'Bu hocayı bu dersten ayırmak istediğine emin misin?'
-                                            : 'Bu işlem geri alınamaz. İlgili tüm veriler silinebilir.'}
-                                    </p>
-                                </div>
-
-                                <div className="flex items-center gap-3 w-full mt-2">
-                                    <button
-                                        onClick={() => setIsDeleteConfirmOpen(false)}
-                                        className="flex-1 py-3 rounded-xl font-bold text-stone-600 bg-stone-100 hover:bg-stone-200 transition-colors"
-                                    >
-                                        İptal
-                                    </button>
-                                    <button
-                                        onClick={handleDelete}
-                                        disabled={loading}
-                                        className="flex-1 py-3 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 transition-colors disabled:opacity-50"
-                                    >
-                                        {loading ? 'İşleniyor...' : (type === 'course-instruction' ? 'Ayır' : 'Sil')}
-                                    </button>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
-
-            {/* --- EDIT MODAL --- */}
-            <AnimatePresence>
-                {isEditModalOpen && (
-                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 relative"
-                        >
-                            <button
-                                onClick={() => setIsEditModalOpen(false)}
-                                className="absolute top-4 right-4 text-stone-400 hover:text-stone-900"
+            {/* --- DELETE CONFIRMATION MODAL (PORTAL) --- */}
+            {typeof document !== 'undefined' && createPortal(
+                <AnimatePresence>
+                    {isDeleteConfirmOpen && (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 overflow-hidden relative max-h-[90dvh] overflow-y-auto"
                             >
-                                <X size={20} />
-                            </button>
-
-                            <h3 className="text-xl font-bold text-stone-900 mb-6">Düzenle</h3>
-
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="text-xs font-bold text-stone-500 uppercase">İsim</label>
-                                    <input
-                                        type="text"
-                                        value={editName}
-                                        onChange={e => setEditName(e.target.value)}
-                                        className="w-full mt-1 p-3 bg-stone-50 border border-stone-200 rounded-xl font-bold text-stone-900 focus:ring-2 focus:ring-stone-900 outline-none"
-                                    />
-                                </div>
-
-                                {type === 'course' && (
+                                <div className="flex flex-col items-center text-center gap-4">
+                                    <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center shrink-0">
+                                        <AlertTriangle size={24} />
+                                    </div>
                                     <div>
-                                        <label className="text-xs font-bold text-stone-500 uppercase">Ders Kodu</label>
+                                        <h3 className="text-xl font-bold text-stone-900">
+                                            {type === 'course-instruction' ? 'Eşleşmeyi Kaldır?' : 'Kayıt Silinecek'}
+                                        </h3>
+                                        <p className="text-sm text-stone-500 mt-2">
+                                            {type === 'course-instruction'
+                                                ? 'Bu hocayı bu dersten ayırmak istediğine emin misin?'
+                                                : 'Bu işlem geri alınamaz. İlgili tüm veriler silinebilir.'}
+                                        </p>
+                                    </div>
+
+                                    <div className="flex items-center gap-3 w-full mt-2">
+                                        <button
+                                            onClick={() => setIsDeleteConfirmOpen(false)}
+                                            className="flex-1 py-3 rounded-xl font-bold text-stone-600 bg-stone-100 hover:bg-stone-200 transition-colors"
+                                        >
+                                            İptal
+                                        </button>
+                                        <button
+                                            onClick={handleDelete}
+                                            disabled={loading}
+                                            className="flex-1 py-3 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 transition-colors disabled:opacity-50"
+                                        >
+                                            {loading ? 'İşleniyor...' : (type === 'course-instruction' ? 'Ayır' : 'Sil')}
+                                        </button>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>,
+                document.body
+            )}
+
+            {/* --- EDIT MODAL (PORTAL) --- */}
+            {typeof document !== 'undefined' && createPortal(
+                <AnimatePresence>
+                    {isEditModalOpen && (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 relative max-h-[90dvh] overflow-y-auto"
+                            >
+                                <button
+                                    onClick={() => setIsEditModalOpen(false)}
+                                    className="absolute top-4 right-4 text-stone-400 hover:text-stone-900 z-10"
+                                >
+                                    <X size={20} />
+                                </button>
+
+                                <h3 className="text-xl font-bold text-stone-900 mb-6">Düzenle</h3>
+
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="text-xs font-bold text-stone-500 uppercase">İsim</label>
                                         <input
                                             type="text"
-                                            value={editCode}
-                                            onChange={e => setEditCode(e.target.value)}
+                                            value={editName}
+                                            onChange={e => setEditName(e.target.value)}
                                             className="w-full mt-1 p-3 bg-stone-50 border border-stone-200 rounded-xl font-bold text-stone-900 focus:ring-2 focus:ring-stone-900 outline-none"
                                         />
                                     </div>
-                                )}
 
-                                <div>
-                                    <label className="text-xs font-bold text-stone-500 uppercase">Departman</label>
-                                    <input
-                                        type="text"
-                                        value={editDept}
-                                        onChange={e => setEditDept(e.target.value)}
-                                        className="w-full mt-1 p-3 bg-stone-50 border border-stone-200 rounded-xl font-bold text-stone-900 focus:ring-2 focus:ring-stone-900 outline-none"
-                                    />
+                                    {type === 'course' && (
+                                        <div>
+                                            <label className="text-xs font-bold text-stone-500 uppercase">Ders Kodu</label>
+                                            <input
+                                                type="text"
+                                                value={editCode}
+                                                onChange={e => setEditCode(e.target.value)}
+                                                className="w-full mt-1 p-3 bg-stone-50 border border-stone-200 rounded-xl font-bold text-stone-900 focus:ring-2 focus:ring-stone-900 outline-none"
+                                            />
+                                        </div>
+                                    )}
+
+                                    <div>
+                                        <label className="text-xs font-bold text-stone-500 uppercase">Departman</label>
+                                        <input
+                                            type="text"
+                                            value={editDept}
+                                            onChange={e => setEditDept(e.target.value)}
+                                            className="w-full mt-1 p-3 bg-stone-50 border border-stone-200 rounded-xl font-bold text-stone-900 focus:ring-2 focus:ring-stone-900 outline-none"
+                                        />
+                                    </div>
+
+                                    <button
+                                        onClick={handleUpdate}
+                                        disabled={loading}
+                                        className="w-full py-3 mt-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-lg shadow-blue-200 active:scale-95 transition-all disabled:opacity-50"
+                                    >
+                                        {loading ? 'Güncelleniyor...' : 'Kaydet'}
+                                    </button>
                                 </div>
-
-                                <button
-                                    onClick={handleUpdate}
-                                    disabled={loading}
-                                    className="w-full py-3 mt-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-lg shadow-blue-200 active:scale-95 transition-all disabled:opacity-50"
-                                >
-                                    {loading ? 'Güncelleniyor...' : 'Kaydet'}
-                                </button>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>,
+                document.body
+            )}
         </>
     );
 }

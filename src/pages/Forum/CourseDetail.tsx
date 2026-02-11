@@ -117,24 +117,40 @@ const CourseDetail: React.FC = () => {
         try {
             await hookSubmitReview(data);
 
-            // Optimistic Update
+            // Optimistic & Manual Update
+            const currentCount = course.reviewCount || 0;
+            const currentRating = course.rating || 0;
+            const currentDiff = course.avgDifficulty || 0;
+
             if (!hookUserReview) {
                 // Create
-                const newCount = (course.reviewCount || 0) + 1;
-                const newRating = ((course.rating || 0) * (course.reviewCount || 0) + data.rating) / newCount;
-                const newDiff = ((course.avgDifficulty || 0) * (course.reviewCount || 0) + (data.difficulty || 5)) / newCount;
+                const newCount = currentCount + 1;
+                const newRating = (currentRating * currentCount + data.rating) / newCount;
+                const newDiff = (currentDiff * currentCount + (data.difficulty || 5)) / newCount;
 
                 setCourse({ ...course, reviewCount: newCount, rating: newRating, avgDifficulty: newDiff });
+
+                await updateDoc(doc(db, 'courses', course.id), {
+                    reviewCount: newCount,
+                    rating: newRating,
+                    avgDifficulty: newDiff
+                });
             } else {
                 // Edit
-                const count = course.reviewCount || 1;
-                const totalRating = (course.rating || 0) * count;
-                const totalDiff = (course.avgDifficulty || 0) * count;
+                if (currentCount > 0) {
+                    const totalRating = currentRating * currentCount;
+                    const totalDiff = currentDiff * currentCount;
 
-                const newRating = (totalRating - hookUserReview.rating + data.rating) / count;
-                const newDiff = (totalDiff - (hookUserReview.difficulty || 5) + (data.difficulty || 5)) / count;
+                    const newRating = (totalRating - hookUserReview.rating + data.rating) / currentCount;
+                    const newDiff = (totalDiff - (hookUserReview.difficulty || 5) + (data.difficulty || 5)) / currentCount;
 
-                setCourse({ ...course, rating: newRating, avgDifficulty: newDiff });
+                    setCourse({ ...course, rating: newRating, avgDifficulty: newDiff });
+
+                    await updateDoc(doc(db, 'courses', course.id), {
+                        rating: newRating,
+                        avgDifficulty: newDiff
+                    });
+                }
             }
         } catch (e) {
             console.error(e);
@@ -147,10 +163,15 @@ const CourseDetail: React.FC = () => {
         try {
             await hookDeleteReview();
 
-            // Optimistic Update
+            // Optimistic & Manual Update
             const count = course.reviewCount || 0;
             if (count <= 1) {
                 setCourse({ ...course, reviewCount: 0, rating: 0, avgDifficulty: 0 });
+                await updateDoc(doc(db, 'courses', course.id), {
+                    reviewCount: 0,
+                    rating: 0,
+                    avgDifficulty: 0
+                });
             } else {
                 const totalRating = (course.rating || 0) * count;
                 const totalDiff = (course.avgDifficulty || 0) * count;
@@ -159,6 +180,12 @@ const CourseDetail: React.FC = () => {
                 const newDiff = (totalDiff - (hookUserReview.difficulty || 5)) / (count - 1);
 
                 setCourse({ ...course, reviewCount: count - 1, rating: newRating, avgDifficulty: newDiff });
+
+                await updateDoc(doc(db, 'courses', course.id), {
+                    reviewCount: count - 1,
+                    rating: newRating,
+                    avgDifficulty: newDiff
+                });
             }
         } catch (e) {
             console.error(e);

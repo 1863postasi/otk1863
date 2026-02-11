@@ -120,51 +120,67 @@ const CourseInstructorDetail: React.FC = () => {
                 courseCodes: arrayUnion(course.code)
             });
 
-            // Optimistic Updates for Course & Instructor Global Stats are complex to calculate 100% accurately without fetching.
-            // But we can try or just leave it to eventual consistency if we don't display them heavily here?
-            // This page displays "stats" which is local offering stats.
-            // It ALSO might update global stats.
+            // Optimistic Updates for Course & Instructor Global Stats
 
-            // The original code did update global stats.
-            // I will keep updating global stats in DB, but I won't optimistically update 'course' or 'instructor' state objects extensively 
-            // unless they are displayed.
-            // 'course' state structure doesn't seem to be displayed for rating in this page? 
-            // The Header displays `stats.rating` (local). 
-            // The Hero displays `stats.rating`.
+            // Check if we need to initialize stats if they are undefined
+            const currentCourseCount = course.reviewCount || 0;
+            const currentCourseRating = course.rating || 0;
+            const currentCourseDiff = course.avgDifficulty || 0;
 
-            // So I only need to ensure `stats` is updated, which is handled by the useEffect on `reviews`.
-            // Wait, `reviews` from hook will update after local write?
-            // Yes, `useReview` updates `reviews` state optimistically.
+            const currentInstCount = instructor.reviewCount || 0;
+            const currentInstRating = instructor.rating || 0;
 
-            // However, we still need to write to DB for global stats consistency.
             if (!userReview) {
-                // New Review
-                // Cloud Functions logic for 'course-instructor' is missing, so we must manually update stats here
-                // to ensure the UI and DB remain consistent with the legacy behavior.
+                // --- CREATE CASE ---
 
-                // Update Course Stats (global for the course)
-                const newCourseCount = (course.reviewCount || 0) + 1;
-                const newCourseRating = ((course.rating || 0) * (course.reviewCount || 0) + data.rating) / newCourseCount;
+                // Update Course Stats
+                const newCourseCount = currentCourseCount + 1;
+                const newCourseRating = (currentCourseRating * currentCourseCount + data.rating) / newCourseCount;
+                // Default difficulty to 5 if not provided (though it should be)
+                const newCourseDiff = (currentCourseDiff * currentCourseCount + (data.difficulty || 5)) / newCourseCount;
+
                 await updateDoc(doc(db, 'courses', course.id), {
                     reviewCount: newCourseCount,
-                    rating: newCourseRating
+                    rating: newCourseRating,
+                    avgDifficulty: newCourseDiff
                 });
 
-                // Update Instructor Stats (global for the instructor)
-                const newInstructorCount = (instructor.reviewCount || 0) + 1;
-                const newInstructorRating = ((instructor.rating || 0) * (instructor.reviewCount || 0) + data.rating) / newInstructorCount;
+                // Update Instructor Stats
+                const newInstructorCount = currentInstCount + 1;
+                const newInstructorRating = (currentInstRating * currentInstCount + data.rating) / newInstructorCount;
+
                 await updateDoc(doc(db, 'instructors', instructor.id), {
                     reviewCount: newInstructorCount,
                     rating: newInstructorRating
                 });
+
             } else {
-                // Edit Review - Updating global stats for edit is hard without knowing previous value accurately from here if we don't track it.
-                // But `userReview` has the OLD value!
-                // So we can do it.
-                // Check implementation in hook -> it updates userReview instantly. 
-                // Wait, hook updates state. 
-                // userReview here is the one BEFORE update if I am in the handler? 
-                // Yes, closure captures it or it's current render.
+                // --- EDIT CASE ---
+
+                // Update Course Stats
+                // Count doesn't change
+                if (currentCourseCount > 0) {
+                    const totalCourseRating = currentCourseRating * currentCourseCount;
+                    const totalCourseDiff = currentCourseDiff * currentCourseCount;
+
+                    const newCourseRating = (totalCourseRating - userReview.rating + data.rating) / currentCourseCount;
+                    const newCourseDiff = (totalCourseDiff - (userReview.difficulty || 5) + (data.difficulty || 5)) / currentCourseCount;
+
+                    await updateDoc(doc(db, 'courses', course.id), {
+                        rating: newCourseRating,
+                        avgDifficulty: newCourseDiff
+                    });
+                }
+
+                // Update Instructor Stats
+                if (currentInstCount > 0) {
+                    const totalInstRating = currentInstRating * currentInstCount;
+                    const newInstructorRating = (totalInstRating - userReview.rating + data.rating) / currentInstCount;
+
+                    await updateDoc(doc(db, 'instructors', instructor.id), {
+                        rating: newInstructorRating
+                    });
+                }
             }
 
             setIsReviewModalOpen(false);
@@ -179,15 +195,55 @@ const CourseInstructorDetail: React.FC = () => {
             await deleteReview();
             // Stats update via useEffect
 
-            // Global stats update logic (decrement) could be added here similar to create.
-            // For now, I will skip complex global stat updates on client-side for delete/edit to avoid risk, 
-            // assuming Cloud Functions or eventual consistency handles it?
-            // Original code didn't have delete/edit.
-            // So I am adding new functionality.
-            // I should probably leave global stats calculation to Cloud Functions triggers if possible, 
-            // OR implement it if I want it perfect.
-            // Given safety constraints, I'll stick to what I can safely do. 
-            // The original code DID manual update on Create.
+            // Manual Global Stats Update (Decrement)
+            if (userReview) {
+                const currentCourseCount = course.reviewCount || 0;
+                const currentCourseRating = course.rating || 0;
+                const currentCourseDiff = course.avgDifficulty || 0;
+
+                const currentInstCount = instructor.reviewCount || 0;
+                const currentInstRating = instructor.rating || 0;
+
+                // Update Course (Decrement)
+                if (currentCourseCount > 1) {
+                    const newCourseCount = currentCourseCount - 1;
+                    const totalCourseRating = currentCourseRating * currentCourseCount;
+                    const totalCourseDiff = currentCourseDiff * currentCourseCount;
+
+                    const newCourseRating = (totalCourseRating - userReview.rating) / newCourseCount;
+                    const newCourseDiff = (totalCourseDiff - (userReview.difficulty || 5)) / newCourseCount;
+
+                    await updateDoc(doc(db, 'courses', course.id), {
+                        reviewCount: newCourseCount,
+                        rating: newCourseRating,
+                        avgDifficulty: newCourseDiff
+                    });
+                } else if (currentCourseCount === 1) {
+                    // Reset to 0
+                    await updateDoc(doc(db, 'courses', course.id), {
+                        reviewCount: 0,
+                        rating: 0,
+                        avgDifficulty: 0
+                    });
+                }
+
+                // Update Instructor (Decrement)
+                if (currentInstCount > 1) {
+                    const newInstructorCount = currentInstCount - 1;
+                    const totalInstRating = currentInstRating * currentInstCount;
+                    const newInstructorRating = (totalInstRating - userReview.rating) / newInstructorCount;
+
+                    await updateDoc(doc(db, 'instructors', instructor.id), {
+                        reviewCount: newInstructorCount,
+                        rating: newInstructorRating
+                    });
+                } else if (currentInstCount === 1) {
+                    await updateDoc(doc(db, 'instructors', instructor.id), {
+                        reviewCount: 0,
+                        rating: 0
+                    });
+                }
+            }
         } catch (e) {
             console.error(e);
             alert("Silme başarısız.");
