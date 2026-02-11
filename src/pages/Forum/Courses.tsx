@@ -222,6 +222,38 @@ const AcademicReviews: React.FC = () => {
         });
     }, [activeTab, courses, instructors, debouncedSearchTerm, departmentFilter]);
 
+    const [visibleCount, setVisibleCount] = useState(20);
+    const observerTarget = React.useRef(null);
+
+    useEffect(() => {
+        setVisibleCount(20);
+    }, [activeTab, debouncedSearchTerm, departmentFilter]);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            entries => {
+                if (entries[0].isIntersecting) {
+                    setVisibleCount(prev => prev + 20);
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        if (observerTarget.current) {
+            observer.observe(observerTarget.current);
+        }
+
+        return () => {
+            if (observerTarget.current) {
+                observer.unobserve(observerTarget.current);
+            }
+        };
+    }, [results]);
+
+    const visibleResults = useMemo(() => {
+        return results.slice(0, visibleCount);
+    }, [results, visibleCount]);
+
     const handleCreateCourse = useCallback(async () => {
         if (!courseDept || !courseNumber || !courseName) {
             alert('Lütfen tüm alanları doldurun.');
@@ -567,23 +599,16 @@ const AcademicReviews: React.FC = () => {
                         <Loader2 size={48} className="animate-spin text-stone-400" />
                         <p className="font-serif italic text-stone-400">Veriler taranıyor...</p>
                     </div>
-                ) : results.length > 0 ? (
-                    <motion.div
-                        layout
-                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6"
-                    >
-                        <AnimatePresence mode='popLayout'>
-                            {results.map((item, idx) => (
+                ) : visibleResults.length > 0 ? (
+                    <>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+                            {/* REMOVED AnimatePresence for performance */}
+                            {visibleResults.map((item, idx) => (
                                 <motion.div
                                     key={item.id}
-                                    initial={{ opacity: 0, y: 20, scale: 0.9 }}
-                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 0.9 }}
-                                    transition={{
-                                        duration: 0.4,
-                                        delay: idx < 20 ? idx * 0.05 : 0, // Only first 20 items get stagger animation
-                                        type: "spring"
-                                    }}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.2 }}
                                 >
                                     <Link
                                         to={activeTab === 'courses' ? `/forum/ders/${(item as Course).code}` : `/forum/hoca/${item.id}`}
@@ -596,17 +621,17 @@ const AcademicReviews: React.FC = () => {
                                         )} />
 
                                         <div className="flex justify-between items-start mb-6">
-                                            {/* Icon / Avatar */}
+                                            {/* Icon / Avatar - Modified for Course Code & Instructor Name */}
                                             <div className={cn(
-                                                "w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-black transition-transform group-hover:scale-110 shadow-inner",
+                                                "h-12 rounded-2xl flex items-center justify-center font-black transition-transform group-hover:scale-105 shadow-inner px-3 min-w-[3rem]",
                                                 activeTab === 'courses'
-                                                    ? "bg-blue-50 text-blue-600"
-                                                    : "bg-emerald-50 text-emerald-600"
+                                                    ? "bg-blue-50 text-blue-600 text-sm"
+                                                    : "bg-emerald-50 text-emerald-600 text-sm w-auto" // Instructor name fits here
                                             )}>
                                                 {activeTab === 'courses' ? (
-                                                    (item as Course).department.substring(0, 2)
+                                                    (item as Course).code
                                                 ) : (
-                                                    (item as Instructor).name.charAt(0)
+                                                    (item as Instructor).name
                                                 )}
                                             </div>
 
@@ -618,21 +643,18 @@ const AcademicReviews: React.FC = () => {
                                                         "bg-red-50 border-red-100 text-red-700"
                                             )}>
                                                 <Star size={12} className="fill-current" />
-                                                <span className="font-bold text-xs">{item.rating || '—'}</span>
+                                                <span className="font-bold text-xs">{item.rating?.toFixed(1) || '—'}</span>
                                             </div>
                                         </div>
 
                                         <div className="space-y-2">
-                                            {/* Code / Title */}
-                                            {activeTab === 'courses' && (
-                                                <code className="text-xs font-bold text-stone-400 bg-stone-100 px-2 py-0.5 rounded-md inline-block">
-                                                    {(item as Course).code}
-                                                </code>
-                                            )}
 
-                                            <h3 className="font-serif font-bold text-xl text-stone-900 leading-tight group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-stone-900 group-hover:to-stone-600 transition-all line-clamp-2">
-                                                {activeTab === 'courses' ? (item as Course).name : (item as Instructor).name}
-                                            </h3>
+                                            {/* Title: Only for Courses (Instructor Name is in Badge) */}
+                                            {activeTab === 'courses' && (
+                                                <h3 className="font-serif font-bold text-xl text-stone-900 leading-tight group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-stone-900 group-hover:to-stone-600 transition-all line-clamp-2">
+                                                    {(item as Course).name}
+                                                </h3>
+                                            )}
 
                                             {activeTab === 'courses' && (item as Course).avgDifficulty && (
                                                 <div className="flex items-center gap-2 mt-1">
@@ -653,7 +675,7 @@ const AcademicReviews: React.FC = () => {
                                                     {item.department} Departmanı
                                                 </span>
                                                 <span className="text-xs font-medium text-stone-500 group-hover:text-stone-900 transition-colors">
-                                                    {item.reviewCount} Görüş
+                                                    {item.reviewCount || 0} Görüş
                                                 </span>
                                             </div>
                                         </div>
@@ -667,8 +689,11 @@ const AcademicReviews: React.FC = () => {
                                     </Link>
                                 </motion.div>
                             ))}
-                        </AnimatePresence>
-                    </motion.div>
+                        </div>
+
+                        {/* Sentinel for Infinite Scroll */}
+                        <div ref={observerTarget} className="h-20 w-full" />
+                    </>
                 ) : (
                     /* EMPTY STATE */
                     <motion.div

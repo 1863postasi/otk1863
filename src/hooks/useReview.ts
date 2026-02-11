@@ -113,10 +113,17 @@ export const useReview = ({ type, targetId, secondaryTargetId }: UseReviewProps)
                 // Target info
                 type,
                 targetId,
-                secondaryTargetId,
                 // Metadata
-                courseCode: data.courseCode,
+                ...(data.courseCode && { courseCode: data.courseCode }),
             };
+
+            // Add optional fields only if they exist
+            if (secondaryTargetId) {
+                (reviewData as any).secondaryTargetId = secondaryTargetId;
+            }
+            if (data.difficulty !== undefined) {
+                (reviewData as any).difficulty = data.difficulty;
+            }
 
             if (userReview) {
                 // UPDATE
