@@ -6,6 +6,8 @@ import { isUsernameUnique } from '../../lib/firestore_users';
 import { MOCK_FACULTIES } from '../../lib/data'; // For department list
 import { Lock, ArrowLeft, Loader2, CheckCircle, XCircle, Mail, User, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { CLARIFICATION_TEXT, PRIVACY_AGREEMENT } from '../../lib/legal-content';
+import LegalModal from '../../components/Shared/LegalModal';
 
 const { useNavigate, Link } = router;
 
@@ -23,6 +25,12 @@ const Register: React.FC = () => {
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  const [agreements, setAgreements] = useState({
+    clarification: false,
+    privacy: false
+  });
+  const [modalOpen, setModalOpen] = useState<'clarification' | 'privacy' | null>(null);
 
   // Extract departments for select list
   const departments = MOCK_FACULTIES.flatMap(f => f.departments.map(d => d.name)).sort();
@@ -72,6 +80,9 @@ const Register: React.FC = () => {
       if (!formData.department) {
         throw new Error("Lütfen bölümünüzü seçiniz.");
       }
+      if (!agreements.clarification || !agreements.privacy) {
+        throw new Error("Lütfen Aydınlatma Metni'ni ve Üyelik Sözleşmesi'ni onaylayınız.");
+      }
 
       // 2. Create Auth User
       const userCredential = await auth.createUserWithEmailAndPassword(formData.email, formData.password);
@@ -94,7 +105,11 @@ const Register: React.FC = () => {
         createdAt: serverTimestamp(),
         lastUsernameChange: serverTimestamp(),
         badges: [],
-        clubRoles: {}
+        clubRoles: {},
+        termsAccepted: true,
+        privacyPolicyAccepted: true,
+        agreementsLastVersion: "v1.0",
+        termsAcceptedAt: serverTimestamp()
       });
 
       // 5. Success State
@@ -261,6 +276,43 @@ const Register: React.FC = () => {
               </div>
             </div>
 
+            {/* Legal Agreements */}
+            <div className="space-y-3 pt-2">
+              <label className="flex items-start gap-3 cursor-pointer group">
+                <div className="relative flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={agreements.clarification}
+                    onChange={(e) => setAgreements(prev => ({ ...prev, clarification: e.target.checked }))}
+                    className="peer h-5 w-5 cursor-pointer appearance-none rounded border border-stone-300 bg-stone-50 checked:bg-stone-900 checked:border-stone-900 transition-all"
+                  />
+                  <CheckCircle size={14} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" />
+                </div>
+                <span className="text-xs text-stone-600 leading-snug select-none">
+                  <button type="button" onClick={(e) => { e.preventDefault(); setModalOpen('clarification'); }} className="font-bold text-stone-800 hover:text-boun-gold underline decoration-stone-300 underline-offset-2 transition-colors">
+                    Aydınlatma Metnini
+                  </button> okudum, anladım.
+                </span>
+              </label>
+
+              <label className="flex items-start gap-3 cursor-pointer group">
+                <div className="relative flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={agreements.privacy}
+                    onChange={(e) => setAgreements(prev => ({ ...prev, privacy: e.target.checked }))}
+                    className="peer h-5 w-5 cursor-pointer appearance-none rounded border border-stone-300 bg-stone-50 checked:bg-stone-900 checked:border-stone-900 transition-all"
+                  />
+                  <CheckCircle size={14} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" />
+                </div>
+                <span className="text-xs text-stone-600 leading-snug select-none">
+                  <button type="button" onClick={(e) => { e.preventDefault(); setModalOpen('privacy'); }} className="font-bold text-stone-800 hover:text-boun-gold underline decoration-stone-300 underline-offset-2 transition-colors">
+                    Üyelik Sözleşmesi
+                  </button>'ni okudum, kabul ediyorum.
+                </span>
+              </label>
+            </div>
+
             <button
               type="submit"
               disabled={loading || usernameStatus === 'taken'}
@@ -275,7 +327,14 @@ const Register: React.FC = () => {
           </div>
         </div>
       </motion.div>
-    </div>
+
+      <LegalModal
+        isOpen={!!modalOpen}
+        onClose={() => setModalOpen(null)}
+        title={modalOpen === 'clarification' ? "Aydınlatma Metni" : "Üyelik Sözleşmesi"}
+        content={modalOpen === 'clarification' ? CLARIFICATION_TEXT : PRIVACY_AGREEMENT}
+      />
+    </div >
   );
 };
 
