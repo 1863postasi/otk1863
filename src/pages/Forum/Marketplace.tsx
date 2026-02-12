@@ -26,6 +26,34 @@ interface Message {
 
 // --- COMPONENTS ---
 
+// --- UTILS ---
+const formatPhoneNumber = (value: string) => {
+    // Remove non-numeric characters
+    const numbers = value.replace(/\D/g, '');
+
+    // Limits the number of digits to 11
+    const charCount = numbers.length;
+    let formatted = '';
+
+    if (charCount > 0) {
+        formatted += numbers.substring(0, 1); // 0
+    }
+    if (charCount > 1) {
+        formatted += ' ' + numbers.substring(1, 4); // 5XX
+    }
+    if (charCount > 4) {
+        formatted += ' ' + numbers.substring(4, 7); // XXX
+    }
+    if (charCount > 7) {
+        formatted += ' ' + numbers.substring(7, 9); // XX
+    }
+    if (charCount > 9) {
+        formatted += ' ' + numbers.substring(9, 11); // XX
+    }
+
+    return formatted.trim();
+};
+
 const CategoryPill = ({ label, active, onClick }: { label: string, active: boolean, onClick: () => void }) => (
     <button
         onClick={onClick}
@@ -254,14 +282,15 @@ const SendNoteModal = ({ isOpen, onClose, listing, currentUser }: { isOpen: bool
                 <input
                     type="text"
                     className="w-full border p-3 rounded-lg text-sm bg-stone-50 outline-none focus:border-emerald-500 mb-4"
-                    placeholder="Size ulaşabileceği iletişim bilgisi (Tel/Insta)"
+                    placeholder="Size ulaşabileceği iletişim bilgisi (Tel/Insta)*"
                     value={contact}
                     onChange={e => setContact(e.target.value)}
+                    required
                 />
 
                 <button
                     onClick={handleSend}
-                    disabled={sending}
+                    disabled={sending || !message.trim() || !contact.trim()}
                     className="w-full bg-emerald-900 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                     {sending ? <Loader2 className="animate-spin" /> : <><Send size={16} /> Gönder</>}
@@ -286,6 +315,7 @@ export default function Marketplace() {
     // Form inputs
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [phone, setPhone] = useState('');
 
     const categories = ["Tümü", "Kitap", "Elektronik", "Ev Eşyası", "Giyim", "Diğer"];
 
@@ -395,9 +425,15 @@ export default function Marketplace() {
                 imageURL = result.url;
             }
 
-            // WhatsApp formatting
-            let whatsappRaw = formData.get('whatsapp') as string;
-            let formattedWa = whatsappRaw ? `https://wa.me/${whatsappRaw.replace(/[^0-9]/g, '')}` : undefined;
+            // WhatsApp formatting - Normalize to 905XXXXXXXXX
+            const pureNumbers = phone.replace(/\D/g, '');
+            // If it starts with 0, remove it and add 90. If it starts with 5, add 90.
+            let waString = '';
+            if (pureNumbers.startsWith('0')) waString = '90' + pureNumbers.substring(1);
+            else if (pureNumbers.startsWith('5')) waString = '90' + pureNumbers;
+            else waString = pureNumbers;
+
+            const formattedWa = waString.length >= 10 ? `https://wa.me/${waString}` : undefined;
 
             const newListing: Omit<Listing, 'id'> = { // id added by addDoc
                 title: formData.get('title') as string,
@@ -413,7 +449,7 @@ export default function Marketplace() {
                 sellerPhotoUrl: userProfile.photoUrl || null,
                 contact: {
                     whatsapp: formattedWa,
-                    phone: formData.get('phone') as string
+                    phone: phone // Use the state-stored phone
                 },
                 tags: [formData.get('category') as string],
                 createdAt: serverTimestamp(),
@@ -560,11 +596,20 @@ export default function Marketplace() {
                                                 <option value="good">İyi</option>
                                                 <option value="fair">İdare Eder</option>
                                             </select>
-                                            <input name="phone" placeholder="Görünen Tel (Opsiyonel)" className="w-full border p-3 rounded-lg" />
                                         </div>
-
-                                        <input name="whatsapp" placeholder="WhatsApp No (örn: 90555...)" className="w-full border p-3 rounded-lg border-green-200 bg-green-50" />
-                                        <p className="text-[10px] text-green-700 -mt-2">WhatsApp linki oluşturmak için kullanılır.</p>
+                                        <div className="space-y-1">
+                                            <div className="relative">
+                                                <Phone className="absolute left-3 top-3 text-stone-400" size={18} />
+                                                <input
+                                                    value={phone}
+                                                    onChange={e => setPhone(formatPhoneNumber(e.target.value))}
+                                                    placeholder="Telefon: 0 5XX XXX XX XX"
+                                                    className="w-full border p-3 pl-10 rounded-lg outline-none focus:border-emerald-500"
+                                                    maxLength={15}
+                                                />
+                                            </div>
+                                            <p className="text-[10px] text-stone-400 pl-1 font-medium">Bu numara hem ilanda görünecek hem de WhatsApp linki oluşturacaktır.</p>
+                                        </div>
 
                                         <textarea name="description" rows={3} placeholder="Açıklama" className="w-full border p-3 rounded-lg" required />
 

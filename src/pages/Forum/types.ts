@@ -133,7 +133,7 @@ export interface Club {
     website?: string;
     logoUrl?: string;   // URL to image in R2
     bannerUrl?: string; // URL to image in R2
-    type: string;       // e.g. "Kültür", "Spor", "Akademik"
+    categories: string[]; // e.g. ["Kültür & Sanat", "Spor"]
     founded?: string;
     memberCount?: number;
     rating?: number;

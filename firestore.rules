@@ -111,7 +111,30 @@ service cloud.firestore {
       allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
 
-    // 5. DİĞER HER ŞEY (Genel Korumalar)
+    // 5. KAYIP EŞYA (lost-items)
+    match /lost-items/{itemId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isAdmin() || (isSignedIn() && resource.data.ownerId == request.auth.uid);
+      allow delete: if isAdmin() || (isSignedIn() && resource.data.ownerId == request.auth.uid);
+    }
+
+    // 6. PAZAR YERİ (listings)
+    match /listings/{listingId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.sellerId == request.auth.uid;
+      allow update: if isAdmin() || (isSignedIn() && resource.data.sellerId == request.auth.uid);
+      allow delete: if isAdmin() || (isSignedIn() && resource.data.sellerId == request.auth.uid);
+    }
+
+    // 7. MESAJLAR / NOTLAR (messages)
+    match /messages/{messageId} {
+      allow read: if isSignedIn() && (resource.data.toId == request.auth.uid || resource.data.fromId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && request.resource.data.fromId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // 8. DİĞER HER ŞEY (Genel Korumalar)
     match /{collectionName}/{document=**} {
       allow read: if true;
       allow write: if isAdmin(); 

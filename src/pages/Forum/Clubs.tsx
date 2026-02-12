@@ -13,7 +13,7 @@ export default function Clubs() {
     const [clubs, setClubs] = useState<Club[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const categories = ["Tümü", "Kültür & Sanat", "Spor", "Akademik", "Sosyal Sorumluluk", "Teknoloji"];
+    const categories = ["Tümü", "Kültür & Sanat", "Spor", "Akademik", "Kariyer", "Sosyal Sorumluluk", "Teknoloji", "Fikir & Düşünce", "Yaşam & Hobiler", "Doğa & Çevre"];
 
     useEffect(() => {
         const fetchClubs = async () => {
@@ -58,7 +58,8 @@ export default function Clubs() {
     const filteredClubs = clubs.filter(club => {
         const matchesSearch = club.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             club.shortName.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesCategory = selectedCategory === "Tümü" || club.type === selectedCategory;
+        const clubCats = (club as any).categories || ((club as any).type ? [(club as any).type] : []);
+        const matchesCategory = selectedCategory === "Tümü" || clubCats.includes(selectedCategory);
         return matchesSearch && matchesCategory;
     });
 
@@ -142,10 +143,12 @@ export default function Clubs() {
                                                 )}
 
                                                 {/* Category Badge */}
-                                                <div className="absolute top-2 right-2">
-                                                    <span className="bg-white/90 backdrop-blur-sm text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm text-stone-800 border border-stone-100">
-                                                        {club.type}
-                                                    </span>
+                                                <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
+                                                    {(club.categories || ((club as any).type ? [(club as any).type] : [])).slice(0, 2).map((cat, idx) => (
+                                                        <span key={idx} className="bg-white/90 backdrop-blur-sm text-[9px] font-bold px-2 py-0.5 rounded-full shadow-sm text-stone-800 border border-stone-100 whitespace-nowrap">
+                                                            {cat}
+                                                        </span>
+                                                    ))}
                                                 </div>
                                             </div>
 
@@ -174,9 +177,9 @@ export default function Clubs() {
 
                                                 {/* Footer Stats */}
                                                 <div className="mt-4 pt-3 border-t border-stone-100 flex items-center justify-between text-[10px] text-stone-400 font-medium">
-                                                    <div className="flex items-center gap-1">
-                                                        <MapPin size={12} />
-                                                        <span>Kuzey Kampüs</span>
+                                                    <div className="flex items-center gap-1 min-w-0">
+                                                        <MapPin size={12} className="shrink-0" />
+                                                        <span className="truncate">{club.address || "Konum Belirtilmemiş"}</span>
                                                     </div>
                                                     {club.founded && (
                                                         <span>Est. {club.founded}</span>

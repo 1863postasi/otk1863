@@ -281,13 +281,19 @@ export default function ClubDetail() {
                                 )}
                             </div>
 
-                            <motion.span
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                className="inline-block px-3 py-1 rounded-full bg-white/20 backdrop-blur-md border border-white/10 text-[10px] font-bold uppercase tracking-wider mb-2"
-                            >
-                                {club.type || "Öğrenci Kulübü"}
-                            </motion.span>
+                            <div className="flex flex-wrap gap-2 mb-2">
+                                {(club.categories || ((club as any).type ? [(club as any).type] : ["Öğrenci Kulübü"])).map((cat, idx) => (
+                                    <motion.span
+                                        key={idx}
+                                        initial={{ opacity: 0, x: -20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: 0.1 * idx }}
+                                        className="inline-block px-3 py-1 rounded-full bg-white/20 backdrop-blur-md border border-white/10 text-[10px] font-bold uppercase tracking-wider"
+                                    >
+                                        {cat}
+                                    </motion.span>
+                                ))}
+                            </div>
                             <motion.h1
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}

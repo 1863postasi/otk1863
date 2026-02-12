@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    ArrowLeft, Star, ThumbsUp, Loader2, X, AlertCircle, MessageSquare
+    ArrowLeft, Star, ThumbsUp, Loader2, X, AlertCircle, MessageSquare, User
 } from 'lucide-react';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
@@ -304,8 +304,8 @@ const CourseInstructorDetail: React.FC = () => {
                                 >
                                     <div className="flex items-start justify-between mb-4">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-stone-100 text-stone-600 flex items-center justify-center text-xs font-bold">
-                                                {review.isAnonymous ? '?' : review.userDisplayName?.substring(0, 2).toUpperCase()}
+                                            <div className="w-10 h-10 rounded-full bg-stone-100 flex items-center justify-center text-stone-500 font-bold text-sm">
+                                                {review.isAnonymous ? <User size={18} /> : (review.userPhotoUrl ? <img src={review.userPhotoUrl} className="w-full h-full rounded-full object-cover" /> : review.userDisplayName?.charAt(0))}
                                             </div>
                                             <div>
                                                 <div className="font-bold text-sm text-stone-800">

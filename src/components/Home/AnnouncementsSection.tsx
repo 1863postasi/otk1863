@@ -262,14 +262,14 @@ const AnnouncementsSection: React.FC<AnnouncementsSectionProps> = ({ onBack }) =
                 ownerName: userProfile.username || 'Anonim',
                 ownerDepartment: userProfile.department || 'Bölüm Yok',
                 imageURL: imageURL,
-                status: 'pending', // Always pending initially
+                status: 'approved', // Direct publication
                 isPinned: false,
 
                 createdAt: serverTimestamp()
             });
 
             setIsModalOpen(false);
-            showToast("İlanınız onaya gönderildi! Admin kontrolünden sonra yayınlanacaktır.");
+            showToast("İlanınız başarıyla yayınlandı!");
             setSelectedFile(null);
             setContactHidden(false);
         } catch (error) {
@@ -686,7 +686,7 @@ const AnnouncementsSection: React.FC<AnnouncementsSectionProps> = ({ onBack }) =
                                 <form onSubmit={handleCreateSubmit} className="p-6 space-y-4 overflow-y-auto">
                                     <div className="bg-blue-50 p-3 rounded text-blue-800 text-xs flex gap-2 items-start border border-blue-100">
                                         <CheckCircle size={14} className="mt-0.5 shrink-0" />
-                                        <span>İsim ve bölüm bilginiz profilinizden (<b>{userProfile?.username}</b>) otomatik eklenecektir. İlan onaylandıktan sonra yayına girer.</span>
+                                        <span>İsim ve bölüm bilginiz profilinizden (<b>{userProfile?.username}</b>) otomatik eklenecektir. İlanınız doğrudan yayına girer.</span>
                                     </div>
 
                                     <div>
@@ -751,7 +751,7 @@ const AnnouncementsSection: React.FC<AnnouncementsSectionProps> = ({ onBack }) =
 
                                     <div className="pt-4">
                                         <button type="submit" disabled={isSubmitting} className="w-full bg-stone-900 text-white font-bold py-3 rounded hover:bg-stone-700 transition-colors shadow-lg disabled:opacity-70 flex items-center justify-center gap-2">
-                                            {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : "İlanı Onaya Gönder"}
+                                            {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : "İlanı Yayınla"}
                                         </button>
                                     </div>
                                 </form>
@@ -760,61 +760,66 @@ const AnnouncementsSection: React.FC<AnnouncementsSectionProps> = ({ onBack }) =
                     )}
                 </AnimatePresence>,
                 document.body
-            )}
+            )
+            }
 
             {/* MODAL: SEND NOTE */}
-            {createPortal(
-                <AnimatePresence>
-                    {noteModalItem && (
-                        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setNoteModalItem(null)} className="fixed inset-0 bg-stone-900/60 md:backdrop-blur-sm" />
-                            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-white rounded-lg shadow-xl p-6 w-full max-w-sm z-10">
-                                <h3 className="font-serif font-bold text-lg text-stone-900 mb-2">İlan Sahibine Not Bırak</h3>
-                                <p className="text-sm text-stone-500 mb-4">
-                                    Eşyayı bulduysanız veya bilgi vermek istiyorsanız buradan yazabilirsiniz. Mesajınız gizli kalacaktır.
-                                </p>
-                                <textarea
-                                    className="w-full p-3 border border-stone-300 rounded text-sm min-h-[100px] mb-4 focus:ring-1 focus:ring-stone-500 outline-none"
-                                    placeholder="Örn: Kimliği kütüphane güvenliğine bıraktım..."
-                                    value={noteText}
-                                    onChange={(e) => setNoteText(e.target.value)}
-                                />
-                                <input
-                                    type="text"
-                                    className="w-full p-3 border border-stone-300 rounded text-sm mb-4 focus:ring-1 focus:ring-stone-500 outline-none"
-                                    placeholder="Size ulaşabileceği iletişim bilgisi (Tel/Insta)"
-                                    value={contact}
-                                    onChange={e => setContact(e.target.value)}
-                                />
-                                <div className="flex gap-3">
-                                    <button onClick={() => setNoteModalItem(null)} className="flex-1 py-2 border border-stone-300 rounded text-stone-600 font-bold text-sm hover:bg-stone-50">Vazgeç</button>
-                                    <button onClick={handleSendNote} disabled={noteSending || !noteText.trim()} className="flex-1 py-2 bg-stone-900 text-white rounded font-bold text-sm hover:bg-stone-700 disabled:opacity-50">
-                                        {noteSending ? "Gönderiliyor..." : "Gönder"}
-                                    </button>
-                                </div>
-                            </motion.div>
-                        </div>
-                    )}
-                </AnimatePresence>,
-                document.body
-            )}
+            {
+                createPortal(
+                    <AnimatePresence>
+                        {noteModalItem && (
+                            <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setNoteModalItem(null)} className="fixed inset-0 bg-stone-900/60 md:backdrop-blur-sm" />
+                                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-white rounded-lg shadow-xl p-6 w-full max-w-sm z-10">
+                                    <h3 className="font-serif font-bold text-lg text-stone-900 mb-2">İlan Sahibine Not Bırak</h3>
+                                    <p className="text-sm text-stone-500 mb-4">
+                                        Eşyayı bulduysanız veya bilgi vermek istiyorsanız buradan yazabilirsiniz. Mesajınız gizli kalacaktır.
+                                    </p>
+                                    <textarea
+                                        className="w-full p-3 border border-stone-300 rounded text-sm min-h-[100px] mb-4 focus:ring-1 focus:ring-stone-500 outline-none"
+                                        placeholder="Örn: Kimliği kütüphane güvenliğine bıraktım..."
+                                        value={noteText}
+                                        onChange={(e) => setNoteText(e.target.value)}
+                                    />
+                                    <input
+                                        type="text"
+                                        className="w-full p-3 border border-stone-300 rounded text-sm mb-4 focus:ring-1 focus:ring-stone-500 outline-none"
+                                        placeholder="Size ulaşabileceği iletişim bilgisi (Tel/Insta)"
+                                        value={contact}
+                                        onChange={e => setContact(e.target.value)}
+                                    />
+                                    <div className="flex gap-3">
+                                        <button onClick={() => setNoteModalItem(null)} className="flex-1 py-2 border border-stone-300 rounded text-stone-600 font-bold text-sm hover:bg-stone-50">Vazgeç</button>
+                                        <button onClick={handleSendNote} disabled={noteSending || !noteText.trim()} className="flex-1 py-2 bg-stone-900 text-white rounded font-bold text-sm hover:bg-stone-700 disabled:opacity-50">
+                                            {noteSending ? "Gönderiliyor..." : "Gönder"}
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            </div>
+                        )}
+                    </AnimatePresence>,
+                    document.body
+                )
+            }
 
             {/* TOAST */}
-            {createPortal(
-                <AnimatePresence>
-                    {toast && (
-                        <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[10000] w-max max-w-[90vw]">
-                            <div className={cn("px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 text-sm font-bold border", toast.type === 'success' ? "bg-stone-900 text-white border-stone-700" : "bg-white text-stone-800 border-stone-200")}>
-                                {toast.type === 'success' ? <CheckCircle size={18} className="text-boun-green" /> : <AlertTriangle size={18} className="text-boun-gold" />}
-                                <span className="truncate">{toast.msg}</span>
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>,
-                document.body
-            )}
+            {
+                createPortal(
+                    <AnimatePresence>
+                        {toast && (
+                            <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[10000] w-max max-w-[90vw]">
+                                <div className={cn("px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 text-sm font-bold border", toast.type === 'success' ? "bg-stone-900 text-white border-stone-700" : "bg-white text-stone-800 border-stone-200")}>
+                                    {toast.type === 'success' ? <CheckCircle size={18} className="text-boun-green" /> : <AlertTriangle size={18} className="text-boun-gold" />}
+                                    <span className="truncate">{toast.msg}</span>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>,
+                    document.body
+                )
+            }
 
-        </div>
+        </div >
     );
 };
 

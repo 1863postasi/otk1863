@@ -54,7 +54,7 @@ export const ClubsPanel = ({ setSelectedItemId }: { setSelectedItemId?: (id: str
                     clubName: club.name,
                     clubShort: club.shortName,
                     clubFull: club.fullName || club.name,
-                    clubType: club.type || 'Kültür & Sanat',
+                    clubCategories: club.categories || (club.type ? [club.type] : []),
                     clubFounded: club.founded,
                     clubWeb: club.website,
                     address: club.address || '',
@@ -70,7 +70,7 @@ export const ClubsPanel = ({ setSelectedItemId }: { setSelectedItemId?: (id: str
             }
             setActiveTab('info'); // Reset to info tab on open
         } else if (clubView === 'create') {
-            setFormData({ contents: [] });
+            setFormData({ contents: [], clubCategories: [] });
             setLogoFile(null);
             setBannerFile(null);
             setEditingId(null);
@@ -275,7 +275,7 @@ export const ClubsPanel = ({ setSelectedItemId }: { setSelectedItemId?: (id: str
                 name: formData.clubName,
                 shortName: formData.clubShort,
                 fullName: formData.clubFull || formData.clubName,
-                type: formData.clubType || "Genel",
+                categories: formData.clubCategories || [],
                 founded: formData.clubFounded || "2000",
                 description: formData.clubDesc,
                 website: formData.clubWeb || "",
@@ -393,7 +393,31 @@ export const ClubsPanel = ({ setSelectedItemId }: { setSelectedItemId?: (id: str
                             </div>
                             <Input label="Kulüp Adı" placeholder="Müzik Kulübü" value={formData['clubName'] || ""} onChange={(v: string) => handleInputChange('clubName', v)} />
                             <Input label="Tam Adı (Resmi)" placeholder="Boğaziçi Üniversitesi Müzik Kulübü" value={formData['clubFull'] || ""} onChange={(v: string) => handleInputChange('clubFull', v)} />
-                            <Input label="Kategori" placeholder="Kültür & Sanat" value={formData['clubType'] || ""} onChange={(v: string) => handleInputChange('clubType', v)} />
+                            <div className="space-y-2">
+                                <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">Kategoriler</label>
+                                <div className="flex flex-wrap gap-2">
+                                    {["Kültür & Sanat", "Spor", "Akademik", "Kariyer", "Sosyal Sorumluluk", "Teknoloji", "Fikir & Düşünce", "Yaşam & Hobiler", "Doğa & Çevre"].map(cat => (
+                                        <button
+                                            key={cat}
+                                            onClick={() => {
+                                                const current = formData.clubCategories || [];
+                                                const updated = current.includes(cat)
+                                                    ? current.filter((c: string) => c !== cat)
+                                                    : [...current, cat];
+                                                handleInputChange('clubCategories', updated);
+                                            }}
+                                            className={cn(
+                                                "px-3 py-1.5 rounded-full text-xs font-bold transition-all border",
+                                                (formData.clubCategories || []).includes(cat)
+                                                    ? "bg-stone-900 text-white border-stone-900 shadow-sm"
+                                                    : "bg-white text-stone-600 border-stone-200 hover:border-stone-300"
+                                            )}
+                                        >
+                                            {cat}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
                             <TextArea label="Adres" placeholder="Kuzey Kampüs, 1. Yurt Altı..." className="h-20" value={formData['address'] || ''} onChange={(v: string) => handleInputChange('address', v)} />
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

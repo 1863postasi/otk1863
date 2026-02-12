@@ -34,7 +34,8 @@ const CourseDetail: React.FC = () => {
 
     const reviewHook = useReview({
         type: 'course',
-        targetId: course ? course.id : ''
+        targetId: course ? course.id : '',
+        courseCode: courseCode?.toUpperCase() // Pass courseCode for inclusive fetching
     });
     // Destructure from valid hook instance
     const {

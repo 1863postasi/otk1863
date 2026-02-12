@@ -18,12 +18,14 @@ import { useAuth } from '../context/AuthContext';
 
 interface UseReviewProps {
     type: 'course' | 'instructor' | 'course-instructor';
-    targetId: string; // The main ID to filter by (e.g. instructorId)
+    targetId: string; // The main ID to filter by
     secondaryTargetId?: string; // Optional (e.g. courseId for course-instructor)
-    enableRealtime?: boolean; // If we want realtime updates later
+    courseCode?: string; // New: To fetch course-instructor reviews for a course
+    instructorId?: string; // New: To fetch course-instructor reviews for an instructor
+    enableRealtime?: boolean;
 }
 
-export const useReview = ({ type, targetId, secondaryTargetId }: UseReviewProps) => {
+export const useReview = ({ type, targetId, secondaryTargetId, courseCode, instructorId }: UseReviewProps) => {
     const { userProfile } = useAuth();
 
     const [reviews, setReviews] = useState<Review[]>([]);
@@ -38,28 +40,51 @@ export const useReview = ({ type, targetId, secondaryTargetId }: UseReviewProps)
 
         setLoading(true);
         try {
-            // Base query filters
-            const constraints = [
-                where('type', '==', type),
-                where('targetId', '==', targetId)
-            ];
+            const reviewsRef = collection(db, 'reviews');
+            let data: Review[] = [];
 
-            // Add secondary target if exists (e.g. for specific course-instructor pair)
-            if (secondaryTargetId) {
-                constraints.push(where('secondaryTargetId', '==', secondaryTargetId));
-                // Note: Ensure you have composite indexes if using multiple fields with sorting
+            if (type === 'course' && courseCode) {
+                // Course Detail Case: Fetch both 'course' and 'course-instructor' reviews
+                const q1 = query(reviewsRef, where('type', '==', 'course'), where('targetId', '==', targetId));
+                const q2 = query(reviewsRef, where('type', '==', 'course-instructor'), where('courseCode', '==', courseCode));
+                const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+
+                const d1 = snap1.docs.map(d => ({ id: d.id, ...d.data() })) as Review[];
+                const d2 = snap2.docs.map(d => ({ id: d.id, ...d.data() })) as Review[];
+
+                // Merge and deduplicate just in case (though should be disjoint)
+                const map = new Map();
+                [...d1, ...d2].forEach(r => map.set(r.id, r));
+                data = Array.from(map.values());
+
+            } else if (type === 'instructor' && instructorId) {
+                // Instructor Detail Case: Fetch both 'instructor' and 'course-instructor' reviews
+                const q1 = query(reviewsRef, where('type', '==', 'instructor'), where('targetId', '==', targetId));
+                const q2 = query(reviewsRef, where('type', '==', 'course-instructor'), where('instructorId', '==', instructorId));
+                const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+
+                const d1 = snap1.docs.map(d => ({ id: d.id, ...d.data() })) as Review[];
+                const d2 = snap2.docs.map(d => ({ id: d.id, ...d.data() })) as Review[];
+
+                const map = new Map();
+                [...d1, ...d2].forEach(r => map.set(r.id, r));
+                data = Array.from(map.values());
+
+            } else {
+                // Standard Case (Single Query)
+                const constraints = [
+                    where('type', '==', type),
+                    where('targetId', '==', targetId)
+                ];
+                if (secondaryTargetId) {
+                    constraints.push(where('secondaryTargetId', '==', secondaryTargetId));
+                }
+                const q = query(reviewsRef, ...constraints);
+                const snapshot = await getDocs(q);
+                data = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Review[];
             }
 
-            // Order by timestamp desc
-            // const q = query(collection(db, 'reviews'), ...constraints, orderBy('timestamp', 'desc'));
-            // For now, let's just fetch and sort client side to avoid index issues immediately, 
-            // or use simple query. Index creation might be needed.
-            const q = query(collection(db, 'reviews'), ...constraints);
-
-            const snapshot = await getDocs(q);
-            const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Review[];
-
-            // Sort client-side for now to be safe against missing indexes
+            // Sort client-side for consistency and to avoid complex composite indexes
             data.sort((a, b) => {
                 const tA = a.timestamp?.seconds || 0;
                 const tB = b.timestamp?.seconds || 0;
@@ -81,7 +106,7 @@ export const useReview = ({ type, targetId, secondaryTargetId }: UseReviewProps)
         } finally {
             setLoading(false);
         }
-    }, [type, targetId, secondaryTargetId, userProfile]);
+    }, [type, targetId, secondaryTargetId, courseCode, instructorId, userProfile]);
 
     useEffect(() => {
         fetchReviews();
