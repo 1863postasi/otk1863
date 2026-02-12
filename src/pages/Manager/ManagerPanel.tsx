@@ -71,7 +71,7 @@ export default function ManagerPanel() {
             name: club.name,
             shortName: club.shortName,
             founded: club.founded,
-            type: club.type,
+            categories: club.categories || [],
             bannerUrl: club.bannerUrl
         });
         setActiveTab('info');
@@ -523,7 +523,11 @@ export default function ManagerPanel() {
                                     <div className="w-12 h-12 bg-stone-100 rounded-full flex items-center justify-center font-bold text-stone-500 group-hover:bg-stone-900 group-hover:text-boun-gold transition-colors">
                                         {club.shortName.substring(0, 2)}
                                     </div>
-                                    <span className="bg-stone-100 px-2 py-1 rounded text-xs font-bold text-stone-500">{club.type}</span>
+                                    <div className="flex gap-1 items-center">
+                                        {(club.categories || []).slice(0, 1).map((cat, idx) => (
+                                            <span key={idx} className="bg-stone-100 px-2 py-1 rounded text-[10px] font-bold text-stone-500 whitespace-nowrap">{cat}</span>
+                                        ))}
+                                    </div>
                                 </div>
                                 <h3 className="font-serif text-xl font-bold text-stone-900 group-hover:text-boun-blue transition-colors">{club.name}</h3>
                                 <p className="text-stone-500 text-sm mt-2 line-clamp-2">{club.description || 'Açıklama girilmemiş.'}</p>
