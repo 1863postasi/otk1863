@@ -28,20 +28,21 @@ export const ClubsPanel = ({ setSelectedItemId }: { setSelectedItemId?: (id: str
     const [pendingFiles, setPendingFiles] = useState<File | FileList | null>(null);
 
     // Fetch Clubs from Firestore
+    const fetchClubs = async () => {
+        try {
+            const q = query(collection(db, "clubs"));
+            const snapshot = await getDocs(q);
+            const data = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            setClubs(data);
+        } catch (error) {
+            console.error("Clubs fetch error:", error);
+        }
+    };
+
     useEffect(() => {
-        const fetchClubs = async () => {
-            try {
-                const q = query(collection(db, "clubs"));
-                const snapshot = await getDocs(q);
-                const data = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }));
-                setClubs(data);
-            } catch (error) {
-                console.error("Clubs fetch error:", error);
-            }
-        };
         fetchClubs();
     }, []);
 
@@ -302,6 +303,7 @@ export const ClubsPanel = ({ setSelectedItemId }: { setSelectedItemId?: (id: str
                 });
                 alert("Kulüp oluşturuldu.");
             }
+            await fetchClubs(); // Refresh the list to reflect updates in local state
             setClubView('list');
         } catch (error) {
             console.error("Kulüp kayıt hatası:", error);
