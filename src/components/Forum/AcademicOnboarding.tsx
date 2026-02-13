@@ -129,7 +129,7 @@ const AcademicOnboarding: React.FC = () => {
                                         <div>
                                             <h4 className="font-bold text-stone-800 text-xs md:text-sm mb-1 text-left">Ders & Hoca Ayrımı</h4>
                                             <p className="text-[11px] md:text-xs text-stone-600 leading-relaxed text-left">
-                                                Dersler ve Hocalar ayrı veritabanlarındadır. Bir dersin puanı içeriği, hoca puanı ise genel tutumu ifade eder.
+                                                Dersler ve hocalar ayrı veritabanlarında tutulur. Bir dersi hocalardan bağımsız, bir hocayı ise derslerden bağımsız değerlendirebilirsiniz.
                                             </p>
                                         </div>
                                     </div>
@@ -141,7 +141,7 @@ const AcademicOnboarding: React.FC = () => {
                                         <div>
                                             <h4 className="font-bold text-stone-800 text-xs md:text-sm mb-1 text-left">Ders-Hoca Eşleşmesi</h4>
                                             <p className="text-[11px] md:text-xs text-stone-600 leading-relaxed text-left">
-                                                Hoca listesinden seçim yaparak o hocanın ilgili dersteki özel performansını ayrıca değerlendirebilirsiniz.
+                                                Bir derse ait sayfada iken o dersi veren hocaları görebilir ve bu listeye veritabanında olan bir hocayı ekleyebilirsiniz. Bunu yapmak o ders ile o hocanın eşleştirilmesini sağlar. Ders-hoca eşleştirmelerinin verileri yalnızca ders ve yalnızca hoca değerlendirmelerinden ayrı tutulur.
                                             </p>
                                         </div>
                                     </div>
@@ -153,7 +153,7 @@ const AcademicOnboarding: React.FC = () => {
                                         <div>
                                             <h4 className="font-bold text-stone-800 text-xs md:text-sm mb-1 text-left">Veri Ekleme</h4>
                                             <p className="text-[11px] md:text-xs text-stone-600 leading-relaxed text-left">
-                                                Sistemde olmayan bir dersi veya hocayı "Katkıda Bulun" butonuyla ekleyebilir, derslerin içine hoca bağlayabilirsiniz.
+                                                Sistemde olmayan bir dersi veya hocayı "Katkıda Bulun" butonuyla ekleyebilir, derslere yeni hocalar bağlayabilirsiniz. İster sitenin işleyişinde olsun ister ders/hoca bilgilerinde; bir hata ile karşılaşırsanız buradan bildirebilirsiniz.
                                             </p>
                                         </div>
                                     </div>

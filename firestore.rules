@@ -14,19 +14,19 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
     
-    // Kullanıcının verisini çek
+    // Kullanıcının verisini çek (Sadece giriş yapılmışsa çalışır)
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    // Admin kontrolü
+    // Admin kontrolü (Daha güvenli hale getirildi)
     function isAdmin() {
       return isSignedIn() && 
              exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
              getUserData().role == "admin";
     }
 
-    // Kulüp Yetkilisi Kontrolü
+    // Kulüp Yetkilisi Kontrolü (Mevcut mantık korundu)
     function isClubOfficial(clubId) {
       return isSignedIn() && 
              exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
@@ -37,9 +37,7 @@ service cloud.firestore {
 
     // --- KOLEKSİYON KURALLARI ---
 
-    // 0. BOUNDLE OYUN GÜVENLİĞİ (YENİ)
-    
-    // Günün kelimeleri: Client ASLA okuyamaz. Sadece Cloud Functions erişebilir.
+    // 0. BOUNDLE OYUN GÜVENLİĞİ
     match /boundle_games/{dateId} {
       allow read, write: if false;
     }
@@ -57,7 +55,7 @@ service cloud.firestore {
                     );
       allow delete: if isAdmin();
 
-      // Oyun Geçmişi: Sadece kendi geçmişini okuyabilir. YAZAMAZ (Function yazar).
+      // Oyun Geçmişi: Sadece kendi geçmişini okuyabilir.
       match /game_history/{gameId} {
         allow read: if isSignedIn() && isOwner(userId);
         allow write: if false; 
@@ -73,7 +71,7 @@ service cloud.firestore {
     // 3. ETKİNLİKLER (events)
     match /events/{eventId} {
       allow read: if true;
-      allow create: if isAdmin() || isClubOfficial(request.resource.data.clubId);
+      allow create: if isAdmin() || (isSignedIn() && isClubOfficial(request.resource.data.clubId));
       allow update, delete: if isAdmin() || isClubOfficial(resource.data.clubId);
     }
 
@@ -83,8 +81,6 @@ service cloud.firestore {
     match /courses/{courseId} {
       allow read: if true;
       allow create: if isSignedIn();
-      // instructorIds: Linkleme işlemi için
-      // rating, reviewCount: Puanlama güncellemeleri için (Manuel update desteği)
       allow update: if isSignedIn() && (
         request.resource.data.diff(resource.data).affectedKeys()
         .hasOnly(['instructorIds', 'rating', 'reviewCount', 'avgDifficulty'])
@@ -95,8 +91,6 @@ service cloud.firestore {
     match /instructors/{instructorId} {
       allow read: if true;
       allow create: if isSignedIn();
-      // courseCodes: Linkleme işlemi için
-      // rating, reviewCount: Puanlama güncellemeleri için
       allow update: if isSignedIn() && (
         request.resource.data.diff(resource.data).affectedKeys()
         .hasOnly(['courseCodes', 'rating', 'reviewCount'])
@@ -107,8 +101,8 @@ service cloud.firestore {
     match /reviews/{reviewId} {
       allow read: if true;
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow update: if isSignedIn() && resource.data.userId == request.auth.uid && request.resource.data.userId == request.auth.uid;
-      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
     }
 
     // 5. KAYIP EŞYA (lost-items)
@@ -134,7 +128,13 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
-    // 8. DİĞER HER ŞEY (Genel Korumalar)
+    // 8. GERİ BİLDİRİMLER (feedback)
+    match /feedback/{feedbackId} {
+      allow create: if true; 
+      allow read, update, delete: if isAdmin();
+    }
+
+    // 9. DİĞER HER ŞEY (Genel Korumalar)
     match /{collectionName}/{document=**} {
       allow read: if true;
       allow write: if isAdmin(); 
