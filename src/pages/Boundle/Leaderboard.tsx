@@ -1,11 +1,14 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Trophy, Medal, User } from 'lucide-react';
-import { cn } from '../../lib/utils'; // veya path neredeyse
-
+import { cn } from '../../lib/utils';
 import UserStatsCard from './components/UserStatsCard';
 
-const Leaderboard: React.FC = () => {
+interface LeaderboardProps {
+    compactView?: boolean;
+}
+
+const Leaderboard: React.FC<LeaderboardProps> = ({ compactView = false }) => {
     // DUMMY DATA FOR DEMO
     const leaderboardData = Array.from({ length: 15 }).map((_, i) => ({
         rank: i + 1,
@@ -17,15 +20,15 @@ const Leaderboard: React.FC = () => {
     return (
         <div className="space-y-6">
 
-            {/* Kullanıcı Kartı (Compact) */}
-            <UserStatsCard compact className="bg-stone-100 border-stone-200" />
+            {/* Kullanıcı Kartı (Sadece tam görünümde göster) */}
+            {!compactView && <UserStatsCard compact className="bg-stone-100 border-stone-200" />}
 
-            <div className="text-center py-2">
-                <div className="inline-block p-3 bg-amber-100 text-amber-600 rounded-full mb-3 ring-4 ring-amber-50">
-                    <Trophy size={32} />
+            <div className={cn("text-center", compactView ? "py-2" : "py-4")}>
+                <div className={cn("inline-block text-amber-600 rounded-full ring-4 ring-amber-50", compactView ? "p-2 mb-2" : "p-3 mb-3")}>
+                    <Trophy size={compactView ? 24 : 32} />
                 </div>
-                <h2 className="text-2xl font-bold text-stone-800 font-serif">Şampiyonlar Ligi</h2>
-                <p className="text-sm text-stone-500 mt-1">Boundle Top 50 Sıralaması</p>
+                <h2 className={cn("font-bold text-stone-800 font-serif", compactView ? "text-xl" : "text-2xl")}>Şampiyonlar Ligi</h2>
+                <p className="text-xs text-stone-500 mt-1">Boundle Top 50 Sıralaması</p>
             </div>
 
             <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
