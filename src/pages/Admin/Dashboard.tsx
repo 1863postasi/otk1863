@@ -17,7 +17,8 @@ import {
   UserCog,
   Menu,
   X,
-  Book
+  Book,
+  AlertCircle
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { auth } from '../../lib/firebase';
@@ -34,6 +35,7 @@ import { OTKRepresentativesPanel } from './panels/OTKRepresentativesPanel';
 import { OTKCommissionsPanel } from './panels/OTKCommissionsPanel';
 import { UsersPanel } from './panels/UsersPanel';
 import { PublicationsPanel } from './panels/PublicationsPanel';
+import { AcademicReportsPanel } from './panels/AcademicReportsPanel';
 
 const { useNavigate } = router;
 
@@ -50,7 +52,8 @@ type CategoryId =
   | 'reps'
   | 'commissions'
   | 'users'
-  | 'publications';
+  | 'publications'
+  | 'academic-reports';
 
 const CATEGORIES = [
   { id: 'announcement', label: 'Genel Duyuru', icon: Megaphone },
@@ -64,6 +67,7 @@ const CATEGORIES = [
   { id: 'commissions', label: 'ÖTK Komisyon', icon: Briefcase },
   { id: 'users', label: 'Kullanıcılar', icon: UserCog },
   { id: 'publications', label: 'Yayınlar', icon: Book }, // New Panel Placeholder
+  { id: 'academic-reports', label: 'Akademik Bildirimler', icon: AlertCircle },
 ];
 
 // --- MAIN DASHBOARD COMPONENT ---
@@ -114,6 +118,8 @@ const Dashboard: React.FC = () => {
         return <UsersPanel />;
       case 'publications':
         return <PublicationsPanel />;
+      case 'academic-reports':
+        return <AcademicReportsPanel />;
       default: return <div className="p-8">Seçim Yapınız</div>;
     }
   };

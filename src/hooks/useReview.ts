@@ -43,46 +43,17 @@ export const useReview = ({ type, targetId, secondaryTargetId, courseCode, instr
             const reviewsRef = collection(db, 'reviews');
             let data: Review[] = [];
 
-            if (type === 'course' && courseCode) {
-                // Course Detail Case: Fetch both 'course' and 'course-instructor' reviews
-                const q1 = query(reviewsRef, where('type', '==', 'course'), where('targetId', '==', targetId));
-                const q2 = query(reviewsRef, where('type', '==', 'course-instructor'), where('courseCode', '==', courseCode));
-                const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
-
-                const d1 = snap1.docs.map(d => ({ id: d.id, ...d.data() })) as Review[];
-                const d2 = snap2.docs.map(d => ({ id: d.id, ...d.data() })) as Review[];
-
-                // Merge and deduplicate just in case (though should be disjoint)
-                const map = new Map();
-                [...d1, ...d2].forEach(r => map.set(r.id, r));
-                data = Array.from(map.values());
-
-            } else if (type === 'instructor' && instructorId) {
-                // Instructor Detail Case: Fetch both 'instructor' and 'course-instructor' reviews
-                const q1 = query(reviewsRef, where('type', '==', 'instructor'), where('targetId', '==', targetId));
-                const q2 = query(reviewsRef, where('type', '==', 'course-instructor'), where('instructorId', '==', instructorId));
-                const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
-
-                const d1 = snap1.docs.map(d => ({ id: d.id, ...d.data() })) as Review[];
-                const d2 = snap2.docs.map(d => ({ id: d.id, ...d.data() })) as Review[];
-
-                const map = new Map();
-                [...d1, ...d2].forEach(r => map.set(r.id, r));
-                data = Array.from(map.values());
-
-            } else {
-                // Standard Case (Single Query)
-                const constraints = [
-                    where('type', '==', type),
-                    where('targetId', '==', targetId)
-                ];
-                if (secondaryTargetId) {
-                    constraints.push(where('secondaryTargetId', '==', secondaryTargetId));
-                }
-                const q = query(reviewsRef, ...constraints);
-                const snapshot = await getDocs(q);
-                data = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Review[];
+            // Standard Case (Single Query)
+            const constraints = [
+                where('type', '==', type),
+                where('targetId', '==', targetId)
+            ];
+            if (secondaryTargetId) {
+                constraints.push(where('secondaryTargetId', '==', secondaryTargetId));
             }
+            const q = query(reviewsRef, ...constraints);
+            const snapshot = await getDocs(q);
+            data = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Review[];
 
             // Sort client-side for consistency and to avoid complex composite indexes
             data.sort((a, b) => {

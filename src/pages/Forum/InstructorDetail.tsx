@@ -28,8 +28,7 @@ const InstructorDetail: React.FC = () => {
         deleting: reviewDeleting
     } = useReview({
         type: 'instructor',
-        targetId: instructorId || '',
-        instructorId: instructorId // Pass instructorId for inclusive fetching
+        targetId: instructorId || ''
     });
 
     const [instructor, setInstructor] = useState<Instructor | null>(null);

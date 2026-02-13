@@ -66,7 +66,7 @@ const Institutional: React.FC = () => {
     const [searchParams] = useSearchParams();
     const commissionFilter = searchParams.get('commission');
 
-    const [activeTab, setActiveTab] = useState<TabMode>('institutional');
+    const [activeTab, setActiveTab] = useState<TabMode>('academic');
 
     // -- INSTITUTIONAL STATE --
     const [rootCategories, setRootCategories] = useState<OTKDocument[]>([]);

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import AcademicOnboarding from '../../components/Forum/AcademicOnboarding';
 import {
     Search, Plus, BookOpen, GraduationCap, ArrowRight, Star,
-    Loader2, X, ChevronDown, Filter, RefreshCcw
+    Loader2, X, ChevronDown, Filter, RefreshCcw, History, ChevronRight, MessageSquare, Users, AlertCircle, Info
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
@@ -874,6 +875,9 @@ const AcademicReviews: React.FC = () => {
                     </div>
                 )}
             </AnimatePresence>
+
+            {/* Akademik Onboarding & Hata Bildirim Modalı */}
+            <AcademicOnboarding />
 
         </div>
     );

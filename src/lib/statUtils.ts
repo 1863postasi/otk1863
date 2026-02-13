@@ -13,24 +13,16 @@ export const recalculateCourseStats = async (courseId: string, courseCode: strin
     try {
         const reviewsRef = collection(db, 'reviews');
 
-        // Query 1: Generic Course Reviews
+        // Query 1: Generic Course Reviews Only
         const q1 = query(
             reviewsRef,
             where('type', '==', 'course'),
             where('targetId', '==', courseId)
         );
 
-        // Query 2: Course-Instructor Reviews (linked by courseCode)
-        // Note: courseCode is stored as UPPERCASE usually.
-        const q2 = query(
-            reviewsRef,
-            where('type', '==', 'course-instructor'),
-            where('courseCode', '==', courseCode)
-        );
+        const snap1 = await getDocs(q1);
 
-        const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
-
-        const allReviews = [...snap1.docs, ...snap2.docs].map(d => d.data());
+        const allReviews = snap1.docs.map(d => d.data());
 
         const count = allReviews.length;
 
@@ -96,25 +88,16 @@ export const recalculateInstructorStats = async (instructorId: string) => {
         // It also handles 'instructor' type reviews if they follow the same pattern or satisfy the query.
         // 'instructor' type reviews usually have targetId == instructorId.
 
-        // Strategy: Query by targetId for direct reviews, AND instructorId for linked reviews.
-
+        // Strategy: Query only by targetId for direct reviews of type 'instructor'
         const q1 = query(
             reviewsRef,
             where('targetId', '==', instructorId),
             where('type', '==', 'instructor')
         );
 
-        const q2 = query(
-            reviewsRef,
-            where('instructorId', '==', instructorId),
-            where('type', '==', 'course-instructor')
-        );
+        const snap1 = await getDocs(q1);
 
-        const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
-
-        // Deduplicate? A review shouldn't be in both sets unless data is weird.
-        // Snap1: type='instructor'. Snap2: type='course-instructor'. Disjoint sets.
-        const allReviews = [...snap1.docs, ...snap2.docs].map(d => d.data());
+        const allReviews = snap1.docs.map(d => d.data());
 
         const count = allReviews.length;
 
