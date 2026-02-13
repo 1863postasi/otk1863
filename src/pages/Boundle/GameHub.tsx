@@ -7,7 +7,12 @@ import { cn } from '../../lib/utils';
 import UserStatsCard from './components/UserStatsCard';
 import Leaderboard from './Leaderboard';
 
+import { useState } from 'react';
+import { Gamepad2, Trophy } from 'lucide-react';
+
 const GameHub: React.FC = () => {
+    const [activeTab, setActiveTab] = useState<'games' | 'leaderboard'>('games');
+
     // Animasyon varyasyonları
     const container = {
         hidden: { opacity: 0 },
@@ -25,94 +30,168 @@ const GameHub: React.FC = () => {
     };
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+        <div className="space-y-6">
 
-            {/* SOL KOLON: Oyunlar ve İstatistikler */}
-            <div className="md:col-span-2 space-y-6">
-                {/* Kullanıcı İstatistik Kartı */}
-                <UserStatsCard />
-
-                <div className="flex items-center justify-between px-1">
-                    <h3 className="font-bold text-stone-800 text-lg">Günün Oyunları</h3>
-                    <span className="text-xs text-stone-500 bg-stone-100 px-2 py-1 rounded-full">Her gece 00:00'da yenilenir</span>
-                </div>
-
-                {/* Oyun Listesi */}
-                <motion.div
-                    variants={container}
-                    initial="hidden"
-                    animate="show"
-                    className="grid gap-4"
+            {/* MOBİL TAB NAVİGASYON (Sadece Mobilde Görünür) */}
+            <div className="md:hidden flex p-1 bg-stone-200/50 rounded-xl backdrop-blur-sm sticky top-16 z-30 mx-8 shadow-sm border border-white/50">
+                <button
+                    onClick={() => setActiveTab('games')}
+                    className={cn(
+                        "flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-bold transition-all duration-300 relative overflow-hidden",
+                        activeTab === 'games'
+                            ? "bg-white text-boun-blue shadow-sm ring-1 ring-black/5"
+                            : "text-stone-500 hover:text-stone-700 hover:bg-white/50"
+                    )}
                 >
-                    {BOUNDLE_GAMES.map((game) => {
-                        const GameIcon = game.icon;
+                    {activeTab === 'games' && (
+                        <motion.div
+                            layoutId="activeTabBg"
+                            className="absolute inset-0 bg-white rounded-lg -z-10"
+                            transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                        />
+                    )}
+                    <Gamepad2 size={18} />
+                    <span className="relative z-10">Oyunlar</span>
+                </button>
+                <button
+                    onClick={() => setActiveTab('leaderboard')}
+                    className={cn(
+                        "flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-bold transition-all duration-300 relative overflow-hidden",
+                        activeTab === 'leaderboard'
+                            ? "bg-white text-boun-gold shadow-sm ring-1 ring-black/5"
+                            : "text-stone-500 hover:text-stone-700 hover:bg-white/50"
+                    )}
+                >
+                    {activeTab === 'leaderboard' && (
+                        <motion.div
+                            layoutId="activeTabBg"
+                            className="absolute inset-0 bg-white rounded-lg -z-10"
+                            transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                        />
+                    )}
+                    <Trophy size={18} />
+                    <span className="relative z-10">Sıralama</span>
+                </button>
+            </div>
 
-                        return (
-                            <motion.div key={game.id} variants={item}>
-                                <Link
-                                    to={game.comingSoon ? '#' : game.path}
-                                    className={cn(
-                                        "group block bg-white rounded-xl border border-stone-200 overflow-hidden hover:shadow-lg hover:border-boun-blue/30 transition-all duration-300 relative",
-                                        game.comingSoon && "opacity-75 grayscale-[0.5] hover:shadow-sm cursor-not-allowed"
-                                    )}
-                                >
-                                    <div className="flex items-stretch min-h-[100px]">
-                                        {/* Sol İkon Alanı */}
-                                        <div className={cn(
-                                            "w-24 flex items-center justify-center text-white relative overflow-hidden",
-                                            game.color
-                                        )}>
-                                            <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors duration-300" />
-                                            <GameIcon size={32} className="relative z-10 transform group-hover:scale-110 transition-transform duration-300" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start relative">
 
-                                            {/* Arkaplan Deseni */}
-                                            <div className="absolute -bottom-4 -right-4 text-white/20 transform rotate-12 scale-150">
-                                                <GameIcon size={64} />
+                {/* SOL KOLON: Oyunlar ve İstatistikler - Mobilde 'games' tabındaysa veya Masaüstünde her zaman görünür */}
+                <div className={cn(
+                    "md:col-span-2 space-y-6 transition-all duration-500",
+                    "md:block", // Masaüstünde her zaman göster
+                    activeTab === 'games' ? "block animate-in fade-in slide-in-from-left-4 duration-500" : "hidden" // Mobilde tab kontrolü
+                )}>
+                    {/* Kullanıcı İstatistik Kartı */}
+                    <UserStatsCard />
 
-                                            </div>
-                                        </div>
+                    <div className="flex items-center justify-between px-1 border-b border-stone-200 pb-2 mb-4">
+                        <h3 className="font-bold text-stone-800 text-lg flex items-center gap-2">
+                            <Gamepad2 className="text-stone-400" size={20} />
+                            Günün Oyunları
+                        </h3>
+                        <span className="text-[10px] font-mono text-stone-500 bg-stone-100 px-2 py-1 rounded-full border border-stone-200">
+                            Yenilenme: 00:00
+                        </span>
+                    </div>
 
-                                        {/* İçerik */}
-                                        <div className="flex-1 p-4 flex flex-col justify-between relative">
-                                            <div>
-                                                <div className="flex items-center justify-between mb-1">
-                                                    <h4 className="font-bold text-stone-800 group-hover:text-boun-blue transition-colors">
-                                                        {game.name}
-                                                    </h4>
-                                                    {game.comingSoon && (
-                                                        <span className="text-[10px] font-bold bg-stone-100 text-stone-500 px-2 py-0.5 rounded-full border border-stone-200">
-                                                            ÇOK YAKINDA
-                                                        </span>
-                                                    )}
+                    {/* Oyun Listesi */}
+                    <motion.div
+                        variants={container}
+                        initial="hidden"
+                        animate="show"
+                        className="grid gap-4"
+                    >
+                        {BOUNDLE_GAMES.map((game) => {
+                            const GameIcon = game.icon;
+
+                            return (
+                                <motion.div key={game.id} variants={item}>
+                                    <Link
+                                        to={game.comingSoon ? '#' : game.path}
+                                        className={cn(
+                                            "group block bg-white rounded-2xl border border-stone-200 overflow-hidden hover:shadow-xl hover:shadow-boun-blue/10 hover:border-boun-blue/30 transition-all duration-300 relative transform hover:-translate-y-1",
+                                            game.comingSoon && "opacity-80 grayscale-[0.3] hover:shadow-sm cursor-not-allowed hover:transform-none"
+                                        )}
+                                    >
+                                        <div className="flex items-stretch min-h-[110px]">
+                                            {/* Sol İkon Alanı */}
+                                            <div className={cn(
+                                                "w-28 flex items-center justify-center text-white relative overflow-hidden",
+                                                game.color
+                                            )}>
+                                                <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors duration-500" />
+                                                <GameIcon size={36} className="relative z-10 transform group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 ease-out" />
+
+                                                {/* Arkaplan Deseni */}
+                                                <div className="absolute -bottom-6 -right-6 text-white/20 transform rotate-12 scale-150 transition-transform duration-700 group-hover:rotate-45">
+                                                    <GameIcon size={80} />
                                                 </div>
-                                                <p className="text-xs text-stone-500 line-clamp-2 leading-relaxed">
-                                                    {game.description}
-                                                </p>
                                             </div>
 
-                                            {!game.comingSoon && (
-                                                <div className="flex items-center justify-end mt-2">
-                                                    <div className="flex items-center gap-1 text-xs font-bold text-boun-blue group-hover:translate-x-1 transition-transform">
-                                                        Oyna <ChevronRight size={14} />
+                                            {/* İçerik */}
+                                            <div className="flex-1 p-5 flex flex-col justify-between relative bg-gradient-to-br from-white to-stone-50/50">
+                                                <div>
+                                                    <div className="flex items-center justify-between mb-1.5">
+                                                        <h4 className="font-bold text-lg text-stone-800 group-hover:text-boun-blue transition-colors font-serif tracking-tight">
+                                                            {game.name}
+                                                        </h4>
+                                                        {game.comingSoon && (
+                                                            <span className="text-[9px] font-bold bg-stone-100 text-stone-500 px-2 py-0.5 rounded-md border border-stone-200 tracking-wider">
+                                                                ÇOK YAKINDA
+                                                            </span>
+                                                        )}
                                                     </div>
+                                                    <p className="text-xs text-stone-500 line-clamp-2 leading-relaxed font-medium">
+                                                        {game.description}
+                                                    </p>
                                                 </div>
-                                            )}
+
+                                                {!game.comingSoon && (
+                                                    <div className="flex items-center justify-end mt-3">
+                                                        <div className="flex items-center gap-1.5 text-xs font-bold text-boun-blue bg-blue-50 px-3 py-1.5 rounded-full group-hover:bg-boun-blue group-hover:text-white transition-all duration-300 shadow-sm">
+                                                            Oyna <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
-                                </Link>
-                            </motion.div>
-                        );
-                    })}
-                </motion.div>
-            </div>
-
-            {/* SAĞ KOLON: Leaderboard (Desktop Only) */}
-            <div className="hidden md:block md:col-span-1 sticky top-20">
-                <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-4">
-                    <Leaderboard compactView={true} />
+                                    </Link>
+                                </motion.div>
+                            );
+                        })}
+                    </motion.div>
                 </div>
-            </div>
 
+                {/* SAĞ KOLON: Leaderboard - Mobilde 'leaderboard' tabındaysa veya Masaüstünde her zaman görünür */}
+                <div className={cn(
+                    "md:block md:col-span-1 border-l border-stone-100 md:pl-8", // Masaüstü stil
+                    activeTab === 'leaderboard' ? "block animate-in fade-in slide-in-from-right-4 duration-500" : "hidden md:block" // Mobil tab kontrolü
+                )}>
+                    <div className="sticky top-24 space-y-4">
+
+                        {/* Masaüstü Başlık (Mobilde gizli çünkü tab zaten başlık görevi görüyor) */}
+                        <div className="hidden md:flex items-center gap-2 pb-2 border-b border-stone-200 mb-2 text-stone-800">
+                            <div className="p-1.5 bg-amber-100/50 text-amber-600 rounded-lg">
+                                <Trophy size={18} />
+                            </div>
+                            <h3 className="font-bold text-sm uppercase tracking-wider">Liderlik Tablosu</h3>
+                        </div>
+
+                        <div className="bg-white rounded-2xl border border-stone-200 shadow-sm hover:shadow-md transition-shadow duration-300 p-1">
+                            <Leaderboard compactView={true} />
+                        </div>
+
+                        {/* Motivasyon Kartı */}
+                        <div className="bg-gradient-to-br from-boun-blue/5 to-boun-blue/10 rounded-xl p-4 border border-boun-blue/10 text-center">
+                            <p className="text-xs text-boun-blue font-medium leading-relaxed">
+                                "Sıralamaya girmek için her gün Boundle oyunlarını tamamla ve puanlarını topla!"
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
         </div>
     );
 };

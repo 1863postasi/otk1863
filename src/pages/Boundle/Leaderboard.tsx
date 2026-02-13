@@ -23,11 +23,11 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ compactView = false }) => {
             {/* Kullanıcı Kartı (Sadece tam görünümde göster) */}
             {!compactView && <UserStatsCard compact className="bg-stone-100 border-stone-200" />}
 
-            <div className={cn("text-center", compactView ? "py-2" : "py-4")}>
-                <div className={cn("inline-block text-amber-600 rounded-full ring-4 ring-amber-50", compactView ? "p-2 mb-2" : "p-3 mb-3")}>
-                    <Trophy size={compactView ? 24 : 32} />
+            <div className={cn("text-center", compactView ? "hidden" : "py-4")}>
+                <div className={cn("inline-block text-amber-600 rounded-full ring-4 ring-amber-50", "p-3 mb-3")}>
+                    <Trophy size={32} />
                 </div>
-                <h2 className={cn("font-bold text-stone-800 font-serif", compactView ? "text-xl" : "text-2xl")}>Şampiyonlar Ligi</h2>
+                <h2 className="font-bold text-stone-800 font-serif text-2xl">Şampiyonlar Ligi</h2>
                 <p className="text-xs text-stone-500 mt-1">Boundle Top 50 Sıralaması</p>
             </div>
 
