@@ -34,6 +34,11 @@ import ThreadDetail from './pages/Forum/ThreadDetail'; // Import ThreadDetail Pa
 import ProtectedRoute from './components/Auth/ProtectedRoute';
 import RequireProfileSetup from './components/Auth/RequireProfileSetup'; // Onboarding Modal
 
+// Boundle Imports
+import BoundleLayout from './pages/Boundle/Layout';
+import GameHub from './pages/Boundle/GameHub';
+import Leaderboard from './pages/Boundle/Leaderboard';
+
 const { Routes, Route, useLocation, Link } = router;
 
 import MobileBottomNav from './components/PWA/MobileBottomNav';
@@ -265,6 +270,21 @@ const App: React.FC = () => {
                 </ProtectedRoute>
               }
             />
+
+            {/* --- BOUNDLE ROUTES --- */}
+            <Route
+              path="/boundle"
+              element={
+                <ProtectedRoute requireAdmin={false}>
+                  <BoundleLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<GameHub />} />
+              <Route path="leaderboard" element={<Leaderboard />} />
+              {/* Gelecek oyunlar buraya eklenecek */}
+              {/* <Route path="kelimece" element={<Wordle />} /> */}
+            </Route>
 
 
             {/* --- GRUP C: SADECE ADMIN (Admin Only) --- */}

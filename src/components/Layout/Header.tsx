@@ -24,7 +24,7 @@ const Header: React.FC = () => {
     { name: 'Ana Sayfa', path: '/', status: 'active' },
     { name: 'Arşiv', path: '/arsiv', status: 'active' },
     { name: 'ÖTK', path: '/otk', status: 'active' },
-    { name: 'Boundle', path: '/boundle', status: 'construction' },
+    { name: 'Boundle', path: '/boundle', status: 'active' },
 
     { name: 'Forum', path: '/forum', status: 'active' },
     { name: 'Yayınlar', path: '/yayinlar', status: 'active' },
@@ -92,7 +92,6 @@ const Header: React.FC = () => {
                           : "text-stone-600 hover:text-boun-blue"
                       )}
                     >
-                      {link.name === 'Boundle' && <Gamepad2 size={14} className="text-boun-gold" />}
                       {link.name}
                     </Link>
                   ) : (
