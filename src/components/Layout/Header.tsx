@@ -5,6 +5,8 @@ import { cn } from '../../lib/utils';
 import { motion as m, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { SPRINGS } from '../../lib/animations';
+import GlobalFeedbackModal from '../Shared/GlobalFeedbackModal';
+import { AlertCircle } from 'lucide-react';
 
 const motion = m as any;
 const { Link, useLocation } = router;
@@ -12,6 +14,7 @@ const { Link, useLocation } = router;
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
 
@@ -160,6 +163,13 @@ const Header: React.FC = () => {
                             <Info size={16} /> Hakkında
                           </Link>
 
+                          <button
+                            onClick={() => { setIsFeedbackOpen(true); setIsDropdownOpen(false); }}
+                            className="w-full text-left px-4 py-2 text-sm text-amber-600 hover:bg-amber-50 flex items-center gap-2 border-t border-stone-100 pt-1"
+                          >
+                            <AlertCircle size={16} /> Hata Bildir
+                          </button>
+
                           <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 border-t border-stone-100 mt-1">
                             <LogOut size={16} /> Oturumu Kapat
                           </button>
@@ -180,6 +190,13 @@ const Header: React.FC = () => {
                           <Link to="/hakkinda" onClick={() => setIsDropdownOpen(false)} className="block px-4 py-2 text-sm text-stone-700 hover:bg-stone-100 flex items-center gap-2">
                             <Info size={16} /> Hakkında
                           </Link>
+
+                          <button
+                            onClick={() => { setIsFeedbackOpen(true); setIsDropdownOpen(false); }}
+                            className="w-full text-left px-4 py-2 text-sm text-amber-600 hover:bg-amber-50 flex items-center gap-2 border-t border-stone-100 pt-1"
+                          >
+                            <AlertCircle size={16} /> Hata Bildir
+                          </button>
                         </>
                       )}
                     </motion.div>
@@ -282,16 +299,26 @@ const Header: React.FC = () => {
               </button>
 
               {/* About Link (Mobile Logged Out) */}
-              {!currentUser && (
-                <Link to="/hakkinda" onClick={() => setIsMenuOpen(false)} className="block px-3 py-2 text-stone-500 hover:bg-stone-100 rounded-lg flex items-center gap-3 text-sm">
-                  <Info size={18} /> Hakkında
-                </Link>
-              )}
+              <Link to="/hakkinda" onClick={() => setIsMenuOpen(false)} className="block px-3 py-2 text-stone-500 hover:bg-stone-100 rounded-lg flex items-center gap-3 text-sm">
+                <Info size={18} /> Hakkında
+              </Link>
+
+              <button
+                onClick={() => { setIsFeedbackOpen(true); setIsMenuOpen(false); }}
+                className="w-full text-left px-3 py-2 text-amber-600 hover:bg-amber-50 rounded-lg flex items-center gap-3 text-sm font-bold border-t border-stone-100 pt-1"
+              >
+                <AlertCircle size={18} /> Hata Bildir
+              </button>
 
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      <GlobalFeedbackModal
+        isOpen={isFeedbackOpen}
+        onClose={() => setIsFeedbackOpen(false)}
+      />
     </header>
   );
 };

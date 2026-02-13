@@ -13,24 +13,17 @@ export const AcademicReportsPanel = () => {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'resolved'>('all');
+    const [filterType, setFilterType] = useState<'all' | 'academic_error' | 'general_bug'>('all');
     const [selectedReport, setSelectedReport] = useState<any | null>(null);
 
     useEffect(() => {
         const q = query(
             collection(db, "feedback"),
-            where("type", "==", "academic_error")
+            orderBy("timestamp", "desc")
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-            // Client side sorting (newest first)
-            data.sort((a: any, b: any) => {
-                const dateA = a.timestamp?.seconds || 0;
-                const dateB = b.timestamp?.seconds || 0;
-                return dateB - dateA;
-            });
-
             setReports(data);
             setLoading(false);
         });
@@ -70,33 +63,51 @@ export const AcademicReportsPanel = () => {
         const matchesSearch = r.message?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             r.userEmail?.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesStatus = filterStatus === 'all' ? true : r.status === filterStatus;
-        return matchesSearch && matchesStatus;
+        const matchesType = filterType === 'all' ? true : r.type === filterType;
+        return matchesSearch && matchesStatus && matchesType;
     });
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
             <Header
-                title="Akademik Hata Bildirimleri"
-                desc="Kullanıcılar tarafından iletilen eksik veri, yanlış eşleşme veya sistem hatalarını yönetin."
+                title="Hata ve Geri Bildirimler"
+                desc="Kullanıcılar tarafından iletilen uygulama hatalarını ve akademik verilerdeki eksiklikleri yönetin."
             />
 
             <div className="flex flex-col lg:flex-row gap-8">
                 {/* List Side */}
                 <div className="flex-1 space-y-4">
                     <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-white p-4 rounded-2xl border border-stone-200">
-                        <div className="flex bg-stone-100 p-1 rounded-xl w-full md:w-auto">
-                            {(['all', 'pending', 'resolved'] as const).map((status) => (
-                                <button
-                                    key={status}
-                                    onClick={() => setFilterStatus(status)}
-                                    className={cn(
-                                        "flex-1 md:flex-none px-4 py-2 text-xs font-bold rounded-lg transition-all capitalize",
-                                        filterStatus === status ? "bg-white shadow text-stone-900" : "text-stone-500 hover:text-stone-700"
-                                    )}
-                                >
-                                    {status === 'all' ? 'Tümü' : status === 'pending' ? 'Bekleyen' : 'Çözüldü'}
-                                </button>
-                            ))}
+                        <div className="flex flex-wrap gap-2">
+                            <div className="flex bg-stone-100 p-1 rounded-xl">
+                                {(['all', 'pending', 'resolved'] as const).map((status) => (
+                                    <button
+                                        key={status}
+                                        onClick={() => setFilterStatus(status)}
+                                        className={cn(
+                                            "px-4 py-2 text-[10px] font-black uppercase tracking-tighter rounded-lg transition-all",
+                                            filterStatus === status ? "bg-white shadow text-stone-900" : "text-stone-500 hover:text-stone-700"
+                                        )}
+                                    >
+                                        {status === 'all' ? 'Tümü' : status === 'pending' ? 'Bekleyen' : 'Çözüldü'}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="flex bg-stone-100 p-1 rounded-xl">
+                                {(['all', 'academic_error', 'general_bug'] as const).map((type) => (
+                                    <button
+                                        key={type}
+                                        onClick={() => setFilterType(type)}
+                                        className={cn(
+                                            "px-4 py-2 text-[10px] font-black uppercase tracking-tighter rounded-lg transition-all",
+                                            filterType === type ? "bg-white shadow text-stone-900" : "text-stone-500 hover:text-stone-700"
+                                        )}
+                                    >
+                                        {type === 'all' ? 'Tüm Bildirimler' : type === 'academic_error' ? 'Akademik' : 'Genel Hata'}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                         <div className="relative w-full md:w-64">
                             <input
@@ -139,9 +150,17 @@ export const AcademicReportsPanel = () => {
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex justify-between items-start mb-1">
-                                            <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest">
-                                                {report.timestamp?.toDate ? formatDate(report.timestamp.toDate().toISOString()) : 'Bilinmeyen Tarih'}
-                                            </span>
+                                            <div className="flex items-center gap-2">
+                                                <span className={cn(
+                                                    "text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-widest",
+                                                    report.type === 'academic_error' ? "bg-blue-100 text-blue-600" : "bg-purple-100 text-purple-600"
+                                                )}>
+                                                    {report.type === 'academic_error' ? 'Akademik' : 'Genel Hata'}
+                                                </span>
+                                                <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest">
+                                                    {report.timestamp?.toDate ? formatDate(report.timestamp.toDate().toISOString()) : 'Bilinmeyen Tarih'}
+                                                </span>
+                                            </div>
                                             <div className="flex gap-2">
                                                 <button
                                                     onClick={(e) => handleDelete(report.id, e)}
@@ -184,14 +203,27 @@ export const AcademicReportsPanel = () => {
 
                                     <div className="grid grid-cols-2 gap-3">
                                         <div className="bg-stone-50 p-3 rounded-2xl border border-stone-100">
-                                            <label className="text-[8px] font-black text-stone-400 uppercase tracking-widest block mb-1">Kullanıcı</label>
-                                            <p className="text-stone-800 text-[11px] font-bold truncate">{selectedReport.userEmail}</p>
+                                            <label className="text-[8px] font-black text-stone-400 uppercase tracking-widest block mb-1">Tür</label>
+                                            <p className={cn(
+                                                "text-[10px] font-bold uppercase tracking-widest",
+                                                selectedReport.type === 'academic_error' ? "text-blue-600" : "text-purple-600"
+                                            )}>
+                                                {selectedReport.type === 'academic_error' ? 'Akademik' : 'Genel Hata'}
+                                            </p>
                                         </div>
                                         <div className="bg-stone-50 p-3 rounded-2xl border border-stone-100">
                                             <label className="text-[8px] font-black text-stone-400 uppercase tracking-widest block mb-1">Tarih</label>
                                             <p className="text-stone-800 text-[11px] font-bold">
                                                 {selectedReport.timestamp?.toDate ? formatDate(selectedReport.timestamp.toDate().toISOString()) : '-'}
                                             </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-stone-50 p-4 rounded-2xl border border-stone-100">
+                                        <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest block mb-2">Kullanıcı Bilgisi</label>
+                                        <div className="space-y-1">
+                                            <p className="text-stone-800 text-[11px] font-bold truncate">{selectedReport.username || 'Misafir'}</p>
+                                            <p className="text-stone-500 text-[10px] font-medium">{selectedReport.userEmail || 'Anonim'}</p>
                                         </div>
                                     </div>
 
