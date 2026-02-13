@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Trophy, Medal, User } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import UserStatsCard from './components/UserStatsCard';
-import { collection, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { UserProfile } from '../../context/AuthContext';
 
@@ -16,21 +16,35 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ compactView = false }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Gerçek veri çekme (users collection, boundleScore desc)
-        const usersRef = collection(db, 'users');
-        const q = query(
-            usersRef,
-            where('boundleScore', '>', 0), // Sadece puanı olanlar
-            orderBy('boundleScore', 'desc'),
-            limit(compactView ? 5 : 50)
-        );
+        // Aggregated Leaderboard (Function tarafından hesaplanan tek döküman)
+        // Performans için users collection'ı yerine leaderboards/global okunuyor.
+        const lbRef = doc(db, 'leaderboards', 'global');
 
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const fetchedUsers: UserProfile[] = [];
-            snapshot.forEach((doc) => {
-                fetchedUsers.push(doc.data() as UserProfile);
-            });
-            setLeaders(fetchedUsers);
+        const unsubscribe = onSnapshot(lbRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                const allLeaders = data.leaders || [];
+
+                // Adapter: UserProfile formatına uyarla
+                // Firestore'daki veri zaten uyumlu ama garanti olsun
+                const formattedLeaders: UserProfile[] = allLeaders.map((l: any) => ({
+                    uid: l.uid,
+                    displayName: l.displayName,
+                    username: '', // Aggregated data'da olmayabilir ama display name esas
+                    photoUrl: l.photoUrl,
+                    department: l.department,
+                    boundleScore: l.score
+                }));
+
+                // Compact view için limit
+                if (compactView) {
+                    setLeaders(formattedLeaders.slice(0, 5));
+                } else {
+                    setLeaders(formattedLeaders);
+                }
+            } else {
+                setLeaders([]);
+            }
             setLoading(false);
         }, (error) => {
             console.error("Leaderboard error:", error);

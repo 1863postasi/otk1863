@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../firebase';
-import { doc, getDoc, setDoc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, arrayUnion, runTransaction } from 'firebase/firestore';
 import { UserBoundleStats } from './types';
 import toast from 'react-hot-toast'; // Using global toast if available, or fallback
 
@@ -66,10 +66,14 @@ export const useBoundle = () => {
     /**
      * Skor Gönderimi (Oyun bittiğinde çağrılır)
      */
+    /**
+     * Skor Gönderimi (Oyun bittiğinde çağrılır)
+     * ATOMIC TRANSACTION ILE GÜVENLİ HALE GETİRİLDİ
+     */
     const submitScore = async (gameId: string, score: number) => {
         if (!currentUser) return;
 
-        // Basit client-side check
+        // Basit client-side check (UI için)
         if (!canPlay(gameId)) {
             toast.error("Bugünlük bu oyunu zaten tamamladın!");
             return;
@@ -79,67 +83,83 @@ export const useBoundle = () => {
         const statsRef = doc(db, 'users', currentUser.uid, 'boundle', 'stats');
 
         try {
-            // Transaction yerine optimistic update + direct write (basit yapı için)
-            // Daha güvenli olması için Cloud Function önerilir ama şimdilik client-side yeterli.
+            await runTransaction(db, async (transaction) => {
+                // 1. Oku (Server State)
+                const sfDoc = await transaction.get(statsRef);
+                let currentStats = sfDoc.exists() ? (sfDoc.data() as UserBoundleStats) : INITIAL_STATS;
 
-            const currentDoc = await getDoc(statsRef);
-            let currentStats = currentDoc.exists() ? (currentDoc.data() as UserBoundleStats) : INITIAL_STATS;
+                // 2. Kontrol Et (Server-Side Check)
+                if (currentStats.games[gameId]?.lastPlayedDate === today) {
+                    throw new Error("ALREADY_PLAYED");
+                }
 
-            // Double check
-            if (currentStats.games[gameId]?.lastPlayedDate === today) {
-                toast.error("Zaten kaydedilmiş!");
-                return;
-            }
+                // 3. Yeni Veriyi Hazırla
+                const currentStreak = currentStats.games[gameId]?.streak || 0;
 
-            // Streak Mantığı (Dün oynamış mı?)
-            // Not: Basit bir streak mantığı. Tarih farkına bakılmalı.
-            // Şimdilik sadece +1 artırıyoruz her oynayışta.
-            const currentStreak = currentStats.games[gameId]?.streak || 0;
-            // TODO: Gerçek streak kontrolü (yesterday check) eklenebilir.
+                const newGameStats = {
+                    playedToday: true,
+                    lastPlayedDate: today,
+                    lastScore: score,
+                    totalGameScore: (currentStats.games[gameId]?.totalGameScore || 0) + score,
+                    streak: currentStreak + 1
+                };
 
-            // Yeni istatistikleri hazırla
-            const newGameStats = {
-                playedToday: true, // Legacy support
-                lastPlayedDate: today,
-                lastScore: score,
-                totalGameScore: (currentStats.games[gameId]?.totalGameScore || 0) + score,
-                streak: currentStreak + 1
-            };
+                const newTotalScore = (currentStats.totalScore || 0) + score;
 
-            const newTotalScore = (currentStats.totalScore || 0) + score;
+                const updates: any = {
+                    totalScore: newTotalScore,
+                    lastPlayedDate: today,
+                    [`games.${gameId}`]: newGameStats
+                };
 
-            const updates: any = {
-                totalScore: newTotalScore,
-                lastPlayedDate: today, // Global son aktivite
-                [`games.${gameId}`]: newGameStats
-            };
+                // 4. Yaz (Atomic Write)
+                if (!sfDoc.exists()) {
+                    transaction.set(statsRef, { ...INITIAL_STATS, ...updates });
+                } else {
+                    transaction.update(statsRef, updates);
+                }
 
-            // Firestore'a yaz
-            if (!currentDoc.exists()) {
-                await setDoc(statsRef, { ...INITIAL_STATS, ...updates });
-            } else {
-                await updateDoc(statsRef, updates);
-            }
+                // Opsiyonel: Ana user dökümanını da güncelle (Leaderboard için)
+                // Transaction içinde yapmak en güvenlisidir ama cross-document transaction maliyetli olabilir.
+                // Boundle skorunun kritikliği düşük olduğu için burada updateDoc ile devam edebiliriz 
+                // ya da transaction'a dahil edebiliriz. Tutarlılık için transaction'a dahil edelim.
+                const userRef = doc(db, 'users', currentUser.uid!);
+                transaction.update(userRef, {
+                    boundleScore: newTotalScore,
+                    lastActiveAt: new Date()
+                });
+            });
 
-            // Liderlik tablosu için 'users/{uid}' belgesini de güncelle (Opsiyonel ama performanslı sorgu için iyi)
-            // Şimdilik sadece boundle/stats tutuyoruz.
-
-            // State'i güncelle
+            // 5. Başarılı (UI Update)
+            // Transaction başarılı olursa buraya düşer.
+            // Local state'i güncelle (Optimistic değil, confirmed update)
             setStats(prev => ({
                 ...prev,
-                totalScore: newTotalScore,
+                totalScore: (prev.totalScore || 0) + score,
                 lastPlayedDate: today,
                 games: {
                     ...prev.games,
-                    [gameId]: newGameStats
+                    [gameId]: {
+                        ...prev.games[gameId],
+                        playedToday: true,
+                        lastPlayedDate: today,
+                        lastScore: score,
+                        totalGameScore: (prev.games[gameId]?.totalGameScore || 0) + score,
+                        streak: (prev.games[gameId]?.streak || 0) + 1
+                    }
                 }
             }));
 
             toast.success(`Tebrikler! +${score} puan kazandın.`);
 
-        } catch (error) {
-            console.error("Skor kaydedilemedi:", error);
-            toast.error("Skor kaydedilirken bir hata oluştu.");
+        } catch (error: any) {
+            console.error("Skor transaction hatası:", error);
+            if (error.message === "ALREADY_PLAYED") {
+                toast.error("Bu puan zaten alınmış! (Başka bir cihazda oynamış olabilirsin)");
+                // State'i tazelemek iyi olabilir, belki sayfa yenilenmeli
+            } else {
+                toast.error("Skor kaydedilirken bir hata oluştu.");
+            }
         }
     };
 

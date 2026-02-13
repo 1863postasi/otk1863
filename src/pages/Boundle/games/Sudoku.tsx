@@ -228,10 +228,11 @@ const Sudoku: React.FC = () => {
 
         return cn(
             "relative flex items-center justify-center text-xl md:text-2xl font-bold select-none transition-all duration-100 cursor-pointer h-[min(10vw,48px)] w-[min(10vw,48px)] md:h-12 md:w-12",
-            isRightBorder && "border-r-2 border-stone-800",
-            isBottomBorder && "border-b-2 border-stone-800",
-            !isRightBorder && "border-r border-stone-200",
-            !isBottomBorder && "border-b border-stone-200",
+            // 3x3 Grid Sınırları (Daha belirgin)
+            isRightBorder && "border-r-[3px] border-stone-900/80",
+            isBottomBorder && "border-b-[3px] border-stone-900/80",
+            !isRightBorder && "border-r border-stone-300/80",
+            !isBottomBorder && "border-b border-stone-300/80",
 
             // Renkler
             isInitial ? "text-stone-900 bg-stone-100" : "text-boun-blue bg-white",
@@ -246,11 +247,11 @@ const Sudoku: React.FC = () => {
     if (boundleLoading || initializing || !gameState) return <div className="min-h-screen flex items-center justify-center flex-col gap-2"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-boun-blue"></div><span className="text-xs text-stone-400">Yükleniyor...</span></div>;
 
     return (
-        <div className="flex flex-col items-center max-w-lg mx-auto pb-10">
+        <div className="flex flex-col items-center max-w-lg mx-auto pb-4">
             {gameState.isComplete && <Confetti width={width} height={height} recycle={false} numberOfPieces={500} />}
 
             {/* HEADER AREA */}
-            <div className="w-full flex items-center justify-between mb-6 px-2">
+            <div className="w-full flex items-center justify-between mb-4 px-2">
                 <div className="flex flex-col">
                     <span className="text-xs font-bold text-stone-400 tracking-wider">GÜNLÜK SUDOKU</span>
                     <h2 className="text-2xl font-serif font-bold text-stone-800">
@@ -258,16 +259,9 @@ const Sudoku: React.FC = () => {
                     </h2>
                 </div>
                 <div className="flex items-center gap-4">
-                    {gameState.isComplete ? (
+                    {gameState.isComplete && (
                         <div className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
                             <CheckCircle2 size={14} /> 75 PUAN
-                        </div>
-                    ) : (
-                        <div className="flex flex-col items-end">
-                            <span className="text-xs text-stone-400 font-bold">HATALAR</span>
-                            <span className={cn("text-lg font-bold font-mono", gameState.mistakes > 2 ? "text-red-500" : "text-stone-700")}>
-                                {gameState.mistakes}/3
-                            </span>
                         </div>
                     )}
                 </div>
@@ -293,7 +287,7 @@ const Sudoku: React.FC = () => {
 
             {/* SUDOKU BOARD CONTAINER */}
             <div className={cn(
-                "p-1 bg-stone-800 rounded-lg shadow-2xl overflow-hidden mb-6 select-none touch-manipulation relative",
+                "p-1 bg-stone-800 rounded-lg shadow-2xl overflow-hidden mb-4 select-none touch-manipulation relative",
                 gameState.isComplete && "opacity-90 grayscale-[0.2]"
             )}>
                 {/* Tamamlandı Overlay */}
@@ -330,7 +324,7 @@ const Sudoku: React.FC = () => {
             {!gameState.isComplete && (
                 <div className="w-full max-w-[400px]">
                     {/* Tools Row */}
-                    <div className="flex items-center justify-around mb-6 text-stone-600">
+                    <div className="flex items-center justify-center gap-6 mb-4 text-stone-600">
                         <button
                             onClick={() => setIsNoteMode(!isNoteMode)}
                             className={cn(
@@ -352,11 +346,6 @@ const Sudoku: React.FC = () => {
                             <Eraser size={22} />
                             <span className="text-[10px] font-bold">Sil</span>
                         </button>
-
-                        <div className="flex flex-col items-center gap-1 p-2 rounded-xl opacity-50 cursor-not-allowed w-20">
-                            <RotateCcw size={22} />
-                            <span className="text-[10px] font-bold">Geri Al</span>
-                        </div>
                     </div>
 
                     {/* Numpad Grid */}

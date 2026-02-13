@@ -1,14 +1,15 @@
 import React from 'react';
 import { useBoundle } from '../../../lib/boundle/hooks';
-import { Trophy, Star, Calendar } from 'lucide-react';
+import { Trophy, Star, HelpCircle } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 
 interface UserStatsCardProps {
     className?: string;
     compact?: boolean;
+    onOpenHelp?: () => void;
 }
 
-const UserStatsCard: React.FC<UserStatsCardProps> = ({ className, compact = false }) => {
+const UserStatsCard: React.FC<UserStatsCardProps> = ({ className, compact = false, onOpenHelp }) => {
     const { stats, loading } = useBoundle();
 
     // Bugünkü toplam puan (lastPlayedDate === bugün olan oyunlar)
@@ -52,11 +53,13 @@ const UserStatsCard: React.FC<UserStatsCardProps> = ({ className, compact = fals
 
             {!compact && (
                 <div className="mt-3 pt-3 border-t border-stone-100 text-center">
-                    <div className="text-xs text-stone-400 flex items-center justify-center gap-1">
-                        <Calendar size={12} />
-                        <span>Sıfırlanmaya: </span>
-                        <span className="font-mono text-stone-600">00:00:00</span>
-                    </div>
+                    <button
+                        onClick={onOpenHelp}
+                        className="text-xs text-stone-400 hover:text-boun-blue flex items-center justify-center gap-1.5 mx-auto transition-colors py-1 px-3 rounded-full hover:bg-blue-50"
+                    >
+                        <HelpCircle size={14} />
+                        <span className="font-bold">Nasıl Oynanır? / Hata Bildir</span>
+                    </button>
                 </div>
             )}
         </div>

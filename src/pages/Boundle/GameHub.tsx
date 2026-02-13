@@ -7,6 +7,7 @@ import { ChevronRight } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import UserStatsCard from './components/UserStatsCard';
 import Leaderboard from './Leaderboard';
+import BoundleOnboarding from './components/BoundleOnboarding';
 
 import { useState } from 'react';
 import { Gamepad2, Trophy } from 'lucide-react';
@@ -15,7 +16,22 @@ const GameHub: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'games' | 'leaderboard'>('games');
     const { canPlay } = useBoundle(); // Hook kullanımı
 
-    // Animasyon varyasyonları
+    // Onboarding State
+    const [isHelpOpen, setIsHelpOpen] = useState(false);
+    const ONBOARDING_KEY = 'otk1863_boundle_onboarding_v1';
+
+    // Auto-open check
+    React.useEffect(() => {
+        const hasShown = localStorage.getItem(ONBOARDING_KEY);
+        if (!hasShown) {
+            const timer = setTimeout(() => {
+                setIsHelpOpen(true);
+            }, 1000);
+            return () => clearTimeout(timer);
+        }
+    }, []);
+
+    // Tab animations
     const container = {
         hidden: { opacity: 0 },
         show: {
@@ -33,6 +49,7 @@ const GameHub: React.FC = () => {
 
     return (
         <div className="space-y-6">
+            <BoundleOnboarding isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
 
             {/* MOBİL TAB NAVİGASYON (Sadece Mobilde Görünür) */}
             <div className="md:hidden flex p-1 bg-stone-200/50 rounded-xl backdrop-blur-sm sticky top-16 z-30 mx-8 shadow-sm border border-white/50">
@@ -85,16 +102,14 @@ const GameHub: React.FC = () => {
                     activeTab === 'games' ? "block animate-in fade-in slide-in-from-left-4 duration-500" : "hidden" // Mobilde tab kontrolü
                 )}>
                     {/* Kullanıcı İstatistik Kartı */}
-                    <UserStatsCard />
+                    <UserStatsCard onOpenHelp={() => setIsHelpOpen(true)} />
 
                     <div className="flex items-center justify-between px-1 border-b border-stone-200 pb-2 mb-4">
                         <h3 className="font-bold text-stone-800 text-lg flex items-center gap-2">
                             <Gamepad2 className="text-stone-400" size={20} />
                             Günün Oyunları
                         </h3>
-                        <span className="text-[10px] font-mono text-stone-500 bg-stone-100 px-2 py-1 rounded-full border border-stone-200">
-                            Yenilenme: 00:00
-                        </span>
+                        {/* Timer removed, functionality moved to Onboarding/Help */}
                     </div>
 
                     {/* Oyun Listesi */}

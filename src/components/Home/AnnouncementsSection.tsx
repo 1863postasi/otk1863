@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Pin, ArrowLeft, Search, MapPin, Calendar, CheckCircle, HelpCircle, Archive, Camera, Plus, X, Upload, Instagram, Mail, AlertTriangle, Send, Megaphone, ExternalLink, Phone, Loader2, EyeOff, MessageCircle, Lock } from 'lucide-react';
 import { formatDate, safeDate, cn } from '../../lib/utils';
-import { motion as m, AnimatePresence } from 'framer-motion';
+import { motion as m, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { db } from '../../lib/firebase';
 import { collection, query, where, addDoc, serverTimestamp, updateDoc, doc, arrayUnion, getDocs, onSnapshot } from 'firebase/firestore';
 import { uploadFile } from '../../lib/storage';
@@ -88,6 +88,7 @@ const AnnouncementsSection: React.FC<AnnouncementsSectionProps> = ({ onBack }) =
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
     const [lostItems, setLostItems] = useState<LostItem[]>([]);
     const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
+    const [expandedId, setExpandedId] = useState<string | null>(null);
 
     // Filters
     const [searchQuery, setSearchQuery] = useState('');
@@ -254,12 +255,12 @@ const AnnouncementsSection: React.FC<AnnouncementsSectionProps> = ({ onBack }) =
                 type: typeVal,
                 title: formData.get('title'),
                 category: formData.get('category'),
-                description: "",
+                description: formData.get('description') || "",
                 contactType: formData.get('contactType'),
                 contactValue: formData.get('contactValue'),
                 contactHidden: contactHidden,
                 ownerId: currentUser.uid,
-                ownerName: userProfile.username || 'Anonim',
+                ownerName: userProfile.displayName || userProfile.username || 'Anonim',
                 ownerDepartment: userProfile.department || 'Bölüm Yok',
                 imageURL: imageURL,
                 status: 'approved', // Direct publication
@@ -270,6 +271,11 @@ const AnnouncementsSection: React.FC<AnnouncementsSectionProps> = ({ onBack }) =
 
             setIsModalOpen(false);
             showToast("İlanınız başarıyla yayınlandı!");
+
+            // Clear cache and reload to show new item immediately
+            cache.clear('lost_items_cache');
+            setTimeout(() => window.location.reload(), 1000);
+
             setSelectedFile(null);
             setContactHidden(false);
         } catch (error) {
@@ -289,7 +295,7 @@ const AnnouncementsSection: React.FC<AnnouncementsSectionProps> = ({ onBack }) =
         try {
             await addDoc(collection(db, "messages"), {
                 fromId: currentUser.uid,
-                fromName: userProfile?.username || 'Gizli Kullanıcı',
+                fromName: userProfile?.displayName || userProfile?.username || 'Gizli Kullanıcı',
                 toId: noteModalItem.ownerId,
                 listingId: noteModalItem.id,
                 listingTitle: noteModalItem.title,
@@ -509,116 +515,145 @@ const AnnouncementsSection: React.FC<AnnouncementsSectionProps> = ({ onBack }) =
                                 transition={{ duration: 0.2 }}
                                 className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-8"
                             >
-                                {filteredLostItems.map((item) => (
-                                    <div
-                                        key={item.id}
-                                        className={cn(
-                                            "bg-white shadow-sm rounded-lg transform transition-all hover:scale-[1.02] hover:shadow-xl relative flex",
-                                            "flex-row md:flex-col p-0 md:p-3 h-28 md:h-auto overflow-hidden",
-                                            item.status === 'resolved' && "grayscale opacity-70 hover:scale-100 hover:shadow-lg cursor-not-allowed"
-                                        )}
-                                    >
-                                        <div className="absolute top-2 right-2 md:top-5 md:right-5 z-10 flex gap-1">
-                                            {item.isPinned && item.status !== 'resolved' && <span className="bg-boun-red text-white p-1 rounded-sm"><Pin size={10} fill="currentColor" /></span>}
-                                            {item.status === 'resolved' ? (
-                                                <span className="px-2 py-0.5 bg-stone-600 text-white text-[9px] md:text-[10px] font-bold uppercase tracking-wider shadow-sm rounded-sm">ÇÖZÜLDÜ</span>
-                                            ) : (
-                                                item.type === 'found' ? (
-                                                    <span className="px-2 py-0.5 bg-boun-green text-white text-[9px] md:text-[10px] font-bold uppercase tracking-wider shadow-sm rounded-sm">BULUNTU</span>
-                                                ) : (
-                                                    <span className="px-2 py-0.5 bg-orange-600 text-white text-[9px] md:text-[10px] font-bold uppercase tracking-wider shadow-sm rounded-sm">KAYIP</span>
-                                                )
+                                <LayoutGroup>
+                                    {filteredLostItems.map((item) => (
+                                        <motion.div
+                                            layout
+                                            initial={{ opacity: 0, scale: 0.9 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            exit={{ opacity: 0, scale: 0.9 }}
+                                            key={item.id}
+                                            onClick={() => setExpandedId(expandedId === item.id ? null : item.id)}
+                                            className={cn(
+                                                "bg-white shadow-sm rounded-lg relative flex flex-col md:flex-col overflow-hidden will-change-transform z-0",
+                                                "w-full", // Mobile width fix
+                                                expandedId === item.id ? "ring-2 ring-stone-900 z-10" : "hover:shadow-xl",
+                                                item.status === 'resolved' && "grayscale opacity-70 cursor-not-allowed"
                                             )}
-                                        </div>
+                                            style={{ minHeight: '7rem' }}
+                                        >
+                                            <div className="flex flex-row md:flex-col h-full">
+                                                <div className="absolute top-2 right-2 md:top-5 md:right-5 z-10 flex gap-1">
+                                                    {item.isPinned && item.status !== 'resolved' && <span className="bg-boun-red text-white p-1 rounded-sm"><Pin size={10} fill="currentColor" /></span>}
+                                                    {item.status === 'resolved' ? (
+                                                        <span className="px-2 py-0.5 bg-stone-600 text-white text-[9px] md:text-[10px] font-bold uppercase tracking-wider shadow-sm rounded-sm">ÇÖZÜLDÜ</span>
+                                                    ) : (
+                                                        item.type === 'found' ? (
+                                                            <span className="px-2 py-0.5 bg-boun-green text-white text-[9px] md:text-[10px] font-bold uppercase tracking-wider shadow-sm rounded-sm">BULUNTU</span>
+                                                        ) : (
+                                                            <span className="px-2 py-0.5 bg-orange-600 text-white text-[9px] md:text-[10px] font-bold uppercase tracking-wider shadow-sm rounded-sm">KAYIP</span>
+                                                        )
+                                                    )}
+                                                </div>
 
-                                        <div className={cn(
-                                            "relative flex items-center justify-center border-l md:border-l-0 md:border md:border-stone-100 md:rounded-sm overflow-hidden",
-                                            "w-[30%] md:w-full h-full md:aspect-square order-last md:order-first bg-stone-50"
-                                        )}>
-                                            {item.imageURL ? (
-                                                <img src={item.imageURL} alt="" className="w-full h-full object-cover" />
-                                            ) : (
-                                                <Camera className="text-white opacity-50 w-6 h-6 md:w-12 md:h-12" />
-                                            )}
+                                                <div className={cn(
+                                                    "relative flex items-center justify-center border-r md:border-r-0 md:border-b md:border-stone-100 overflow-hidden shrink-0",
+                                                    "w-[30%] md:w-full aspect-square bg-stone-50"
+                                                )}>
+                                                    {item.imageURL ? (
+                                                        <img src={item.imageURL} alt="" className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <Camera className="text-white opacity-50 w-6 h-6 md:w-12 md:h-12" />
+                                                    )}
 
-                                            {item.status === 'resolved' && (
-                                                <div className="absolute inset-0 flex items-center justify-center bg-white/20 backdrop-blur-[1px]">
-                                                    <div className="border-2 md:border-4 border-stone-800 text-stone-800 px-1 md:px-2 py-0.5 md:py-1 font-serif font-black text-xs md:text-xl uppercase tracking-widest transform -rotate-12 opacity-80 text-center">
-                                                        {item.type === 'found' ? 'TESLİM EDİLDİ' : 'BULUNDU'}
+                                                    {item.status === 'resolved' && (
+                                                        <div className="absolute inset-0 flex items-center justify-center bg-white/20 backdrop-blur-[1px]">
+                                                            <div className="border-2 md:border-4 border-stone-800 text-stone-800 px-1 md:px-2 py-0.5 md:py-1 font-serif font-black text-xs md:text-xl uppercase tracking-widest transform -rotate-12 opacity-80 text-center">
+                                                                {item.type === 'found' ? 'TESLİM EDİLDİ' : 'BULUNDU'}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div className="flex-1 flex flex-col p-3 justify-between min-w-0">
+                                                    <div>
+                                                        <h3 className="font-serif font-bold text-sm md:text-lg text-stone-900 leading-tight mb-1 md:mb-2 truncate pr-6">{item.title}</h3>
+                                                        <div className="space-y-0.5 md:space-y-1.5 mb-2">
+                                                            <div className="flex items-center gap-1 md:gap-2 text-[10px] md:text-xs text-stone-600 font-sans"><Calendar size={10} className="shrink-0 text-stone-400" /><span>{formatDate(item.createdAt?.toDate ? item.createdAt.toDate().toISOString() : new Date().toISOString())}</span></div>
+                                                            <div className="flex items-center gap-1 md:gap-2 text-[10px] md:text-xs text-stone-600 font-sans font-bold"><span className="text-stone-400 shrink-0">Kimden:</span> {item.ownerName || 'Anonim'}</div>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            )}
-                                        </div>
 
-                                        <div className="flex-1 flex flex-col p-3 md:px-1 md:pb-2 justify-between min-w-0">
-                                            <div>
-                                                <h3 className="font-serif font-bold text-sm md:text-lg text-stone-900 leading-tight mb-1 md:mb-2 truncate pr-6">{item.title}</h3>
-                                                <div className="space-y-0.5 md:space-y-1.5 mb-2">
-                                                    <div className="flex items-center gap-1 md:gap-2 text-[10px] md:text-xs text-stone-600 font-sans"><Calendar size={10} className="shrink-0 text-stone-400" /><span>{formatDate(item.createdAt?.toDate ? item.createdAt.toDate().toISOString() : new Date().toISOString())}</span></div>
-                                                    <div className="flex items-center gap-1 md:gap-2 text-[10px] md:text-xs text-stone-600 font-sans font-bold"><span className="text-stone-400 shrink-0">Kimden:</span> {item.ownerName || 'Anonim'}</div>
-                                                </div>
-                                            </div>
+                                                    {/* Expanded Description Area */}
+                                                    <AnimatePresence>
+                                                        {expandedId === item.id && item.description && (
+                                                            <motion.div
+                                                                initial={{ height: 0, opacity: 0 }}
+                                                                animate={{ height: "auto", opacity: 1 }}
+                                                                exit={{ height: 0, opacity: 0 }}
+                                                                transition={{ duration: 0.3, ease: [0.04, 0.62, 0.23, 0.98] }}
+                                                                className="overflow-hidden"
+                                                            >
+                                                                <p className="text-xs text-stone-600 italic border-l-2 border-stone-300 pl-2 my-2 leading-relaxed">
+                                                                    {item.description}
+                                                                </p>
+                                                            </motion.div>
+                                                        )}
+                                                    </AnimatePresence>
 
-                                            {item.status !== 'resolved' && (
-                                                <div className="mt-auto space-y-2 md:space-y-3 relative">
-                                                    {!item.contactHidden ? (
-                                                        <div className="relative">
+                                                    {/* ACTIONS */}
+                                                    {item.status !== 'resolved' && (
+                                                        <div className="mt-auto space-y-2 md:space-y-3 relative pt-2">
+                                                            {!item.contactHidden ? (
+                                                                <div className="relative">
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            if (!currentUser) {
+                                                                                showToast("İletişim bilgilerini görmek için giriş yapmalısınız.", 'info');
+                                                                                return;
+                                                                            }
+                                                                            setActiveContactId(activeContactId === item.id ? null : item.id);
+                                                                        }}
+                                                                        className="w-full py-1 md:py-2 border border-stone-300 text-stone-600 text-[10px] md:text-xs font-bold uppercase tracking-wider hover:bg-stone-800 hover:text-white hover:border-stone-800 transition-colors rounded-sm flex items-center justify-center gap-1 md:gap-2"
+                                                                    >
+                                                                        {currentUser ? <Send size={10} /> : <Lock size={10} />} İletişim
+                                                                    </button>
+
+                                                                    <AnimatePresence>
+                                                                        {activeContactId === item.id && currentUser && (
+                                                                            <motion.div
+                                                                                initial={{ opacity: 0, y: 10 }}
+                                                                                animate={{ opacity: 1, y: 0 }}
+                                                                                exit={{ opacity: 0, y: 10 }}
+                                                                                className="absolute bottom-full left-0 right-0 mb-2 p-2 md:p-3 bg-stone-900 text-white rounded shadow-xl z-20 text-xs text-center font-sans"
+                                                                            >
+                                                                                <div className="flex items-center justify-center gap-2 mb-1 uppercase tracking-widest text-[10px] text-stone-400">
+                                                                                    {getContactIcon(item.contactType)}
+                                                                                    <span className="font-bold">{item.contactType}</span>
+                                                                                </div>
+                                                                                <div className="text-white select-all font-bold text-sm">{renderContactValue(item.contactValue, item.contactType)}</div>
+                                                                                <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-stone-900 rotate-45"></div>
+                                                                            </motion.div>
+                                                                        )}
+                                                                    </AnimatePresence>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="w-full py-1 md:py-2 border border-stone-200 bg-stone-50 text-stone-400 text-[10px] md:text-xs font-bold uppercase tracking-wider rounded-sm flex items-center justify-center gap-1 cursor-not-allowed">
+                                                                    <EyeOff size={10} /> Gizli İletişim
+                                                                </div>
+                                                            )}
+
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
                                                                     if (!currentUser) {
-                                                                        showToast("İletişim bilgilerini görmek için giriş yapmalısınız.", 'info');
+                                                                        showToast("Mesaj göndermek için giriş yapmalısınız.", 'info');
                                                                         return;
                                                                     }
-                                                                    setActiveContactId(activeContactId === item.id ? null : item.id);
+                                                                    setNoteModalItem(item);
                                                                 }}
-                                                                className="w-full py-1 md:py-2 border border-stone-300 text-stone-600 text-[10px] md:text-xs font-bold uppercase tracking-wider hover:bg-stone-800 hover:text-white hover:border-stone-800 transition-colors rounded-sm flex items-center justify-center gap-1 md:gap-2"
+                                                                className="w-full text-center text-[9px] md:text-xs text-boun-blue font-bold uppercase tracking-wider hover:text-blue-800 transition-colors flex items-center justify-center gap-1"
                                                             >
-                                                                {currentUser ? <Send size={10} /> : <Lock size={10} />} İletişim
+                                                                <MessageCircle size={12} /> <span className="hidden sm:inline">Bilgi Ver / Not Bırak</span><span className="sm:hidden">Bilgi Ver</span>
                                                             </button>
-
-                                                            <AnimatePresence>
-                                                                {activeContactId === item.id && currentUser && (
-                                                                    <motion.div
-                                                                        initial={{ opacity: 0, y: 10 }}
-                                                                        animate={{ opacity: 1, y: 0 }}
-                                                                        exit={{ opacity: 0, y: 10 }}
-                                                                        className="absolute bottom-full left-0 right-0 mb-2 p-2 md:p-3 bg-stone-900 text-white rounded shadow-xl z-20 text-xs text-center font-sans"
-                                                                    >
-                                                                        <div className="flex items-center justify-center gap-2 mb-1 uppercase tracking-widest text-[10px] text-stone-400">
-                                                                            {getContactIcon(item.contactType)}
-                                                                            <span className="font-bold">{item.contactType}</span>
-                                                                        </div>
-                                                                        <div className="text-white select-all font-bold text-sm">{renderContactValue(item.contactValue, item.contactType)}</div>
-                                                                        <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-stone-900 rotate-45"></div>
-                                                                    </motion.div>
-                                                                )}
-                                                            </AnimatePresence>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="w-full py-1 md:py-2 border border-stone-200 bg-stone-50 text-stone-400 text-[10px] md:text-xs font-bold uppercase tracking-wider rounded-sm flex items-center justify-center gap-1 cursor-not-allowed">
-                                                            <EyeOff size={10} /> Gizli İletişim
                                                         </div>
                                                     )}
-
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            if (!currentUser) {
-                                                                showToast("Mesaj göndermek için giriş yapmalısınız.", 'info');
-                                                                return;
-                                                            }
-                                                            setNoteModalItem(item);
-                                                        }}
-                                                        className="w-full text-center text-[9px] md:text-xs text-boun-blue font-bold uppercase tracking-wider hover:text-blue-800 transition-colors flex items-center justify-center gap-1"
-                                                    >
-                                                        <MessageCircle size={12} /> <span className="hidden sm:inline">Bilgi Ver / Not Bırak</span><span className="sm:hidden">Bilgi Ver</span>
-                                                    </button>
                                                 </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
+                                            </div>
+                                        </motion.div>
+                                    ))}
+                                </LayoutGroup>
                             </motion.div>
                         )}
                     </AnimatePresence>
@@ -635,7 +670,7 @@ const AnnouncementsSection: React.FC<AnnouncementsSectionProps> = ({ onBack }) =
                         if (currentUser) setIsModalOpen(true);
                         else navigate('/auth/login');
                     }}
-                    className="md:hidden absolute bottom-8 right-6 z-50 w-14 h-14 bg-boun-red text-white rounded-full shadow-[0_4px_12px_rgba(138,27,27,0.4)] flex items-center justify-center cursor-pointer pointer-events-auto active:scale-95 transition-transform"
+                    className="md:hidden fixed bottom-24 right-6 z-[60] w-14 h-14 bg-boun-red text-white rounded-full shadow-[0_4px_12px_rgba(138,27,27,0.4)] flex items-center justify-center cursor-pointer pointer-events-auto active:scale-95 transition-transform"
                 >
                     <Plus size={28} />
                 </button>
@@ -686,7 +721,7 @@ const AnnouncementsSection: React.FC<AnnouncementsSectionProps> = ({ onBack }) =
                                 <form onSubmit={handleCreateSubmit} className="p-6 space-y-4 overflow-y-auto">
                                     <div className="bg-blue-50 p-3 rounded text-blue-800 text-xs flex gap-2 items-start border border-blue-100">
                                         <CheckCircle size={14} className="mt-0.5 shrink-0" />
-                                        <span>İsim ve bölüm bilginiz profilinizden (<b>{userProfile?.username}</b>) otomatik eklenecektir. İlanınız doğrudan yayına girer.</span>
+                                        <span>İsim ve bölüm bilginiz profilinizden (<b>{userProfile?.displayName || userProfile?.username}</b>) otomatik eklenecektir. İlanınız doğrudan yayına girer.</span>
                                     </div>
 
                                     <div>
@@ -717,6 +752,15 @@ const AnnouncementsSection: React.FC<AnnouncementsSectionProps> = ({ onBack }) =
                                                 <option>Aksesuar</option>
                                                 <option>Diğer</option>
                                             </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-bold text-stone-700 mb-1">Açıklama (Opsiyonel)</label>
+                                            <textarea
+                                                name="description"
+                                                maxLength={400}
+                                                placeholder="Kaybolan/Bulunan eşyayı kısaca betimleyin (Maks 400 karakter)..."
+                                                className="w-full px-3 py-2 border border-stone-300 rounded focus:ring-1 focus:ring-stone-500 outline-none text-sm min-h-[80px]"
+                                            />
                                         </div>
                                     </div>
 

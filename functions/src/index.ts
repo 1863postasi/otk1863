@@ -13,3 +13,7 @@ export const onAnnouncementCreated = notificationsController.onAnnouncementCreat
 // Export Forum Trigger
 import * as forumController from './controllers/forum';
 export const onReviewCreated = forumController.onReviewCreated;
+
+// Export Boundle Trigger
+import * as boundleController from './controllers/boundle';
+export const onUserBoundleScoreUpdate = boundleController.onUserBoundleScoreUpdate;
