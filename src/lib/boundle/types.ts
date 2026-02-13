@@ -24,7 +24,8 @@ export interface UserBoundleStats {
     lastPlayedDate: string; // Son oynanan tarih (YYYY-MM-DD)
     games: {
         [gameId: string]: {
-            playedToday: boolean; // Bugün oynandı mı?
+            playedToday: boolean; // @deprecated use lastPlayedDate verification
+            lastPlayedDate?: string; // Bu oyunun son oynandığı tarih (YYYY-MM-DD)
             lastScore: number; // Son oyundaki puan (günlük)
             totalGameScore: number; // Bu oyundaki toplam puanı
             streak: number; // Seriye bağlama (opsiyonel)

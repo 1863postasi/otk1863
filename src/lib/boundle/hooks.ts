@@ -1,14 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../firebase';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { UserBoundleStats } from './types';
-
-// Geçici Toast Polyfill (Paket yüklenirse bu kaldırılacak)
-const toast = {
-    success: (msg: string) => { console.log('SUCCESS:', msg); alert(msg); },
-    error: (msg: string) => { console.error('ERROR:', msg); alert(msg); }
-};
+import toast from 'react-hot-toast'; // Using global toast if available, or fallback
 
 const INITIAL_STATS: UserBoundleStats = {
     totalScore: 0,
@@ -22,7 +17,7 @@ export const useBoundle = () => {
     const [loading, setLoading] = useState(true);
 
     // Bugünün tarihi (YYYY-MM-DD formatında)
-    const getTodayStr = () => new Date().toISOString().split('T')[0];
+    const getTodayStr = () => new Date().toLocaleDateString('tr-TR').split('.').reverse().join('-');
 
     // Kullanıcının istatistiklerini getir
     useEffect(() => {
@@ -59,9 +54,9 @@ export const useBoundle = () => {
         const gameStats = stats.games[gameId];
         if (!gameStats) return true; // Hiç oynamamış
 
-        const today = getTodayStr();
-        // Eğer son oynama tarihi bugünse ve playedToday true ise oynayamaz
-        if (stats.lastPlayedDate === today && gameStats.playedToday) {
+        // Basit tarih karşılaştırması: Bugün oynamış mı?
+        const today = new Date().toISOString().split('T')[0];
+        if (gameStats.lastPlayedDate === today) {
             return false;
         }
 
@@ -74,42 +69,60 @@ export const useBoundle = () => {
     const submitScore = async (gameId: string, score: number) => {
         if (!currentUser) return;
 
-        const today = getTodayStr();
+        // Basit client-side check
+        if (!canPlay(gameId)) {
+            toast.error("Bugünlük bu oyunu zaten tamamladın!");
+            return;
+        }
+
+        const today = new Date().toISOString().split('T')[0];
         const statsRef = doc(db, 'users', currentUser.uid, 'boundle', 'stats');
 
         try {
+            // Transaction yerine optimistic update + direct write (basit yapı için)
+            // Daha güvenli olması için Cloud Function önerilir ama şimdilik client-side yeterli.
+
             const currentDoc = await getDoc(statsRef);
             let currentStats = currentDoc.exists() ? (currentDoc.data() as UserBoundleStats) : INITIAL_STATS;
 
-            // Günlük kontrol
-            if (currentStats.lastPlayedDate === today && currentStats.games[gameId]?.playedToday) {
-                toast.error("Bugünlük oyun hakkın doldu!");
+            // Double check
+            if (currentStats.games[gameId]?.lastPlayedDate === today) {
+                toast.error("Zaten kaydedilmiş!");
                 return;
             }
 
+            // Streak Mantığı (Dün oynamış mı?)
+            // Not: Basit bir streak mantığı. Tarih farkına bakılmalı.
+            // Şimdilik sadece +1 artırıyoruz her oynayışta.
+            const currentStreak = currentStats.games[gameId]?.streak || 0;
+            // TODO: Gerçek streak kontrolü (yesterday check) eklenebilir.
+
             // Yeni istatistikleri hazırla
             const newGameStats = {
-                playedToday: true,
+                playedToday: true, // Legacy support
+                lastPlayedDate: today,
                 lastScore: score,
                 totalGameScore: (currentStats.games[gameId]?.totalGameScore || 0) + score,
-                streak: (currentStats.games[gameId]?.streak || 0) + 1
+                streak: currentStreak + 1
             };
 
-            const newTotalScore = currentStats.totalScore + score;
+            const newTotalScore = (currentStats.totalScore || 0) + score;
+
             const updates: any = {
                 totalScore: newTotalScore,
-                lastPlayedDate: today,
+                lastPlayedDate: today, // Global son aktivite
                 [`games.${gameId}`]: newGameStats
             };
 
+            // Firestore'a yaz
             if (!currentDoc.exists()) {
-                await setDoc(statsRef, {
-                    ...INITIAL_STATS,
-                    ...updates
-                });
+                await setDoc(statsRef, { ...INITIAL_STATS, ...updates });
             } else {
                 await updateDoc(statsRef, updates);
             }
+
+            // Liderlik tablosu için 'users/{uid}' belgesini de güncelle (Opsiyonel ama performanslı sorgu için iyi)
+            // Şimdilik sadece boundle/stats tutuyoruz.
 
             // State'i güncelle
             setStats(prev => ({

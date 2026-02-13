@@ -16,7 +16,10 @@ export interface UserProfile {
 
   // Roles & Badges
   clubRoles?: Record<string, string>; // e.g., { "compec": "admin" }
+  // Roles & Badges
+  clubRoles?: Record<string, string>; // e.g., { "compec": "admin" }
   badges?: string[];
+  boundleScore?: number; // Leaderboard için toplam puan
 
   // Bookmarks
   savedEventIds?: string[];

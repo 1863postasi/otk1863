@@ -53,7 +53,13 @@ Proje, sunucusuz (serverless) mimari üzerine kuruludur. Aşağıdaki yapı taş
 *   **Proaktif Olun:** Sadece isteneni değil, olması gerekeni yapın. Eğer bir kod bloğu güvensiz veya performanssız görünüyorsa, kullanıcıyı uyararak düzeltin.
 *   **Tamamlayıcılık:** Bir özellik eklerken, eksik parçaları (örn: back button, loading state, empty state) mutlaka düşünün ve ekleyin.
 
-## 6. Performans, Cache Stratejisi ve 60 FPS Takıntısı
+## 6. Veri Gizliliği ve Kimlik (ÖNEMLİ)
+*   **Kullanıcı Adı vs Görünen İsim:**
+    *   `username` (örn: `ali_veli_123`) teknik bir tanımlayıcıdır ve **ASLA** herkese açık arayüzlerde (public UI) gösterilmemelidir.
+    *   Bunun yerine her zaman kullanıcının belirlediği `displayName` (örn: `Ali Veli`) kullanılmalıdır.
+    *   Kayıt olurken alınan `username` eşsizdir (unique), ancak `displayName` eşsiz olmak zorunda değildir. Arayüzde hitap ederken Duplicate olabilen `displayName` esastır.
+
+## 7. Performans, Cache Stratejisi ve 60 FPS Takıntısı
 *   **60 FPS Kırmızı Çizgimizdir:** Uygulama, en düşük donanımlı mobil cihazlarda bile "yağ gibi" akmalıdır. Jank (takılma) ve frame drop kesinlikle kabul edilemez.
     *   **Animasyon Performansı:** Animasyonlarda **SADECE** GPU hızlandırmalı özellikleri (`transform`, `opacity`, `filter`) kullanın. Layout tetikleyen özellikleri (`width`, `height`, `margin`, `top/left`) animasyona sokmaktan kaçının.
     *   **Ağır İşlemler:** Main thread'i bloklamayın. Pahalı hesaplamalar için `useMemo` veya Web Worker kullanın.

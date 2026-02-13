@@ -38,6 +38,7 @@ import RequireProfileSetup from './components/Auth/RequireProfileSetup'; // Onbo
 import BoundleLayout from './pages/Boundle/Layout';
 import GameHub from './pages/Boundle/GameHub';
 import Leaderboard from './pages/Boundle/Leaderboard';
+import Sudoku from './pages/Boundle/games/Sudoku';
 
 const { Routes, Route, useLocation, Link } = router;
 
@@ -282,6 +283,7 @@ const App: React.FC = () => {
             >
               <Route index element={<GameHub />} />
               <Route path="leaderboard" element={<Leaderboard />} />
+              <Route path="sudoku" element={<Sudoku />} />
               {/* Gelecek oyunlar buraya eklenecek */}
               {/* <Route path="kelimece" element={<Wordle />} /> */}
             </Route>

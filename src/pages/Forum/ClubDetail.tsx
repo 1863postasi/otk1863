@@ -90,7 +90,7 @@ export default function ClubDetail() {
                         const data = doc.data();
                         return {
                             id: doc.id,
-                            name: data.username || data.displayName || "İsimsiz", // Prioritize username as per usage elsewhere
+                            name: data.displayName || data.username || "İsimsiz", // Prioritize displayName
                             photoUrl: data.photoUrl,
                             role: data.clubRoles?.[id] || "Yetkili" // Get specific role for this club
                         };

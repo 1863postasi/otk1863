@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { BOUNDLE_GAMES } from '../../lib/boundle/registry';
+import { useBoundle } from '../../lib/boundle/hooks';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import UserStatsCard from './components/UserStatsCard';
@@ -12,6 +13,7 @@ import { Gamepad2, Trophy } from 'lucide-react';
 
 const GameHub: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'games' | 'leaderboard'>('games');
+    const { canPlay } = useBoundle(); // Hook kullanımı
 
     // Animasyon varyasyonları
     const container = {
@@ -104,6 +106,9 @@ const GameHub: React.FC = () => {
                     >
                         {BOUNDLE_GAMES.map((game) => {
                             const GameIcon = game.icon;
+                            // Oynanabilir mi?
+                            // canPlay false dönüyorsa oynamış demektir (tabi comingSoon değilse)
+                            const isCompleted = !game.comingSoon && !canPlay(game.id);
 
                             return (
                                 <motion.div key={game.id} variants={item}>
@@ -118,7 +123,8 @@ const GameHub: React.FC = () => {
                                             {/* Sol İkon Alanı */}
                                             <div className={cn(
                                                 "w-28 flex items-center justify-center text-white relative overflow-hidden",
-                                                game.color
+                                                game.color,
+                                                isCompleted && "bg-stone-400 grayscale" // Tamamlandıysa gri yap
                                             )}>
                                                 <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors duration-500" />
                                                 <GameIcon size={36} className="relative z-10 transform group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 ease-out" />
@@ -127,6 +133,15 @@ const GameHub: React.FC = () => {
                                                 <div className="absolute -bottom-6 -right-6 text-white/20 transform rotate-12 scale-150 transition-transform duration-700 group-hover:rotate-45">
                                                     <GameIcon size={80} />
                                                 </div>
+
+                                                {/* Tamamlandı Badge */}
+                                                {isCompleted && (
+                                                    <div className="absolute inset-0 flex items-center justify-center z-20 bg-black/20 backdrop-blur-[2px]">
+                                                        <div className="bg-white/90 text-stone-800 text-[10px] font-bold px-2 py-1 rounded-full shadow-lg">
+                                                            TAMAMLANDI
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
 
                                             {/* İçerik */}
@@ -149,9 +164,15 @@ const GameHub: React.FC = () => {
 
                                                 {!game.comingSoon && (
                                                     <div className="flex items-center justify-end mt-3">
-                                                        <div className="flex items-center gap-1.5 text-xs font-bold text-boun-blue bg-blue-50 px-3 py-1.5 rounded-full group-hover:bg-boun-blue group-hover:text-white transition-all duration-300 shadow-sm">
-                                                            Oyna <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
-                                                        </div>
+                                                        {isCompleted ? (
+                                                            <div className="flex items-center gap-1.5 text-xs font-bold text-green-600 bg-green-50 px-3 py-1.5 rounded-full shadow-sm">
+                                                                Puan Alındı
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex items-center gap-1.5 text-xs font-bold text-boun-blue bg-blue-50 px-3 py-1.5 rounded-full group-hover:bg-boun-blue group-hover:text-white transition-all duration-300 shadow-sm">
+                                                                Oyna <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 )}
                                             </div>

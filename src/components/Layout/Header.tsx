@@ -123,7 +123,7 @@ const Header: React.FC = () => {
                     className="flex items-center gap-2 bg-stone-800 text-stone-100 px-3 py-1.5 rounded-md text-xs font-sans font-medium hover:bg-stone-700 transition-colors shadow-lg shadow-stone-400/50 focus:outline-none focus:ring-2 focus:ring-boun-blue"
                   >
                     <span className="max-w-[100px] truncate">
-                      {currentUser && userProfile ? userProfile.username : "Menü"}
+                      {currentUser && userProfile ? (userProfile.displayName || userProfile.username) : "Menü"}
                     </span>
                     <Settings size={14} />
                   </button>
@@ -251,7 +251,7 @@ const Header: React.FC = () => {
               className="md:hidden absolute top-16 right-4 w-64 bg-white rounded-xl shadow-2xl border border-stone-200 overflow-hidden z-50 origin-top-right pointer-events-auto"
             >
               <div className="p-4 bg-stone-50 border-b border-stone-100">
-                <div className="text-sm font-bold text-stone-900">{userProfile?.username || "Misafir"}</div>
+                <div className="text-sm font-bold text-stone-900">{userProfile?.displayName || userProfile?.username || "Misafir"}</div>
                 <div className="text-xs text-stone-500">{userProfile?.role === 'admin' ? 'Yönetici' : 'Üye'}</div>
               </div>
 

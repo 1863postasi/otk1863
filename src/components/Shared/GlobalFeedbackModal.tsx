@@ -25,7 +25,7 @@ const GlobalFeedbackModal: React.FC<GlobalFeedbackModalProps> = ({ isOpen, onClo
             await addDoc(collection(db, 'feedback'), {
                 userId: user?.uid || 'anonymous',
                 userEmail: user?.email || 'anonymous',
-                username: user?.displayName || 'Anonim Öğrenci',
+                username: user?.displayName || user?.email?.split('@')[0] || 'Anonim Öğrenci',
                 type: 'general_bug',
                 message: feedback,
                 timestamp: serverTimestamp(),

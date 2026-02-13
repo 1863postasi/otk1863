@@ -17,7 +17,7 @@ const Register: React.FC = () => {
     username: '',
     password: '',
     passwordConfirm: '',
-    department: ''
+    // department removed - handled in onboarding
   });
 
   const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
@@ -32,8 +32,7 @@ const Register: React.FC = () => {
   });
   const [modalOpen, setModalOpen] = useState<'clarification' | 'privacy' | null>(null);
 
-  // Extract departments for select list
-  const departments = MOCK_FACULTIES.flatMap(f => f.departments.map(d => d.name)).sort();
+  // Department selection moved to Onboarding Modal
 
   // Debounced Username Check
   useEffect(() => {
@@ -77,9 +76,6 @@ const Register: React.FC = () => {
       if (formData.password !== formData.passwordConfirm) {
         throw new Error("Şifreler eşleşmiyor.");
       }
-      if (!formData.department) {
-        throw new Error("Lütfen bölümünüzü seçiniz.");
-      }
       if (!agreements.clarification || !agreements.privacy) {
         throw new Error("Lütfen Aydınlatma Metni'ni ve Üyelik Sözleşmesi'ni onaylayınız.");
       }
@@ -99,7 +95,7 @@ const Register: React.FC = () => {
         email: formData.email,
         username: formData.username,
         username_lower: formData.username.toLowerCase(),
-        department: formData.department,
+        department: "", // Will be set in onboarding
         role: "student",
         emailVerified: false,
         createdAt: serverTimestamp(),
@@ -220,25 +216,7 @@ const Register: React.FC = () => {
               </div>
             </div>
 
-            {/* Department */}
-            <div>
-              <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-1.5">Bölüm</label>
-              <div className="relative">
-                <select
-                  name="department"
-                  value={formData.department}
-                  onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-3 bg-stone-50 border border-stone-200 rounded text-stone-900 focus:ring-2 focus:ring-stone-800 outline-none text-sm appearance-none"
-                  required
-                >
-                  <option value="">Seçiniz...</option>
-                  {departments.map(dept => (
-                    <option key={dept} value={dept}>{dept}</option>
-                  ))}
-                </select>
-                <BookOpen className="absolute left-3 top-3.5 text-stone-400" size={18} />
-              </div>
-            </div>
+            {/* Department - REMOVED */}
 
             {/* Passwords */}
             <div className="grid grid-cols-2 gap-4">

@@ -1,5 +1,6 @@
 import { GameDefinition } from './types';
-import { Gamepad2, BrainCircuit, Puzzle, Sparkles } from 'lucide-react';
+import { Gamepad2, BrainCircuit, Puzzle, Sparkles, Grid3X3 } from 'lucide-react';
+import Sudoku from '../../pages/Boundle/games/Sudoku';
 
 // Şimdilik boş oyun bileşenleri (Placeholder)
 const PlaceholderGame = () => null;
@@ -38,6 +39,16 @@ export const BOUNDLE_GAMES: GameDefinition[] = [
         path: '/boundle/bulmaca',
         component: PlaceholderGame,
         comingSoon: true,
+    },
+    {
+        id: 'sudoku',
+        name: 'Sudoku',
+        description: 'Her güne özel zihin jimnastiği. Klasik 9x9 eğlencesi.',
+        icon: Grid3X3,
+        color: 'bg-red-500',
+        path: '/boundle/sudoku',
+        component: Sudoku,
+        comingSoon: false,
     }
 ];
 

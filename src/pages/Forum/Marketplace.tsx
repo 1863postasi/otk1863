@@ -239,7 +239,7 @@ const SendNoteModal = ({ isOpen, onClose, listing, currentUser }: { isOpen: bool
         try {
             await addDoc(collection(db, "messages"), {
                 fromId: currentUser.uid,
-                fromName: currentUser.displayName || "Kullanıcı",
+                fromName: currentUser.displayName || currentUser.username || "Kullanıcı",
                 toId: listing.sellerId,
                 listingId: listing.id,
                 listingTitle: listing.title,
@@ -445,7 +445,7 @@ export default function Marketplace() {
                 condition: formData.get('condition') as any,
                 images: imageURL ? [imageURL] : [],
                 sellerId: currentUser.uid,
-                sellerName: userProfile.username || 'Anonim',
+                sellerName: userProfile.displayName || userProfile.username || 'Anonim',
                 sellerPhotoUrl: userProfile.photoUrl || null,
                 contact: {
                     whatsapp: formattedWa,

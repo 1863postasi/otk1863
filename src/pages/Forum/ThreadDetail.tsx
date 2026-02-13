@@ -12,7 +12,7 @@ const mockThread: ForumThread = {
     title: 'Kampüs kartıma nasıl para yüklerim?',
     content: 'Merhaba arkadaşlar, yeni kayıt oldum. Yemekhane için karta para yüklemem gerekiyor ama kiosk bozuk. Online yükleme var mı? Varsa link atabilir misiniz?',
     authorId: 'user-1',
-    authorName: 'Ahmet Yılmaz',
+    authorName: 'Ahmet Yılmaz', // Mock Data - In real app, this comes from user profile displayName
     authorPhotoUrl: 'https://ui-avatars.com/api/?name=Ahmet+Yilmaz&background=random',
     category: 'soru-cevap',
     tags: ['kampüs-kart', 'yemekhane'],
@@ -27,7 +27,7 @@ const mockComments: ForumComment[] = [
         threadId: 'thread-1',
         content: 'Evet, sol taraftaki menüden "BounCard" başlığına tıklarsan online yükleme sayfasına gidersin.',
         authorId: 'user-2',
-        authorName: 'Ayşe Demir',
+        authorName: 'Ayşe Demir', // Mock Data
         authorPhotoUrl: 'https://ui-avatars.com/api/?name=Ayse+Demir&background=random',
         createdAt: new Date(Date.now() - 3600000).toISOString(),
         likes: 12
@@ -37,7 +37,7 @@ const mockComments: ForumComment[] = [
         threadId: 'thread-1',
         content: 'Teşekkürler, buldum! Peki komisyon alıyor mu?',
         authorId: 'user-1',
-        authorName: 'Ahmet Yılmaz',
+        authorName: 'Ahmet Yılmaz', // Mock Data
         authorPhotoUrl: 'https://ui-avatars.com/api/?name=Ahmet+Yilmaz&background=random',
         createdAt: new Date(Date.now() - 1800000).toISOString(),
         likes: 2
@@ -47,7 +47,7 @@ const mockComments: ForumComment[] = [
         threadId: 'thread-1',
         content: 'Hayır, komisyon yok. Kredi kartı ile direkt yükleyebilirsin.',
         authorId: 'user-3',
-        authorName: 'Mehmet Öztürk',
+        authorName: 'Mehmet Öztürk', // Mock Data
         authorPhotoUrl: 'https://ui-avatars.com/api/?name=Mehmet+Ozturk&background=random',
         createdAt: new Date(Date.now() - 900000).toISOString(),
         likes: 5

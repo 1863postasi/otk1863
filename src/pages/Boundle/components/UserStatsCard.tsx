@@ -9,12 +9,18 @@ interface UserStatsCardProps {
 }
 
 const UserStatsCard: React.FC<UserStatsCardProps> = ({ className, compact = false }) => {
-    const { stats } = useBoundle();
+    const { stats, loading } = useBoundle();
 
-    // Bugünkü toplam puan (Oyunların lastScore'larından hesaplanabilir ama playedToday true olanlar)
+    // Bugünkü toplam puan (lastPlayedDate === bugün olan oyunlar)
+    // hook içindeki canPlay mantığına benzer
+    const today = new Date().toISOString().split('T')[0];
+
     const todayScore = Object.values(stats.games).reduce((acc: number, game: any) => {
-        return game.playedToday ? acc + game.lastScore : acc;
+        // Eğer oyunun oynanma tarihi bugünse, puano ekle
+        return game.lastPlayedDate === today ? acc + game.lastScore : acc;
     }, 0);
+
+    if (loading) return null; // veya skeleton
 
     return (
         <div className={cn("bg-white rounded-xl border border-stone-200 shadow-sm p-4", className)}>
