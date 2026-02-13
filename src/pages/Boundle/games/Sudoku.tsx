@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { SudokuEngine, Board, getDailySeed } from '../../lib/boundle/sudoku/engine';
+import { SudokuEngine, Board, getDailySeed } from '../../../lib/boundle/sudoku/engine';
 import { Eraser, Lightbulb, RotateCcw, PartyPopper, ChevronLeft, CheckCircle2, Lock } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { cn } from '../../../lib/utils';
 import { Link } from 'react-router-dom';
 import Confetti from 'react-confetti';
 import { useWindowSize } from 'react-use';
-import { useBoundle } from '../../lib/boundle/hooks';
+import { useBoundle } from '../../../lib/boundle/hooks';
 
 // TYPES
 type CellValue = number | null;
