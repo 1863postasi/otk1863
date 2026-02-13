@@ -133,22 +133,25 @@ export const useBoundle = () => {
             // 5. Başarılı (UI Update)
             // Transaction başarılı olursa buraya düşer.
             // Local state'i güncelle (Optimistic değil, confirmed update)
-            setStats(prev => ({
-                ...prev,
-                totalScore: (prev.totalScore || 0) + score,
-                lastPlayedDate: today,
-                games: {
-                    ...prev.games,
-                    [gameId]: {
-                        ...prev.games[gameId],
-                        playedToday: true,
-                        lastPlayedDate: today,
-                        lastScore: score,
-                        totalGameScore: (prev.games[gameId]?.totalGameScore || 0) + score,
-                        streak: (prev.games[gameId]?.streak || 0) + 1
+            setStats(prev => {
+                const prevStreak = prev.games[gameId]?.streak || 0;
+                return {
+                    ...prev,
+                    totalScore: (prev.totalScore || 0) + score,
+                    lastPlayedDate: today,
+                    games: {
+                        ...prev.games,
+                        [gameId]: {
+                            ...prev.games[gameId],
+                            playedToday: true,
+                            lastPlayedDate: today,
+                            lastScore: score,
+                            totalGameScore: (prev.games[gameId]?.totalGameScore || 0) + score,
+                            streak: prevStreak + 1
+                        }
                     }
-                }
-            }));
+                };
+            });
 
             toast.success(`Tebrikler! +${score} puan kazandın.`);
 

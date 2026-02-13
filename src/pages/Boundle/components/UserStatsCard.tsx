@@ -39,7 +39,7 @@ const UserStatsCard: React.FC<UserStatsCardProps> = ({ className, compact = fals
                 </div>
 
                 {/* Toplam Puan */}
-                <div className="flex-1 text-center">
+                <div className="flex-1 text-center border-r border-stone-100 last:border-0">
                     <div className="flex items-center justify-center gap-1.5 text-stone-500 mb-1">
                         <Trophy size={16} className="text-boun-blue" />
                         <span className="text-xs font-bold uppercase tracking-wider">Toplam</span>
@@ -49,13 +49,24 @@ const UserStatsCard: React.FC<UserStatsCardProps> = ({ className, compact = fals
                     </div>
                 </div>
 
+                {/* Streak (Yeni) */}
+                <div className="flex-1 text-center">
+                    <div className="flex items-center justify-center gap-1.5 text-stone-500 mb-1">
+                        <div className="text-orange-500">🔥</div>
+                        <span className="text-xs font-bold uppercase tracking-wider">Seri</span>
+                    </div>
+                    <div className="text-2xl font-bold text-stone-800 font-mono">
+                        {Math.max(0, ...Object.values(stats.games).map((g: any) => g.streak || 0))}
+                    </div>
+                </div>
+
             </div>
 
             {!compact && (
-                <div className="mt-3 pt-3 border-t border-stone-100 text-center">
+                <div className="mt-4 pt-3 border-t border-stone-100 text-center">
                     <button
                         onClick={onOpenHelp}
-                        className="text-xs text-stone-400 hover:text-boun-blue flex items-center justify-center gap-1.5 mx-auto transition-colors py-1 px-3 rounded-full hover:bg-blue-50"
+                        className="text-xs text-stone-400 hover:text-boun-blue flex items-center justify-center gap-1.5 mx-auto transition-colors py-1.5 px-3 rounded-full hover:bg-blue-50"
                     >
                         <HelpCircle size={14} />
                         <span className="font-bold">Nasıl Oynanır? / Hata Bildir</span>

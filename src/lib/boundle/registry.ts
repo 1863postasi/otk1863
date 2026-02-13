@@ -14,7 +14,7 @@ export const BOUNDLE_GAMES: GameDefinition[] = [
     {
         id: 'sudoku',
         name: 'Sudoku',
-        description: 'Her güne özel zihin jimnastiği. Klasik 9x9 eğlencesi.',
+        description: 'Klasik 9x9 eğlence işte...',
         icon: Grid3X3,
         color: 'bg-red-500',
         path: '/boundle/sudoku',
