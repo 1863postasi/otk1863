@@ -38,28 +38,19 @@ service cloud.firestore {
     // --- KOLEKSİYON KURALLARI ---
 
     // 0. BOUNDLE OYUN GÜVENLİĞİ
-    match /boundle_games/{dateId} {
-      allow read, write: if false;
-    }
+
 
     // 1. KULLANICILAR (users)
     match /users/{userId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isOwner(userId);
       
-      // Kullanıcı boundle puanlarını elle değiştiremez!
-      allow update: if isSignedIn() && isOwner(userId) 
-                    && (
-                      !request.resource.data.diff(resource.data).affectedKeys()
-                        .hasAny(['boundleTotalPoints', 'boundleStreak', 'boundleWeeklyPoints', 'lastBoundleDate'])
-                    );
+
       allow delete: if isAdmin();
 
       // Oyun Geçmişi: Sadece kendi geçmişini okuyabilir.
-      match /game_history/{gameId} {
-        allow read: if isSignedIn() && isOwner(userId);
-        allow write: if false; 
-      }
+
     }
 
     // 2. KULÜPLER (clubs)

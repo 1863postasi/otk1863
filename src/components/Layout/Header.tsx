@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Menu, X, Search, Lock, User, LogOut, Settings, LogIn, UserPlus, Mail, Briefcase, Gamepad2, Info, Home, HardHat } from 'lucide-react';
+import { Menu, X, Search, Lock, User, LogOut, Settings, LogIn, UserPlus, Mail, Briefcase, Info, Home } from 'lucide-react';
 import * as router from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { motion as m, AnimatePresence } from 'framer-motion';
@@ -24,9 +24,7 @@ const Header: React.FC = () => {
     { name: 'Ana Sayfa', path: '/', status: 'active' },
     { name: 'Arşiv', path: '/arsiv', status: 'active' },
     { name: 'ÖTK', path: '/otk', status: 'active' },
-    // TEMPORARY: Boundle disabled for maintenance (2026-02-08)
-    // { name: 'Boundle', path: '/boundle', status: 'active' }, 
-    { name: 'Boundle', path: '/boundle', status: 'construction' },
+
     { name: 'Forum', path: '/forum', status: 'active' },
     { name: 'Yayınlar', path: '/yayinlar', status: 'active' },
   ];
@@ -93,7 +91,6 @@ const Header: React.FC = () => {
                           : "text-stone-600 hover:text-boun-blue"
                       )}
                     >
-                      {link.name === 'Boundle' && <Gamepad2 size={14} className="text-boun-gold" />}
                       {link.name}
                     </Link>
                   ) : (
@@ -105,7 +102,7 @@ const Header: React.FC = () => {
                       title={link.status === 'construction' ? "Bakımda" : "Erişim Kısıtlı"}
                     >
                       {link.name}
-                      {link.status === 'construction' ? <HardHat size={12} className="text-orange-400" /> : <Lock size={10} />}
+                      {link.status === 'construction' ? null : <Lock size={10} />}
                     </span>
                   )}
                 </div>

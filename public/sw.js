@@ -35,19 +35,7 @@ self.addEventListener('fetch', (event) => {
 // from the client to schedule/show notifications.
 
 self.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'SCHEDULE_NOTIFICATION') {
-        // In a real PWA, you might use the Notification API directly here
-        // or rely on the OS via the client scheduling it.
-        // Simulating a "New Games Available" notification logic
-        setTimeout(() => {
-            self.registration.showNotification("1863 Postası - Boundle", {
-                body: "Günlük bulmacalar yenilendi! İsmini efsaneler arasına yazdır.",
-                icon: "/pwa-192x192.png",
-                badge: "/pwa-192x192.png",
-                tag: "daily-boundle"
-            });
-        }, calculateTimeToNextMidnight());
-    }
+
 });
 
 function calculateTimeToNextMidnight() {

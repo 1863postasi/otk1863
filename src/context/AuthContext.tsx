@@ -26,12 +26,7 @@ export interface UserProfile {
   // Notifications
   fcmTokens?: string[];
 
-  // Boundle (Game Stats)
-  boundleTotalPoints?: number; // All time total
-  boundleWeeklyPoints?: number; // Weekly leaderboard
-  boundleStreak?: number; // Current streak
-  boundleMaxStreak?: number; // Max streak ever
-  lastBoundleDate?: string; // YYYY-MM-DD to check continuity
+
 
   // Meta
   lastDisplayNameChange?: any; // Timestamp

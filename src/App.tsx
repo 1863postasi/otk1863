@@ -15,7 +15,7 @@ import ManagerPanel from './pages/Manager/ManagerPanel';
 import StudentLogin from './pages/Auth/Login';
 import Register from './pages/Auth/Register';
 import Profile from './pages/Profile'; // Import the new Profile page
-import Boundle from './pages/Boundle'; // Import Boundle Lobby
+
 import About from './pages/About'; // Import About Page
 import PublicationsPage from './pages/Publications'; // Import Publications Page
 import DiaryPage from './pages/Publications/Diary'; // Import Diary Page
@@ -173,14 +173,7 @@ const App: React.FC = () => {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/boundle"
-              element={
-                <ProtectedRoute requireAdmin={false}>
-                  <Boundle />
-                </ProtectedRoute>
-              }
-            />
+
 
             {/* Forum Routes */}
             <Route

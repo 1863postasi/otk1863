@@ -1,14 +1,13 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Archive, Gamepad2, Users, BookOpen, MessageCircle, HardHat } from 'lucide-react';
+import { Home, Archive, Users, BookOpen, MessageCircle } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 const MobileBottomNav: React.FC = () => {
     const navItems = [
         { name: 'ÖTK', path: '/otk', icon: Users, disabled: false },
         { name: 'Arşiv', path: '/arsiv', icon: Archive, disabled: false },
-        // TEMPORARY: Boundle disabled for maintenance. Revert icon to Gamepad2 and disabled to false.
-        { name: 'Boundle', path: '/boundle', icon: HardHat, isCenter: true, disabled: true },
+
         { name: 'Forum', path: '/forum', icon: MessageCircle, disabled: false },
         { name: 'Yayınlar', path: '/yayinlar', icon: BookOpen, disabled: false },
     ];
