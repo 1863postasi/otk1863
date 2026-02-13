@@ -1,7 +1,7 @@
 import React from 'react';
-import { useBoundle } from '../../lib/boundle/hooks';
+import { useBoundle } from '../../../lib/boundle/hooks';
 import { Trophy, Star, Calendar } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { cn } from '../../../lib/utils';
 
 interface UserStatsCardProps {
     className?: string;
@@ -12,7 +12,7 @@ const UserStatsCard: React.FC<UserStatsCardProps> = ({ className, compact = fals
     const { stats } = useBoundle();
 
     // Bugünkü toplam puan (Oyunların lastScore'larından hesaplanabilir ama playedToday true olanlar)
-    const todayScore = Object.values(stats.games).reduce((acc, game) => {
+    const todayScore = Object.values(stats.games).reduce((acc: number, game: any) => {
         return game.playedToday ? acc + game.lastScore : acc;
     }, 0);
 
