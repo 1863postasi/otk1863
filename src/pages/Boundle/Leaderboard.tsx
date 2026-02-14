@@ -4,14 +4,16 @@ import { Trophy, Medal, User } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import UserStatsCard from './components/UserStatsCard';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { UserProfile } from '../../context/AuthContext';
+import { UserProfile, useAuth } from '../../context/AuthContext';
 
 interface LeaderboardProps {
     compactView?: boolean;
 }
 
 const Leaderboard: React.FC<LeaderboardProps> = ({ compactView = false }) => {
+    const { currentUser, userProfile } = useAuth();
     const [leaders, setLeaders] = useState<UserProfile[]>([]);
     const [loading, setLoading] = useState(true);
 
