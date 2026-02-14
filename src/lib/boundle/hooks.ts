@@ -93,21 +93,44 @@ export const useBoundle = () => {
                     throw new Error("ALREADY_PLAYED");
                 }
 
+                // --- STREAK MANTIĞI (Düzeltildi) ---
+                const lastDateStr = currentStats.games[gameId]?.lastPlayedDate;
+                let newStreak = 1;
+
+                if (lastDateStr) {
+                    const lastDate = new Date(lastDateStr);
+                    const yesterday = new Date();
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+                    if (lastDateStr === yesterdayStr) {
+                        // Eğer dün oynadıysa streak artar
+                        newStreak = (currentStats.games[gameId]?.streak || 0) + 1;
+                    } else {
+                        // Dün oynamadıysa (daha eski veya hiç), streak 1'e döner
+                        newStreak = 1;
+                    }
+                }
+
                 // 3. Yeni Veriyi Hazırla
-                const currentStreak = currentStats.games[gameId]?.streak || 0;
+                const newGameScore = (currentStats.games[gameId]?.totalGameScore || 0) + score;
 
                 const newGameStats = {
                     playedToday: true,
                     lastPlayedDate: today,
                     lastScore: score,
-                    totalGameScore: (currentStats.games[gameId]?.totalGameScore || 0) + score,
-                    streak: currentStreak + 1
+                    totalGameScore: newGameScore,
+                    streak: newStreak
                 };
 
-                const newTotalScore = (currentStats.totalScore || 0) + score;
+                // local 'games' objesini güncelle (hesaplama için)
+                const updatedGames = { ...currentStats.games, [gameId]: newGameStats };
+
+                // --- TOTAL SCORE (Self-Healing) ---
+                const recalculatedTotalScore = Object.values(updatedGames).reduce((acc, g: any) => acc + (g.totalGameScore || 0), 0);
 
                 const updates: any = {
-                    totalScore: newTotalScore,
+                    totalScore: recalculatedTotalScore,
                     lastPlayedDate: today,
                     [`games.${gameId}`]: newGameStats
                 };
@@ -119,13 +142,10 @@ export const useBoundle = () => {
                     transaction.update(statsRef, updates);
                 }
 
-                // Opsiyonel: Ana user dökümanını da güncelle (Leaderboard için)
-                // Transaction içinde yapmak en güvenlisidir ama cross-document transaction maliyetli olabilir.
-                // Boundle skorunun kritikliği düşük olduğu için burada updateDoc ile devam edebiliriz 
-                // ya da transaction'a dahil edebiliriz. Tutarlılık için transaction'a dahil edelim.
+                // Ana user dökümanını da güncelle
                 const userRef = doc(db, 'users', currentUser.uid!);
                 transaction.update(userRef, {
-                    boundleScore: newTotalScore,
+                    boundleScore: recalculatedTotalScore,
                     lastActiveAt: new Date()
                 });
             });
