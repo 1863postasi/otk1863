@@ -1,6 +1,6 @@
-import * as seedrandom from 'seedrandom';
+// import * as seedrandom from 'seedrandom'; // REMOVED: Causing runtime crash
 import { EXPENSE_ITEMS, INCOME_ITEMS, HEADLINES_POOL } from './data';
-import { BudgetGameDaily, GameItem } from './types';
+import { BudgetGameDaily, GameItem } from './budgetTypes';
 
 export type { BudgetGameDaily, GameItem };
 
@@ -12,8 +12,26 @@ const BASE_BALANCE = 185488378; // 2024 Artan Bütçe (Sabit)
 /**
  * Verilen tarih için deterministik (herkes için aynı) bir oyun durumu oluşturur.
  */
+/**
+ * Basit Linear Congruential Generator (LCG) - Seeded RNG
+ */
+const createSeededRNG = (seed: string) => {
+    // String seed'i sayıya çevir (djb2 hash benzeri)
+    let h = 0xdeadbeef;
+    for (let i = 0; i < seed.length; i++) {
+        h = Math.imul(h ^ seed.charCodeAt(i), 2654435761);
+    }
+
+    // RNG fonksiyonu döndür (0 ile 1 arası)
+    return function () {
+        h = Math.imul(h ^ (h >>> 16), 2246822507);
+        h = Math.imul(h ^ (h >>> 13), 3266489909);
+        return ((h >>> 0) / 4294967296);
+    }
+}
+
 export const getDailyBudgetGame = (dateString: string): BudgetGameDaily => {
-    const rng = seedrandom(dateString); // Seeded RNG
+    const rng = createSeededRNG(dateString); // Custom Seeded RNG
 
     // 1. Günün Manşetini Seç
     const headlineIndex = Math.floor(rng() * HEADLINES_POOL.length);
