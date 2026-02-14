@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SudokuEngine, Board, getDailySeed } from '../../../lib/boundle/sudoku/engine';
-import { Eraser, Lightbulb, RotateCcw, PartyPopper, ChevronLeft, CheckCircle2, Lock } from 'lucide-react';
+import { Eraser, Lightbulb, PartyPopper, ChevronLeft, CheckCircle2, Lock } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { Link } from 'react-router-dom';
 import Confetti from 'react-confetti';
@@ -19,7 +19,6 @@ interface GameState {
     notes: { [key: number]: number[] }; // Hücre bazlı notlar
     mistakes: number;
     isComplete: boolean;
-    history: Board[]; // Undo için (basit versiyon: sadece board state)
     lastPlayed: string; // Tarih
 }
 
@@ -75,7 +74,6 @@ const Sudoku: React.FC = () => {
                 notes: {},
                 mistakes: 0,
                 isComplete: false,
-                history: [],
                 lastPlayed: today
             };
         }
@@ -221,34 +219,39 @@ const Sudoku: React.FC = () => {
         const isError = val !== null && val !== gameState.solution[index];
         const isSameNumber = selectedCell !== null && gameState.current[selectedCell] === val && val !== null;
 
-        const row = Math.floor(index / 9);
-        const col = index % 9;
+        // Related Cells Calculation
+        let isRelated = false;
+        if (selectedCell !== null) {
+            const row = Math.floor(index / 9);
+            const col = index % 9;
+            const block = Math.floor(row / 3) * 3 + Math.floor(col / 3);
 
-        // Border Logic
-        const isRightThick = col === 2 || col === 5;
-        const isBottomThick = row === 2 || row === 5;
-        const isRightEdge = col === 8;
-        const isBottomEdge = row === 8;
+            const sRow = Math.floor(selectedCell / 9);
+            const sCol = selectedCell % 9;
+            const sBlock = Math.floor(sRow / 3) * 3 + Math.floor(sCol / 3);
+
+            if (row === sRow || col === sCol || block === sBlock) {
+                isRelated = true;
+            }
+        }
 
         return cn(
-            "relative flex items-center justify-center text-xl md:text-3xl select-none transition-all duration-75 cursor-pointer h-[min(10vw,48px)] w-[min(10vw,48px)] md:h-14 md:w-14",
+            "relative flex items-center justify-center text-xl md:text-3xl select-none transition-all duration-75 cursor-pointer h-[min(9vw,44px)] w-[min(9vw,44px)] md:h-14 md:w-14",
 
-            // Right Borders
-            isRightThick ? "border-r-[2px] border-r-stone-800" : (!isRightEdge && "border-r border-r-stone-200"),
-
-            // Bottom Borders
-            isBottomThick ? "border-b-[2px] border-b-stone-800" : (!isBottomEdge && "border-b border-b-stone-200"),
-
-            // Colors & Fonts
+            // Background Colors
             "bg-white",
+            // Highlight related cells (row, col, block) - subtle
+            isRelated && !isSelected && !isSameNumber && !isError && "bg-blue-50/50",
+
+            // Text Colors
             isInitial ? "text-stone-900" : "text-blue-600 font-medium",
 
             // Interaction States
-            isSameNumber && !isSelected && !isError && "bg-blue-50 text-blue-700",
-            isSelected && "bg-blue-100 ring-2 ring-inset ring-blue-500 z-10",
+            isSameNumber && !isSelected && !isError && "bg-blue-100/80 text-blue-800",
+            isSelected && "bg-blue-100 ring-4 ring-inset ring-blue-500/50 z-20",
 
             // Error overlay
-            isError && "bg-red-50 text-red-600 ring-2 ring-inset ring-red-500"
+            isError && "bg-red-50 text-red-600 ring-inset ring-2 ring-red-500"
         );
     };
 
@@ -295,39 +298,62 @@ const Sudoku: React.FC = () => {
 
             {/* SUDOKU BOARD CONTAINER */}
             <div className={cn(
-                "p-4 bg-white rounded-2xl shadow-xl shadow-stone-200/50 mb-6 select-none touch-manipulation relative",
+                "bg-stone-800 p-1 md:p-1.5 rounded-xl shadow-2xl shadow-stone-300/50 mb-6 select-none touch-manipulation relative",
                 gameState.isComplete && "opacity-90 grayscale-[0.2]"
             )}>
                 {/* Tamamlandı Overlay */}
                 {gameState.isComplete && (
-                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/10 backdrop-blur-[1px] pointer-events-none">
+                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/10 backdrop-blur-[1px] pointer-events-none rounded-xl">
                     </div>
                 )}
 
-                <div className="grid grid-cols-9 border-2 border-stone-800 bg-stone-800">
-                    {Array.from({ length: 81 }).map((_, i) => (
-                        <div
-                            key={i}
-                            onClick={!gameState.isComplete ? () => setSelectedCell(i) : undefined}
-                            className={getCellStyle(i)}
-                        >
-                            <span className={cn(
-                                "z-10 relative",
-                                gameState.puzzle[i] !== null && "font-serif font-black"
-                            )}>
-                                {gameState.current[i]}
-                            </span>
+                {/* 
+                    Grid System:
+                    - Main grid: 3x3 for the "blocks" (thick borders)
+                    - Sub grids: 3x3 for the cells (thin borders)
+                */}
+                <div className="grid grid-cols-3 gap-0.5 md:gap-1 bg-stone-800 border-2 border-stone-800 rounded-lg overflow-hidden">
+                    {/* 9 Major Blocks */}
+                    {Array.from({ length: 9 }).map((_, blockIndex) => (
+                        <div key={blockIndex} className="grid grid-cols-3 gap-[1px] bg-stone-300">
+                            {/* 9 Cells per Block */}
+                            {Array.from({ length: 9 }).map((_, cellIndex) => {
+                                // Calculate global index (0-80) based on block and cell index
+                                const blockRow = Math.floor(blockIndex / 3);
+                                const blockCol = blockIndex % 3;
+                                const cellRow = Math.floor(cellIndex / 3);
+                                const cellCol = cellIndex % 3;
 
-                            {/* Notes Display */}
-                            {gameState.current[i] === null && gameState.notes[i] && gameState.notes[i].length > 0 && (
-                                <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 p-[2px] pointer-events-none">
-                                    {gameState.notes[i].map(note => (
-                                        <div key={note} className="flex items-center justify-center text-[8px] md:text-[10px] font-medium text-stone-500 leading-none" style={{ gridArea: `${Math.ceil(note / 3)} / ${(note - 1) % 3 + 1}` }}>
-                                            {note}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
+                                const globalRow = blockRow * 3 + cellRow;
+                                const globalCol = blockCol * 3 + cellCol;
+                                const globalIndex = globalRow * 9 + globalCol;
+
+                                return (
+                                    <div
+                                        key={globalIndex}
+                                        onClick={!gameState.isComplete ? () => setSelectedCell(globalIndex) : undefined}
+                                        className={getCellStyle(globalIndex)}
+                                    >
+                                        <span className={cn(
+                                            "z-10 relative",
+                                            gameState.puzzle[globalIndex] !== null && "font-serif font-black text-2xl md:text-3xl"
+                                        )}>
+                                            {gameState.current[globalIndex]}
+                                        </span>
+
+                                        {/* Notes Display */}
+                                        {gameState.current[globalIndex] === null && gameState.notes[globalIndex] && gameState.notes[globalIndex].length > 0 && (
+                                            <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 p-[2px] pointer-events-none">
+                                                {gameState.notes[globalIndex].map(note => (
+                                                    <div key={note} className="flex items-center justify-center text-[8px] md:text-[10px] font-medium text-stone-500 leading-none" style={{ gridArea: `${Math.ceil(note / 3)} / ${(note - 1) % 3 + 1}` }}>
+                                                        {note}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
                     ))}
                 </div>
@@ -360,16 +386,6 @@ const Sudoku: React.FC = () => {
                         >
                             <Eraser size={18} />
                             <span>Sil</span>
-                        </button>
-                        <button
-                            onClick={() => {
-                                // Undo functionality placeholder inside UI
-                            }}
-                            className="flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-white text-stone-400 border border-stone-200 cursor-not-allowed opacity-50 text-sm font-bold shadow-sm"
-                            disabled
-                        >
-                            <RotateCcw size={18} />
-                            <span>Geri Al</span>
                         </button>
                     </div>
 
