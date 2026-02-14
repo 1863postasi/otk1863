@@ -250,9 +250,13 @@ const BudgetSimulator: React.FC = () => {
                                 <div>
                                     <div className="flex justify-between items-start mb-2">
                                         <div className="text-4xl">{item.emoji}</div>
-                                        <div className="text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider bg-amber-100 text-amber-700">
-                                            Politika
-                                        </div>
+                                        {item.maxQuantity ? (
+                                            <div className="text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider bg-amber-100 text-amber-700">
+                                                Limit: {item.maxQuantity}
+                                            </div>
+                                        ) : (
+                                            <div className="h-6"></div>
+                                        )}
                                     </div>
 
                                     <h3 className="font-bold text-stone-800 leading-tight mb-1">{item.name}</h3>
@@ -289,11 +293,7 @@ const BudgetSimulator: React.FC = () => {
                                     </button>
                                 </div>
 
-                                {item.maxQuantity && (
-                                    <div className="absolute top-2 right-12 text-[10px] text-amber-700/50 font-bold px-1.5 py-0.5">
-                                        Limit: {item.maxQuantity}
-                                    </div>
-                                )}
+
                             </motion.div>
                         );
                     })}
@@ -323,10 +323,13 @@ const BudgetSimulator: React.FC = () => {
                                 <div>
                                     <div className="flex justify-between items-start mb-2">
                                         <div className="text-4xl">{item.emoji}</div>
-                                        <div className="text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider bg-stone-100 text-stone-500">
-                                            {item.category === 'infrastructure' ? 'Yatırım' :
-                                                item.category === 'student' ? 'Öğrenci' : 'Eğlence'}
-                                        </div>
+                                        {item.maxQuantity ? (
+                                            <div className="text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider bg-stone-100 text-stone-500">
+                                                Limit: {item.maxQuantity}
+                                            </div>
+                                        ) : (
+                                            <div className="h-6"></div>
+                                        )}
                                     </div>
 
                                     <h3 className="font-bold text-stone-800 leading-tight mb-1">{item.name}</h3>
@@ -363,11 +366,7 @@ const BudgetSimulator: React.FC = () => {
                                     </button>
                                 </div>
 
-                                {item.maxQuantity && (
-                                    <div className="absolute top-2 right-12 text-[10px] text-stone-400/50 font-bold px-1.5 py-0.5">
-                                        Limit: {item.maxQuantity}
-                                    </div>
-                                )}
+
                             </motion.div>
                         );
                     })}

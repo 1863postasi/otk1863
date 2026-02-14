@@ -30,7 +30,7 @@ export const BOUNDLE_GAMES: GameDefinition[] = [
         color: 'bg-emerald-500',
         path: '/boundle/butce',
         component: BudgetSimulator,
-        comingSoon: false, // Artık aktif
+        comingSoon: true, // Artık aktif
     }
 ];
 

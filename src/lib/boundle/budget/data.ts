@@ -7,28 +7,15 @@ import { GameItem } from './budgetTypes';
  * 
  * Yeni veri eklemek için aşağıdaki şablonları kopyalayıp ilgili listenin altına yapıştırın.
  * 
- * --- HARCAMA EKLEME ŞABLONU ---
- * {
- *   id: 'benzersiz-id',      // Örn: 'exp-101'
- *   name: 'Örnek Harcama', 
- *   price: 500,              // POZİTİF Sayı (Harcama Tutarı)
- *   emoji: '💸',
- *   category: 'fun',         // 'infrastructure' | 'student' | 'fun'
- *   maxQuantity: 1           // (Opsiyonel) En fazla kaç tane alınabilir?
- * },
+ * ÖNEMLİ NOT: 
+ * Oyun motoru hangi kategoriden kaç tane seçeceğine 'category' kısmına bakarak karar verir.
+ * ID'ler sadece benzersiz (unique) olmalıdır.
  * 
- * --- GELİR/TASARRUF EKLEME ŞABLONU ---
- * {
- *   id: 'benzersiz-id',      // Örn: 'inc-101'
- *   name: 'Örnek Gelir', 
- *   price: 1000,             // POZİTİF Sayı (Kazanç Tutarı)
- *   emoji: '💰',
- *   category: 'policy',      // Genelde 'policy' kullanılır
- *   maxQuantity: 1
- * },
- * 
- * --- MANŞET EKLEME ŞABLONU ---
- * "Yeni Manşet Metni Buraya",
+ * Kategoriler:
+ * - 'infrastructure' : Büyük Projeler (2 Tane seçilir)
+ * - 'student'        : Öğrenci Destek (3 Tane seçilir)
+ * - 'fun'            : Eğlence / Küçük (5 Tane seçilir)
+ * - 'policy'         : Gelir / Tasarruf (3 Tane seçilir)
  */
 
 // ==========================================================================================
@@ -50,11 +37,11 @@ export const HEADLINES_POOL: string[] = [
 // Fiyatlar POZİTİF yazılır, oyun motoru bunları gelir olarak işler.
 // ==========================================================================================
 export const INCOME_ITEMS: GameItem[] = [
-    { id: '301', name: 'Makam Araçlarını İptal Et', price: 10370470, emoji: '🚍', category: 'policy', maxQuantity: 1 },
+    { id: '301', name: 'Makam Araçlarını İptal Et', price: 10370470, emoji: '🚍', category: 'policy', maxQuantity: 32 },
     { id: '302', name: 'Tanıtım Bütçesini Azalt', price: 2387900, emoji: '🤝', category: 'policy', maxQuantity: 1 },
-    { id: '303', name: 'PR Aboneliklerini İptal Et', price: 1500000, emoji: '📽️', category: 'policy', maxQuantity: 1 },
-    { id: '304', name: 'Gereksiz Işıkları Kapat', price: 500000, emoji: '💡', category: 'policy', maxQuantity: 1 },
-    { id: '305', name: 'Bürokratik Giderleri Kıs', price: 5000000, emoji: '✂️', category: 'policy', maxQuantity: 1 },
+    { id: '303', name: 'Propaganda Belgeseli Ödeneğini İptal Et', price: 1500000, emoji: '📽️', category: 'policy', maxQuantity: 1 },
+    { id: '304', name: 'Ampulleri Değiştir :D', price: 500000, emoji: '💡', category: 'policy', maxQuantity: 10 },
+    { id: '305', name: 'Damadının Bacanağını İşten Çıkar', price: 500000, emoji: '✂️', category: 'policy', maxQuantity: 2 },
     // Yeni gelirleri buraya ekleyin:
 ];
 
@@ -64,7 +51,7 @@ export const INCOME_ITEMS: GameItem[] = [
 // ==========================================================================================
 export const EXPENSE_ITEMS: GameItem[] = [
     // --- BÜYÜK PROJELER (Infrastructure) ---
-    { id: '101', name: '1000 Kişilik Prefabrik Yurt', price: 120000000, emoji: '🏢', category: 'infrastructure', maxQuantity: 5 },
+    { id: '101', name: '600 Kişilik Yurt Yap', price: 150000000, emoji: '🏢', category: 'infrastructure', maxQuantity: 1 },
     { id: '102', name: 'Güney Kampüs Restorasyonu', price: 45000000, emoji: '🏛️', category: 'infrastructure', maxQuantity: 1 },
     { id: '103', name: 'Metro Yürüyen Merdiven Tamiri', price: 5000000, emoji: '🚇', category: 'infrastructure', maxQuantity: 10 },
     { id: '104', name: 'Kilyos Servis Filosu', price: 15000000, emoji: '🚌', category: 'infrastructure', maxQuantity: 3 },
