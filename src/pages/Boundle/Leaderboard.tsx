@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { Trophy, Medal, User } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import UserStatsCard from './components/UserStatsCard';
-import { doc, onSnapshot } from 'firebase/firestore';
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { UserProfile, useAuth } from '../../context/AuthContext';
