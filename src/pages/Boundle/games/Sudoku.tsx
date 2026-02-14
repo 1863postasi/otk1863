@@ -228,9 +228,9 @@ const Sudoku: React.FC = () => {
 
         return cn(
             "relative flex items-center justify-center text-xl md:text-2xl font-bold select-none transition-all duration-100 cursor-pointer h-[min(10vw,48px)] w-[min(10vw,48px)] md:h-12 md:w-12",
-            // 3x3 Grid Sınırları (Daha belirgin)
-            isRightBorder && "border-r-[3px] border-stone-900/80",
-            isBottomBorder && "border-b-[3px] border-stone-900/80",
+            // 3x3 Grid Sınırları (Daha belirgin - Kullanıcı isteği)
+            isRightBorder && "border-r-[4px] border-stone-950",
+            isBottomBorder && "border-b-[4px] border-stone-950",
             !isRightBorder && "border-r border-stone-300/80",
             !isBottomBorder && "border-b border-stone-300/80",
 
