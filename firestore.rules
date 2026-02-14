@@ -49,8 +49,11 @@ service cloud.firestore {
 
       allow delete: if isAdmin();
 
-      // Oyun Geçmişi: Sadece kendi geçmişini okuyabilir.
 
+      // Oyun Geçmişi: Sadece kendi geçmişini okuyabilir.
+      match /boundle/{document=**} {
+        allow read, write: if isSignedIn() && isOwner(userId);
+      }
     }
 
     // 2. KULÜPLER (clubs)

@@ -223,24 +223,32 @@ const Sudoku: React.FC = () => {
 
         const row = Math.floor(index / 9);
         const col = index % 9;
-        const isRightBorder = col === 2 || col === 5;
-        const isBottomBorder = row === 2 || row === 5;
+
+        // Border Logic
+        const isRightThick = col === 2 || col === 5;
+        const isBottomThick = row === 2 || row === 5;
+        const isRightEdge = col === 8;
+        const isBottomEdge = row === 8;
 
         return cn(
-            "relative flex items-center justify-center text-xl md:text-2xl font-bold select-none transition-all duration-100 cursor-pointer h-[min(10vw,48px)] w-[min(10vw,48px)] md:h-12 md:w-12",
-            // 3x3 Grid Sınırları (Daha belirgin - Kullanıcı isteği)
-            isRightBorder && "border-r-[4px] border-stone-950",
-            isBottomBorder && "border-b-[4px] border-stone-950",
-            !isRightBorder && "border-r border-stone-300/80",
-            !isBottomBorder && "border-b border-stone-300/80",
+            "relative flex items-center justify-center text-xl md:text-3xl select-none transition-all duration-75 cursor-pointer h-[min(10vw,48px)] w-[min(10vw,48px)] md:h-14 md:w-14",
 
-            // Renkler
-            isInitial ? "text-stone-900 bg-stone-100" : "text-boun-blue bg-white",
-            isError && "bg-red-100 text-red-600 animate-pulse",
+            // Right Borders
+            isRightThick ? "border-r-[2px] border-r-stone-800" : (!isRightEdge && "border-r border-r-stone-200"),
 
-            // Highlight
-            isSameNumber && !isSelected && !isError && "bg-boun-blue/10",
-            isSelected && "bg-boun-blue/30 scale-105 z-10 rounded-md shadow-md ring-2 ring-boun-blue border-transparent"
+            // Bottom Borders
+            isBottomThick ? "border-b-[2px] border-b-stone-800" : (!isBottomEdge && "border-b border-b-stone-200"),
+
+            // Colors & Fonts
+            "bg-white",
+            isInitial ? "text-stone-900" : "text-blue-600 font-medium",
+
+            // Interaction States
+            isSameNumber && !isSelected && !isError && "bg-blue-50 text-blue-700",
+            isSelected && "bg-blue-100 ring-2 ring-inset ring-blue-500 z-10",
+
+            // Error overlay
+            isError && "bg-red-50 text-red-600 ring-2 ring-inset ring-red-500"
         );
     };
 
@@ -287,29 +295,34 @@ const Sudoku: React.FC = () => {
 
             {/* SUDOKU BOARD CONTAINER */}
             <div className={cn(
-                "p-1 bg-stone-800 rounded-lg shadow-2xl overflow-hidden mb-4 select-none touch-manipulation relative",
+                "p-4 bg-white rounded-2xl shadow-xl shadow-stone-200/50 mb-6 select-none touch-manipulation relative",
                 gameState.isComplete && "opacity-90 grayscale-[0.2]"
             )}>
                 {/* Tamamlandı Overlay */}
                 {gameState.isComplete && (
-                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/5 pointer-events-none">
+                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/10 backdrop-blur-[1px] pointer-events-none">
                     </div>
                 )}
 
-                <div className="grid grid-cols-9 bg-stone-300 gap-[1px] border-2 border-stone-800">
+                <div className="grid grid-cols-9 border-2 border-stone-800 bg-stone-800">
                     {Array.from({ length: 81 }).map((_, i) => (
                         <div
                             key={i}
                             onClick={!gameState.isComplete ? () => setSelectedCell(i) : undefined}
                             className={getCellStyle(i)}
                         >
-                            {gameState.current[i]}
+                            <span className={cn(
+                                "z-10 relative",
+                                gameState.puzzle[i] !== null && "font-serif font-black"
+                            )}>
+                                {gameState.current[i]}
+                            </span>
 
                             {/* Notes Display */}
                             {gameState.current[i] === null && gameState.notes[i] && gameState.notes[i].length > 0 && (
                                 <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 p-[2px] pointer-events-none">
                                     {gameState.notes[i].map(note => (
-                                        <div key={note} className="flex items-center justify-center text-[7px] md:text-[9px] font-bold text-stone-500 leading-none" style={{ gridArea: `${Math.ceil(note / 3)} / ${(note - 1) % 3 + 1}` }}>
+                                        <div key={note} className="flex items-center justify-center text-[8px] md:text-[10px] font-medium text-stone-500 leading-none" style={{ gridArea: `${Math.ceil(note / 3)} / ${(note - 1) % 3 + 1}` }}>
                                             {note}
                                         </div>
                                     ))}
@@ -322,42 +335,54 @@ const Sudoku: React.FC = () => {
 
             {/* CONTROLS (Hide if complete) */}
             {!gameState.isComplete && (
-                <div className="w-full max-w-[400px]">
+                <div className="w-full max-w-[420px] flex flex-col gap-6">
                     {/* Tools Row */}
-                    <div className="flex items-center justify-center gap-6 mb-4 text-stone-600">
+                    <div className="flex items-center justify-center gap-4">
                         <button
                             onClick={() => setIsNoteMode(!isNoteMode)}
                             className={cn(
-                                "flex flex-col items-center gap-1 p-2 rounded-xl transition-all w-20",
-                                isNoteMode ? "bg-boun-blue text-white shadow-lg shadow-boun-blue/30 scale-105" : "hover:bg-stone-100"
+                                "flex items-center justify-center gap-2 px-6 py-3 rounded-full transition-all text-sm font-bold shadow-sm border",
+                                isNoteMode
+                                    ? "bg-stone-800 text-white border-stone-800 shadow-lg scale-105"
+                                    : "bg-white text-stone-600 border-stone-200 hover:bg-stone-50 hover:border-stone-300"
                             )}
                         >
                             <div className="relative">
-                                <Lightbulb size={22} fill={isNoteMode ? "currentColor" : "none"} />
-                                <div className="absolute -top-1 -right-1 bg-white text-boun-blue rounded-full w-3 h-3 flex items-center justify-center text-[8px] font-bold">ON</div>
+                                <Lightbulb size={18} fill={isNoteMode ? "currentColor" : "none"} />
+                                {isNoteMode && <div className="absolute -top-1 -right-1 bg-white text-stone-800 rounded-full w-2 h-2" />}
                             </div>
-                            <span className="text-[10px] font-bold">Not Al</span>
+                            <span>Not Modu</span>
                         </button>
 
                         <button
                             onClick={handleErase}
-                            className="flex flex-col items-center gap-1 p-2 rounded-xl hover:bg-stone-100 transition-all w-20 active:scale-95"
+                            className="flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-white text-stone-600 border border-stone-200 hover:bg-stone-50 hover:border-stone-300 transition-all text-sm font-bold shadow-sm active:scale-95"
                         >
-                            <Eraser size={22} />
-                            <span className="text-[10px] font-bold">Sil</span>
+                            <Eraser size={18} />
+                            <span>Sil</span>
+                        </button>
+                        <button
+                            onClick={() => {
+                                // Undo functionality placeholder inside UI
+                            }}
+                            className="flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-white text-stone-400 border border-stone-200 cursor-not-allowed opacity-50 text-sm font-bold shadow-sm"
+                            disabled
+                        >
+                            <RotateCcw size={18} />
+                            <span>Geri Al</span>
                         </button>
                     </div>
 
                     {/* Numpad Grid */}
-                    <div className="grid grid-cols-3 md:grid-cols-9 gap-2 md:gap-3">
+                    <div className="grid grid-cols-9 gap-1 md:gap-2 px-2">
                         {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
                             <button
                                 key={num}
                                 onClick={() => handleNumberInput(num)}
                                 className={cn(
-                                    "h-12 md:h-10 rounded-lg text-lg md:text-xl font-bold transition-all shadow-sm active:scale-95 touch-manipulation",
-                                    "bg-white border border-stone-200 text-boun-blue hover:border-boun-blue hover:shadow-md",
-                                    isNoteMode && "text-stone-500 border-stone-300 border-dashed"
+                                    "aspect-[4/5] md:aspect-square flex items-center justify-center rounded-xl text-xl md:text-2xl font-medium transition-all shadow-[0_2px_0_0_rgba(168,162,158,0.3)] active:shadow-none active:translate-y-[2px] touch-manipulation",
+                                    "bg-white border border-stone-200 text-stone-700 hover:text-boun-blue hover:border-boun-blue/50",
+                                    isNoteMode && "text-stone-400 border-dashed"
                                 )}
                             >
                                 {num}
