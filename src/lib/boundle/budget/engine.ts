@@ -31,42 +31,34 @@ const createSeededRNG = (seed: string) => {
 }
 
 export const getDailyBudgetGame = (dateString: string): BudgetGameDaily => {
-    const rng = createSeededRNG(dateString); // Custom Seeded RNG
+    const rng = createSeededRNG(dateString); // Main RNG (Headlines)
 
     // 1. Günün Manşetini Seç
     const headlineIndex = Math.floor(rng() * HEADLINES_POOL.length);
     const newsHeadline = HEADLINES_POOL[headlineIndex];
 
     // 2. Rastgele Item Seçimi
-    // Hem gelirlerden hem giderlerden seçim yapalım.
 
-    // a. Gelir Seçimi (1-2 tane)
-    const incomeCount = Math.floor(rng() * 2) + 1; // 1 to 2
-    const shuffledIncomes = [...INCOME_ITEMS].sort(() => 0.5 - rng());
-    const selectedIncomes = shuffledIncomes.slice(0, incomeCount).map(item => ({
+    // a. Gelir Seçimi (Sabit 3 Tane)
+    const incomeRng = createSeededRNG(dateString + 'inc');
+    const shuffledIncomes = [...INCOME_ITEMS].sort(() => 0.5 - incomeRng());
+    const selectedIncomes = shuffledIncomes.slice(0, 3).map(item => ({
         ...item,
         price: -Math.abs(item.price) // Gelirleri negatif fiyat yap (logic gereği)
     }));
 
-    // b. Gider Seçimi (7-10 tane)
-    const expenseCount = Math.floor(rng() * 4) + 7; // 7 to 10
-    const shuffledExpenses = [...EXPENSE_ITEMS].sort(() => 0.5 - rng());
+    // b. Gider Seçimi (Kategorilere Göre)
+    // 2 Büyük (Infrastructure), 3 Orta (Student), 5 Küçük (Fun)
+    const expRng = createSeededRNG(dateString + 'exp');
+    const infrastructureItems = EXPENSE_ITEMS.filter(i => i.category === 'infrastructure').sort(() => 0.5 - expRng());
+    const studentItems = EXPENSE_ITEMS.filter(i => i.category === 'student').sort(() => 0.5 - expRng());
+    const funItems = EXPENSE_ITEMS.filter(i => i.category === 'fun').sort(() => 0.5 - expRng());
 
-    // Garantilemek adına: En az 1 'student' (ucuz) olsun.
-    const selectedExpenses: GameItem[] = [];
-    const studentItems = shuffledExpenses.filter(i => i.category === 'student');
-
-    if (studentItems.length > 0) {
-        selectedExpenses.push(studentItems[0]);
-    }
-
-    // Geri kalanları rastgele doldur
-    for (const item of shuffledExpenses) {
-        if (selectedExpenses.length >= expenseCount) break;
-        if (!selectedExpenses.find(x => x.id === item.id)) {
-            selectedExpenses.push(item);
-        }
-    }
+    const selectedExpenses: GameItem[] = [
+        ...infrastructureItems.slice(0, 2),
+        ...studentItems.slice(0, 3),
+        ...funItems.slice(0, 5)
+    ];
 
     // Listeleri Birleştir ve Sırala
     // Önce Gelirler, Sonra Giderler (Ucuzdan pahalıya)

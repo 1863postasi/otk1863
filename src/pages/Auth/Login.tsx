@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import * as router from 'react-router-dom';
 import { auth } from '../../lib/firebase';
 import { getEmailByUsername } from '../../lib/firestore_users';
-import { Lock, ArrowLeft, Loader2, AlertTriangle, User, Mail } from 'lucide-react';
+import { Lock, ArrowLeft, Loader2, AlertTriangle, User, CheckCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
+import firebase from 'firebase/compat/app';
 
 const { useNavigate, Link } = router;
 
@@ -12,12 +13,20 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // State for Email Verification Resend
+  const [unverifiedUser, setUnverifiedUser] = useState<firebase.User | null>(null);
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setUnverifiedUser(null);
+    setVerificationSent(false);
 
     try {
       let emailToAuth = loginInput;
@@ -37,7 +46,11 @@ const Login: React.FC = () => {
 
       // 3. CRITICAL SECURITY CHECK: Is Email Verified?
       if (user && !user.emailVerified) {
-        await auth.signOut(); // Immediately kick out
+        // DO NOT SIGN OUT IMMEDIATELY. We need the user signed in to send the verification email.
+        // Protected routes will still block them because of the check in ProtectedRoute.tsx
+        // As long as we stay on this page, we are fine.
+
+        setUnverifiedUser(user);
         setError('Giriş başarısız. Lütfen önce okul mailinize gelen linke tıklayarak hesabınızı doğrulayın.');
         setLoading(false);
         return;
@@ -59,6 +72,31 @@ const Login: React.FC = () => {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!unverifiedUser) return;
+
+    setResendLoading(true);
+    try {
+      await unverifiedUser.sendEmailVerification();
+      setVerificationSent(true);
+      setError(''); // Clear error to show success message clearly
+      setUnverifiedUser(null); // Clear user so we don't show the button again
+      await auth.signOut(); // Now we can sign them out safely, or let them sit here. Better to sign out to enforce fresh login after verification?
+      // Actually, if we sign out, they can't verify easily? No, verification is via email link.
+      // Signing out is safer to prevent any weird state if they navigate.
+
+    } catch (err: any) {
+      console.error("Resend error:", err);
+      if (err.code === 'auth/too-many-requests') {
+        setError('Çok sık istek gönderdiniz. Lütfen biraz bekleyip e-postanızı kontrol edin.');
+      } else {
+        setError('E-posta gönderilemedi. Lütfen daha sonra tekrar deneyin.');
+      }
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -85,14 +123,39 @@ const Login: React.FC = () => {
         </div>
 
         <div className="p-8">
+          {verificationSent && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              className="mb-6 bg-green-50 text-green-700 px-4 py-3 rounded border border-green-100 flex items-start gap-3 text-sm"
+            >
+              <CheckCircle size={18} className="shrink-0 mt-0.5" />
+              <span>Doğrulama bağlantısı e-posta adresinize tekrar gönderildi. Lütfen spam kutunuzu da kontrol ediniz.</span>
+            </motion.div>
+          )}
+
           {error && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
-              className="mb-6 bg-red-50 text-boun-red px-4 py-3 rounded border border-red-100 flex items-start gap-3 text-sm"
+              className="mb-6 bg-red-50 text-boun-red px-4 py-3 rounded border border-red-100 flex flex-col items-start gap-2 text-sm"
             >
-              <AlertTriangle size={18} className="shrink-0 mt-0.5" />
-              <span>{error}</span>
+              <div className="flex items-start gap-3">
+                <AlertTriangle size={18} className="shrink-0 mt-0.5" />
+                <span>{error}</span>
+              </div>
+
+              {/* Show Resend Button ONLY if we have an unverified user caught in the specific error block */}
+              {unverifiedUser && error.includes('doğrulayın') && (
+                <button
+                  onClick={handleResendVerification}
+                  disabled={resendLoading}
+                  className="ml-8 mt-1 text-xs bg-red-100 hover:bg-red-200 text-red-800 font-bold py-1.5 px-3 rounded transition-colors flex items-center gap-2"
+                >
+                  {resendLoading ? <Loader2 size={12} className="animate-spin" /> : null}
+                  Bağlantıyı Tekrar Gönder
+                </button>
+              )}
             </motion.div>
           )}
 
