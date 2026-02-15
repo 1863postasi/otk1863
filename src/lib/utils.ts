@@ -103,3 +103,16 @@ export function toTitleCase(name: string): string {
 export function getTurkeyDateString(): string {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Istanbul' });
 }
+
+/**
+ * URL ve Dosya yolları için güvenli slug oluşturur.
+ * Örn: "Khôra #1" -> "khora-1"
+ */
+export function slugify(text: string): string {
+  return turkishToEnglish(text)
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '') // Alfanümerik, boşluk ve tire hariç her şeyi sil
+    .replace(/[\s_-]+/g, '-') // Boşluk ve alt çizgileri tireye çevir
+    .replace(/^-+|-+$/g, ''); // Baştaki ve sondaki tireleri sil
+}

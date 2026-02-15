@@ -4,7 +4,7 @@ import { collection, query, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTi
 import { db } from '../../../lib/firebase';
 import { uploadFile } from '../../../lib/storage';
 import { Header, Input, TextArea, FileUploader, ActionButtons } from '../components/SharedUI';
-import { cn } from '../../../lib/utils';
+import { cn, slugify } from '../../../lib/utils';
 
 export const PublicationsPanel = () => {
     // Internal State for View Management
@@ -86,7 +86,9 @@ export const PublicationsPanel = () => {
 
             if (coverFile) {
                 // Main cover upload
-                const path = `yayinlar/${formData.type}/${formData.title}/cover`;
+                const safeTitle = slugify(formData.title);
+                const safeType = slugify(formData.type);
+                const path = `yayinlar/${safeType}/${safeTitle}/cover`;
                 const uploadResult = await uploadFile(coverFile, path);
                 coverUrl = uploadResult.url;
             }
@@ -146,8 +148,11 @@ export const PublicationsPanel = () => {
             let issueCoverUrl = "";
             let issuePdfUrl = "";
 
+
             // Upload Logic
-            const basePath = `yayinlar/${formData.title}/sayilar/${newIssueData.title}`;
+            const safePubTitle = slugify(formData.title);
+            const safeIssueTitle = slugify(newIssueData.title);
+            const basePath = `yayinlar/${safePubTitle}/sayilar/${safeIssueTitle}`;
 
             if (issueCoverFile) {
                 const res = await uploadFile(issueCoverFile, `${basePath}/cover`);
