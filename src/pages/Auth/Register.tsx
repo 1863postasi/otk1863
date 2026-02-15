@@ -4,7 +4,7 @@ import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../../lib/firebase';
 import { isUsernameUnique } from '../../lib/firestore_users';
 import { MOCK_FACULTIES } from '../../lib/data'; // For department list
-import { Lock, ArrowLeft, Loader2, CheckCircle, XCircle, Mail, User, BookOpen } from 'lucide-react';
+import { Lock, ArrowLeft, Loader2, CheckCircle, XCircle, Mail, User, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CLARIFICATION_TEXT, PRIVACY_AGREEMENT } from '../../lib/legal-content';
 import LegalModal from '../../components/Shared/LegalModal';
@@ -289,6 +289,14 @@ const Register: React.FC = () => {
                   </button>'ni okudum, kabul ediyorum.
                 </span>
               </label>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-6 flex items-start gap-3">
+              <Info className="text-blue-600 mt-0.5 shrink-0" size={20} />
+              <div className="text-sm text-blue-900 leading-relaxed">
+                <p className="font-bold mb-1">Önemli Hatırlatma</p>
+                Kayıt işlemini tamamladıktan sonra giriş yapabilmek için okul e-postanıza (spam kutusu dahil) gelen <strong>doğrulama bağlantısına tıklamanız gerekmektedir.</strong> Doğrulama yapmadan sisteme giriş yapamazsınız.
+              </div>
             </div>
 
             <button
