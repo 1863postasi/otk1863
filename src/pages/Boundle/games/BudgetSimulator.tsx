@@ -182,14 +182,20 @@ const BudgetSimulator: React.FC = () => {
             if (qty > 0) {
                 const item = dailyGame.items.find(i => i.id === itemId);
                 if (item) {
-                    breakdown += `\n${item.emoji} ${item.name}: ${qty}`;
+                    const totalAmount = Math.abs(item.price * qty);
+                    // Use formatMoney logic directly or call it if available in scope
+                    const formattedAmount = totalAmount.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 });
+                    const isExpense = item.price > 0;
+                    const action = isExpense ? "Harcama 📉" : "Gelir 📈";
+
+                    breakdown += `\n${item.emoji} ${item.name}: ${formattedAmount} (${action})`;
                 }
             }
         });
 
         const shareData = {
             title: '1863 Postası - Bütçe Simülatörü',
-            text: `Boğaziçi Bütçe Simülatörü 📉\nBütçeyi Sıfırladım! 💸\n${breakdown}\n\nSen de dene:`,
+            text: `Boğaziçi Bütçe Simülatörü 📊\nBütçeyi Sıfırladım! 💸\n${breakdown}\n\nSen de dene:`,
             url: 'https://www.1863postasi.org/boundle'
         };
 
