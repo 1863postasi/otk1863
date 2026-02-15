@@ -1,5 +1,5 @@
 // import * as seedrandom from 'seedrandom'; // REMOVED: Causing runtime crash
-import { EXPENSE_ITEMS, INCOME_ITEMS, HEADLINES_POOL } from './data';
+import { EXPENSE_ITEMS, INCOME_ITEMS, HEADLINES_POOL, SPECIAL_ITEM } from './data';
 import { BudgetGameDaily, GameItem } from './budgetTypes';
 
 export type { BudgetGameDaily, GameItem };
@@ -65,7 +65,7 @@ export const getDailyBudgetGame = (dateString: string): BudgetGameDaily => {
     selectedExpenses.sort((a, b) => a.price - b.price);
 
     // Gelirler zaten negatif, en başta dururlar
-    const allItems = [...selectedIncomes, ...selectedExpenses];
+    const allItems = [...selectedIncomes, ...selectedExpenses, SPECIAL_ITEM];
 
     return {
         date: dateString,

@@ -24,13 +24,13 @@ export const BOUNDLE_GAMES: GameDefinition[] = [
     },
     {
         id: 'budget',
-        name: 'Bütçe Simülatörü',
+        name: 'parayi bitir',
         description: 'Boğaziçi\'nin artan bütçesini sen yönet! 📉',
         icon: Wallet,
         color: 'bg-emerald-500',
         path: '/boundle/butce',
         component: BudgetSimulator,
-        comingSoon: true, // Artık aktif
+        comingSoon: false,
     }
 ];
 
