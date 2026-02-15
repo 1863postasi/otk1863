@@ -10,7 +10,9 @@ import Leaderboard from './Leaderboard';
 import BoundleOnboarding from './components/BoundleOnboarding';
 
 import { useState } from 'react';
-import { Gamepad2, Trophy } from 'lucide-react';
+import { Gamepad2, Trophy, Lightbulb } from 'lucide-react';
+
+const GameIdeaModal = React.lazy(() => import('../../components/Shared/GameIdeaModal'));
 
 const GameHub: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'games' | 'leaderboard'>('games');
@@ -18,6 +20,7 @@ const GameHub: React.FC = () => {
 
     // Onboarding State
     const [isHelpOpen, setIsHelpOpen] = useState(false);
+    const [isIdeaModalOpen, setIsIdeaModalOpen] = useState(false);
     const ONBOARDING_KEY = 'otk1863_boundle_onboarding_v1';
 
     // Auto-open check
@@ -197,6 +200,33 @@ const GameHub: React.FC = () => {
                             );
                         })}
                     </motion.div>
+
+                    {/* Yeni Oyun Fikri Öneri Alanı - Listeden Sonra */}
+                    <div className="mt-8 mb-4">
+                        <motion.button
+                            initial={{ opacity: 0, y: 10 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            onClick={() => setIsIdeaModalOpen(true)}
+                            className="group w-full bg-gradient-to-br from-purple-50 to-white hover:from-purple-100/50 hover:to-purple-50 rounded-2xl border-2 border-dashed border-purple-200 hover:border-purple-300 p-6 flex items-center gap-5 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg hover:shadow-purple-500/5"
+                        >
+                            <div className="w-14 h-14 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600 group-hover:scale-110 transition-transform duration-500">
+                                <Lightbulb size={28} />
+                            </div>
+                            <div className="flex-1 text-left">
+                                <h4 className="font-bold text-lg text-stone-800 group-hover:text-purple-700 transition-colors">YENİ OYUN FİKRİN Mİ VAR?</h4>
+                                <p className="text-xs text-stone-500 font-medium mt-1">
+                                    Boundle'da görmek istediğin oyunları bize anlat, efsaneleşsin.
+                                </p>
+                            </div>
+                            <div className=" bg-white p-2 rounded-full shadow-sm border border-stone-100 text-purple-400 group-hover:text-purple-600 transition-colors">
+                                <ChevronRight size={20} />
+                            </div>
+                        </motion.button>
+                        <React.Suspense fallback={null}>
+                            <GameIdeaModal isOpen={isIdeaModalOpen} onClose={() => setIsIdeaModalOpen(false)} />
+                        </React.Suspense>
+                    </div>
                 </div>
 
                 {/* SAĞ KOLON: Leaderboard - Mobilde 'leaderboard' tabındaysa veya Masaüstünde her zaman görünür */}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SudokuEngine, Board, getDailySeed } from '../../../lib/boundle/sudoku/engine';
-import { Eraser, Lightbulb, PartyPopper, ChevronLeft, CheckCircle2, Lock } from 'lucide-react';
+import { Eraser, Lightbulb, PartyPopper, ChevronLeft, CheckCircle2, Lock, Share2 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { Link } from 'react-router-dom';
 import Confetti from 'react-confetti';
@@ -176,7 +176,12 @@ const Sudoku: React.FC = () => {
             if (!prev) return null;
             const newCurrent = [...prev.current];
             newCurrent[selectedCell] = null;
-            return { ...prev, current: newCurrent };
+
+            // Notları da temizle
+            const newNotes = { ...prev.notes };
+            delete newNotes[selectedCell];
+
+            return { ...prev, current: newCurrent, notes: newNotes };
         });
     };
 
@@ -206,6 +211,30 @@ const Sudoku: React.FC = () => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [gameState, selectedCell, handleNumberInput]);
 
+
+    // --- SHARING ---
+    const handleShare = async () => {
+        if (!gameState) return;
+
+        const shareData = {
+            title: '1863 Postası - Sudoku',
+            text: `Günün Sudolusu tamamlandı! 🎉\nSkorum: 75 Puan\n\nSen de çöz:`,
+            url: 'https://www.1863postasi.org/boundle'
+        };
+
+        try {
+            if (navigator.share) {
+                await navigator.share(shareData);
+            } else {
+                // Fallback: Copy to clipboard
+                const textToCopy = `${shareData.text} ${shareData.url}`;
+                await navigator.clipboard.writeText(textToCopy);
+                alert("Sonuç panoya kopyalandı!");
+            }
+        } catch (err) {
+            console.error('Error sharing:', err);
+        }
+    };
 
     // --- RENDERING ---
 
@@ -290,9 +319,18 @@ const Sudoku: React.FC = () => {
                     </div>
                     <h3 className="text-xl font-bold text-emerald-800">Tebrikler! 🎉</h3>
                     <p className="text-emerald-700 text-sm">Bugünün bulmacasını tamamladın ve puanını kaptın.</p>
-                    <Link to="/boundle" className="inline-block mt-2 px-6 py-2 bg-emerald-600 text-white rounded-lg font-bold text-sm shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-colors">
-                        Diğer Oyunlara Dön
-                    </Link>
+                    <div className="flex flex-wrap items-center justify-center gap-3 mt-2">
+                        <Link to="/boundle" className="px-6 py-2 bg-emerald-600 text-white rounded-lg font-bold text-sm shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-colors">
+                            Diğer Oyunlara Dön
+                        </Link>
+                        <button
+                            onClick={handleShare}
+                            className="px-6 py-2 bg-white text-emerald-700 border border-emerald-200 rounded-lg font-bold text-sm shadow-sm hover:bg-emerald-50 transition-colors flex items-center gap-2"
+                        >
+                            <Share2 size={16} />
+                            Paylaş
+                        </button>
+                    </div>
                 </motion.div>
             )}
 

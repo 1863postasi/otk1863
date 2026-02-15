@@ -13,7 +13,7 @@ export const AcademicReportsPanel = () => {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'resolved'>('all');
-    const [filterType, setFilterType] = useState<'all' | 'academic_error' | 'general_bug'>('all');
+    const [filterType, setFilterType] = useState<'all' | 'academic_error' | 'general_bug' | 'game_idea'>('all');
     const [selectedReport, setSelectedReport] = useState<any | null>(null);
 
     useEffect(() => {
@@ -95,7 +95,7 @@ export const AcademicReportsPanel = () => {
                             </div>
 
                             <div className="flex bg-stone-100 p-1 rounded-xl">
-                                {(['all', 'academic_error', 'general_bug'] as const).map((type) => (
+                                {(['all', 'academic_error', 'general_bug', 'game_idea'] as const).map((type) => (
                                     <button
                                         key={type}
                                         onClick={() => setFilterType(type)}
@@ -104,7 +104,7 @@ export const AcademicReportsPanel = () => {
                                             filterType === type ? "bg-white shadow text-stone-900" : "text-stone-500 hover:text-stone-700"
                                         )}
                                     >
-                                        {type === 'all' ? 'Tüm Bildirimler' : type === 'academic_error' ? 'Akademik' : 'Genel Hata'}
+                                        {type === 'all' ? 'Tümü' : type === 'academic_error' ? 'Akademik' : type === 'general_bug' ? 'Hata' : 'Oyun Fikri'}
                                     </button>
                                 ))}
                             </div>
@@ -153,9 +153,10 @@ export const AcademicReportsPanel = () => {
                                             <div className="flex items-center gap-2">
                                                 <span className={cn(
                                                     "text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-widest",
-                                                    report.type === 'academic_error' ? "bg-blue-100 text-blue-600" : "bg-purple-100 text-purple-600"
+                                                    report.type === 'academic_error' ? "bg-blue-100 text-blue-600" :
+                                                        report.type === 'game_idea' ? "bg-purple-100 text-purple-600" : "bg-red-100 text-red-600"
                                                 )}>
-                                                    {report.type === 'academic_error' ? 'Akademik' : 'Genel Hata'}
+                                                    {report.type === 'academic_error' ? 'Akademik' : report.type === 'game_idea' ? 'Oyun Fikri' : 'Hata'}
                                                 </span>
                                                 <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest">
                                                     {report.timestamp?.toDate ? formatDate(report.timestamp.toDate().toISOString()) : 'Bilinmeyen Tarih'}
@@ -206,9 +207,10 @@ export const AcademicReportsPanel = () => {
                                             <label className="text-[8px] font-black text-stone-400 uppercase tracking-widest block mb-1">Tür</label>
                                             <p className={cn(
                                                 "text-[10px] font-bold uppercase tracking-widest",
-                                                selectedReport.type === 'academic_error' ? "text-blue-600" : "text-purple-600"
+                                                selectedReport.type === 'academic_error' ? "text-blue-600" :
+                                                    selectedReport.type === 'game_idea' ? "text-purple-600" : "text-red-600"
                                             )}>
-                                                {selectedReport.type === 'academic_error' ? 'Akademik' : 'Genel Hata'}
+                                                {selectedReport.type === 'academic_error' ? 'Akademik' : selectedReport.type === 'game_idea' ? 'Oyun Fikri' : 'Genel Hata'}
                                             </p>
                                         </div>
                                         <div className="bg-stone-50 p-3 rounded-2xl border border-stone-100">
@@ -224,6 +226,12 @@ export const AcademicReportsPanel = () => {
                                         <div className="space-y-1">
                                             <p className="text-stone-800 text-[11px] font-bold truncate">{selectedReport.username || 'Misafir'}</p>
                                             <p className="text-stone-500 text-[10px] font-medium">{selectedReport.userEmail || 'Anonim'}</p>
+                                            {selectedReport.contactInfo && (
+                                                <div className="mt-2 pt-2 border-t border-stone-200">
+                                                    <p className="text-[9px] font-bold text-stone-400 uppercase tracking-wider mb-0.5">İletişim</p>
+                                                    <p className="text-purple-700 text-[10px] font-bold">{selectedReport.contactInfo}</p>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 

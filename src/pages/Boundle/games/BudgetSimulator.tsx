@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { getDailyBudgetGame, getTodayString, GameItem, BudgetGameDaily } from '../../../lib/boundle/budget/engine';
 import { useBoundle } from '../../../lib/boundle/hooks';
 import { cn } from '../../../lib/utils';
@@ -34,6 +35,10 @@ const BudgetSimulator: React.FC = () => {
     const [gameState, setGameState] = useState<BudgetGameState | null>(null);
     const [initializing, setInitializing] = useState(true);
     const [scoreSubmitted, setScoreSubmitted] = useState(false);
+
+    // Editing State
+    const [editingItemId, setEditingItemId] = useState<string | null>(null);
+    const [editValue, setEditValue] = useState<string>("");
 
     // --- INIT ---
     useEffect(() => {
@@ -104,8 +109,15 @@ const BudgetSimulator: React.FC = () => {
 
         const cost = item.price * quantityChange;
 
-        // Bakiye Kontrolü (Sadece satın alırken)
-        if (quantityChange > 0 && gameState.balance < cost) {
+        // Bakiye Kontrolü (Sadece satın alırken veya harcama artırırken)
+        if (cost > 0 && gameState.balance < cost) {
+            // cost > 0 means we are spending money (price > 0 and qty > 0 OR price < 0 and qty < 0 - wait, price is signed)
+            // Let's re-verify cost logic.
+            // Income item: price < 0. Buying (+1 qty) -> cost = -100 * 1 = -100. Balance - (-100) = Balance + 100. OK.
+            // Expense item: price > 0. Buying (+1 qty) -> cost = 100 * 1 = 100. Balance - 100. Needs check.
+
+            // The check should be: if we are DECREASING balance, check if we have enough.
+            // We decrease balance if cost > 0.
             toast.error("Yetersiz bütçe!");
             return;
         }
@@ -124,6 +136,32 @@ const BudgetSimulator: React.FC = () => {
         });
     };
 
+    const startEditing = (itemId: string, currentQty: number) => {
+        if (gameState?.isComplete) return;
+        setEditingItemId(itemId);
+        setEditValue(currentQty.toString());
+    };
+
+    const submitEdit = (item: GameItem) => {
+        if (!editingItemId) return;
+
+        const newQty = parseInt(editValue, 10);
+
+        if (isNaN(newQty)) {
+            setEditingItemId(null);
+            return;
+        }
+
+        const currentQty = gameState?.inventory[item.id] || 0;
+        const diff = newQty - currentQty;
+
+        if (diff !== 0) {
+            handleTransaction(item, diff);
+        }
+
+        setEditingItemId(null);
+    };
+
     const handleComplete = () => {
         if (!gameState || !canPlay('budget') || scoreSubmitted) return;
 
@@ -135,10 +173,38 @@ const BudgetSimulator: React.FC = () => {
         }
     };
 
-    const handleShare = () => {
-        const text = `Boğaziçi Bütçe Simülatörü 📉\nBütçeyi Sıfırladım! 💸\n\nSen de dene: https://1863postasi.com/boundle #Boundle`;
-        navigator.clipboard.writeText(text);
-        toast.success("Sonuç panoya kopyalandı!");
+    const handleShare = async () => {
+        if (!gameState || !dailyGame) return;
+
+        // Bütçe dökümünü hazırla
+        let breakdown = "";
+        Object.entries(gameState.inventory).forEach(([itemId, qty]) => {
+            if (qty > 0) {
+                const item = dailyGame.items.find(i => i.id === itemId);
+                if (item) {
+                    breakdown += `\n${item.emoji} ${item.name}: ${qty}`;
+                }
+            }
+        });
+
+        const shareData = {
+            title: '1863 Postası - Bütçe Simülatörü',
+            text: `Boğaziçi Bütçe Simülatörü 📉\nBütçeyi Sıfırladım! 💸\n${breakdown}\n\nSen de dene:`,
+            url: 'https://www.1863postasi.org/boundle'
+        };
+
+        try {
+            if (navigator.share) {
+                await navigator.share(shareData);
+            } else {
+                // Fallback: Copy to clipboard
+                const textToCopy = `${shareData.text} ${shareData.url} #Boundle`;
+                await navigator.clipboard.writeText(textToCopy);
+                toast.success("Sonuç panoya kopyalandı!");
+            }
+        } catch (err) {
+            console.error('Error sharing:', err);
+        }
     };
 
     // --- FORMATTERS ---
@@ -192,7 +258,7 @@ const BudgetSimulator: React.FC = () => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0 }}
-                        className="bg-emerald-50 border border-emerald-200 rounded-xl p-6 text-center mb-8 flex flex-col items-center gap-4"
+                        className="bg-emerald-5 border border-emerald-200 rounded-xl p-6 text-center mb-8 flex flex-col items-center gap-4"
                     >
                         <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center shadow-lg shadow-emerald-200">
                             <PartyPopper size={32} />
@@ -201,12 +267,18 @@ const BudgetSimulator: React.FC = () => {
                             <h3 className="text-xl font-bold text-emerald-900">Mükemmel Yönetim!</h3>
                             <p className="text-emerald-700">Hiç para artırmadan bütçeyi yönettin.</p>
                         </div>
-                        <button
-                            onClick={handleShare}
-                            className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-2.5 rounded-lg font-bold hover:bg-emerald-700 transition-colors shadow-md active:translate-y-0.5"
-                        >
-                            <Share2 size={18} /> Sonucu Paylaş
-                        </button>
+                        <div className="flex flex-wrap items-center justify-center gap-3 mt-2">
+                            <Link to="/boundle" className="px-6 py-2 bg-emerald-600 text-white rounded-lg font-bold text-sm shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-colors">
+                                Diğer Oyunlara Dön
+                            </Link>
+                            <button
+                                onClick={handleShare}
+                                className="px-6 py-2 bg-white text-emerald-700 border border-emerald-200 rounded-lg font-bold text-sm shadow-sm hover:bg-emerald-50 transition-colors flex items-center gap-2"
+                            >
+                                <Share2 size={16} />
+                                Paylaş
+                            </button>
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -240,6 +312,7 @@ const BudgetSimulator: React.FC = () => {
                     {dailyGame.items.filter(i => i.price < 0).map((item) => {
                         const quantity = gameState.inventory[item.id] || 0;
                         const isMaxed = item.maxQuantity ? quantity >= item.maxQuantity : false;
+                        const isEditing = editingItemId === item.id;
 
                         return (
                             <motion.div
@@ -269,19 +342,39 @@ const BudgetSimulator: React.FC = () => {
                                 <div className="flex items-center justify-between bg-white/50 rounded-lg p-1 border border-amber-100">
                                     <button
                                         onClick={() => handleTransaction(item, -1)}
-                                        disabled={quantity <= 0 || gameState.isComplete}
+                                        disabled={quantity <= 0 || gameState.isComplete || isEditing}
                                         className="w-10 h-10 flex items-center justify-center rounded-md text-stone-400 hover:text-red-500 hover:bg-white transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
                                     >
                                         <Trash2 size={18} />
                                     </button>
 
-                                    <div className="font-bold text-xl min-w-[30px] text-center text-stone-800">
-                                        {quantity}
-                                    </div>
+                                    {isEditing ? (
+                                        <input
+                                            type="number"
+                                            value={editValue}
+                                            onChange={(e) => setEditValue(e.target.value)}
+                                            onBlur={() => submitEdit(item)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') submitEdit(item);
+                                                if (e.key === 'Escape') setEditingItemId(null);
+                                            }}
+                                            autoFocus
+                                            className="w-20 text-center font-bold text-xl bg-white border border-emerald-300 rounded focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                            onFocus={(e) => e.target.select()}
+                                        />
+                                    ) : (
+                                        <div
+                                            onClick={() => startEditing(item.id, quantity)}
+                                            className="font-bold text-xl min-w-[30px] text-center text-stone-800 cursor-pointer hover:bg-stone-100 px-2 rounded select-none"
+                                            title="Düzenlemek için tıkla"
+                                        >
+                                            {quantity}
+                                        </div>
+                                    )}
 
                                     <button
                                         onClick={() => handleTransaction(item, 1)}
-                                        disabled={isMaxed || gameState.isComplete}
+                                        disabled={isMaxed || gameState.isComplete || isEditing}
                                         className={cn(
                                             "w-10 h-10 flex items-center justify-center rounded-md transition-all shadow-sm",
                                             isMaxed
@@ -292,8 +385,6 @@ const BudgetSimulator: React.FC = () => {
                                         <ShoppingCart size={18} />
                                     </button>
                                 </div>
-
-
                             </motion.div>
                         );
                     })}
@@ -313,6 +404,7 @@ const BudgetSimulator: React.FC = () => {
                         const quantity = gameState.inventory[item.id] || 0;
                         const isMaxed = item.maxQuantity ? quantity >= item.maxQuantity : false;
                         const canAfford = gameState.balance >= item.price;
+                        const isEditing = editingItemId === item.id;
 
                         return (
                             <motion.div
@@ -342,19 +434,39 @@ const BudgetSimulator: React.FC = () => {
                                 <div className="flex items-center justify-between bg-stone-50 rounded-lg p-1 border border-stone-100">
                                     <button
                                         onClick={() => handleTransaction(item, -1)}
-                                        disabled={quantity <= 0 || gameState.isComplete}
+                                        disabled={quantity <= 0 || gameState.isComplete || isEditing}
                                         className="w-10 h-10 flex items-center justify-center rounded-md text-stone-400 hover:text-red-500 hover:bg-white transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
                                     >
                                         <Trash2 size={18} />
                                     </button>
 
-                                    <div className="font-bold text-xl min-w-[30px] text-center text-stone-800">
-                                        {quantity}
-                                    </div>
+                                    {isEditing ? (
+                                        <input
+                                            type="number"
+                                            value={editValue}
+                                            onChange={(e) => setEditValue(e.target.value)}
+                                            onBlur={() => submitEdit(item)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') submitEdit(item);
+                                                if (e.key === 'Escape') setEditingItemId(null);
+                                            }}
+                                            autoFocus
+                                            className="w-20 text-center font-bold text-xl bg-white border border-stone-300 rounded focus:outline-none focus:ring-2 focus:ring-boun-blue"
+                                            onFocus={(e) => e.target.select()}
+                                        />
+                                    ) : (
+                                        <div
+                                            onClick={() => startEditing(item.id, quantity)}
+                                            className="font-bold text-xl min-w-[30px] text-center text-stone-800 cursor-pointer hover:bg-stone-200 px-2 rounded select-none"
+                                            title="Düzenlemek için tıkla"
+                                        >
+                                            {quantity}
+                                        </div>
+                                    )}
 
                                     <button
                                         onClick={() => handleTransaction(item, 1)}
-                                        disabled={(!canAfford && item.price > 0) || isMaxed || gameState.isComplete}
+                                        disabled={(!canAfford && item.price > 0) || isMaxed || gameState.isComplete || isEditing}
                                         className={cn(
                                             "w-10 h-10 flex items-center justify-center rounded-md transition-all shadow-sm",
                                             isMaxed || !canAfford
@@ -365,8 +477,6 @@ const BudgetSimulator: React.FC = () => {
                                         <ShoppingCart size={18} />
                                     </button>
                                 </div>
-
-
                             </motion.div>
                         );
                     })}
