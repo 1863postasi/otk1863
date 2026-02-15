@@ -94,3 +94,12 @@ export function toTitleCase(name: string): string {
     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
 }
+
+/**
+ * Türkiye saatiyle bugünün tarihini YYYY-MM-DD formatında döndürür.
+ * Boundle oyunlarında herkesin aynı günü oynaması ve skorların doğru güne işlenmesi için kullanılır.
+ * (Kullanıcının yerel saatinden bağımsızdır)
+ */
+export function getTurkeyDateString(): string {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Istanbul' });
+}

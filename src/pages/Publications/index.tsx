@@ -184,7 +184,7 @@ const PublicationsPage: React.FC = () => {
         fetchPublications();
     }, []);
 
-    const periodicals = publications.filter(p => p.type === 'Dergi' || p.type === 'Süreli (ÖTK)' || p.type === 'Bülten');
+    const periodicals = publications.filter(p => p.type === 'Süreli Yayın' || p.type === 'Dergi' || p.type === 'Bülten'); // Legacy support + New Standard
     const fanzines = publications.filter(p => p.type === 'Fanzin');
 
     if (loading) {

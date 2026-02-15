@@ -1,7 +1,7 @@
 import React from 'react';
 import { useBoundle } from '../../../lib/boundle/hooks';
 import { Trophy, Star, HelpCircle } from 'lucide-react';
-import { cn } from '../../../lib/utils';
+import { cn, getTurkeyDateString } from '../../../lib/utils';
 
 interface UserStatsCardProps {
     className?: string;
@@ -14,7 +14,7 @@ const UserStatsCard: React.FC<UserStatsCardProps> = ({ className, compact = fals
 
     // Bugünkü toplam puan (lastPlayedDate === bugün olan oyunlar)
     // hook içindeki canPlay mantığına benzer
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTurkeyDateString();
 
     const todayScore = Object.values(stats.games).reduce((acc: number, game: any) => {
         // Eğer oyunun oynanma tarihi bugünse, puano ekle

@@ -1,6 +1,6 @@
-// import * as seedrandom from 'seedrandom'; // REMOVED: Causing runtime crash
 import { EXPENSE_ITEMS, INCOME_ITEMS, HEADLINES_POOL, SPECIAL_ITEM } from './data';
 import { BudgetGameDaily, GameItem } from './budgetTypes';
+import { getTurkeyDateString } from '../../utils';
 
 export type { BudgetGameDaily, GameItem };
 
@@ -79,5 +79,5 @@ export const getDailyBudgetGame = (dateString: string): BudgetGameDaily => {
  * Bugünün tarihini YYYY-MM-DD olarak döndürür
  */
 export const getTodayString = (): string => {
-    return new Date().toLocaleDateString('tr-TR').split('.').reverse().join('-');
+    return getTurkeyDateString();
 };

@@ -3,7 +3,8 @@ import { useAuth } from '../../context/AuthContext';
 import { db } from '../firebase';
 import { doc, getDoc, setDoc, updateDoc, arrayUnion, runTransaction } from 'firebase/firestore';
 import { UserBoundleStats } from './types';
-import toast from 'react-hot-toast'; // Using global toast if available, or fallback
+import { getTurkeyDateString } from '../utils'; // Import helper
+import toast from 'react-hot-toast';
 
 const INITIAL_STATS: UserBoundleStats = {
     totalScore: 0,
@@ -15,9 +16,6 @@ export const useBoundle = () => {
     const { currentUser } = useAuth();
     const [stats, setStats] = useState<UserBoundleStats>(INITIAL_STATS);
     const [loading, setLoading] = useState(true);
-
-    // Bugünün tarihi (YYYY-MM-DD formatında)
-    const getTodayStr = () => new Date().toLocaleDateString('tr-TR').split('.').reverse().join('-');
 
     // Kullanıcının istatistiklerini getir
     useEffect(() => {
@@ -54,8 +52,8 @@ export const useBoundle = () => {
         const gameStats = stats.games[gameId];
         if (!gameStats) return true; // Hiç oynamamış
 
-        // Basit tarih karşılaştırması: Bugün oynamış mı?
-        const today = new Date().toISOString().split('T')[0];
+        // Tarih karşılaştırması: Bugün oynamış mı? (Turkey Time)
+        const today = getTurkeyDateString();
         if (gameStats.lastPlayedDate === today) {
             return false;
         }
@@ -63,9 +61,6 @@ export const useBoundle = () => {
         return true;
     };
 
-    /**
-     * Skor Gönderimi (Oyun bittiğinde çağrılır)
-     */
     /**
      * Skor Gönderimi (Oyun bittiğinde çağrılır)
      * ATOMIC TRANSACTION ILE GÜVENLİ HALE GETİRİLDİ
@@ -79,7 +74,7 @@ export const useBoundle = () => {
             return;
         }
 
-        const today = new Date().toISOString().split('T')[0];
+        const today = getTurkeyDateString(); // UTC yerine TRT
         const statsRef = doc(db, 'users', currentUser.uid, 'boundle', 'stats');
 
         try {
@@ -99,15 +94,25 @@ export const useBoundle = () => {
 
                 if (lastDateStr) {
                     const lastDate = new Date(lastDateStr);
-                    const yesterday = new Date();
-                    yesterday.setDate(yesterday.getDate() - 1);
-                    const yesterdayStr = yesterday.toISOString().split('T')[0];
+                    // Dünün tarihini bulmak için bugünden 1 gün çıkar (tarih string üzerinden gitmek daha güvenli)
+                    // Ancak Date objesi UTC/Local karışıklığı yaratabilir.
+                    // String karşılaştırması yapalım:
+
+                    const yesterdayDate = new Date(); // Bu sistem saati, ama biz TRT istiyoruz.
+                    // TRT today string'i parse edelim
+                    const [y, m, d] = today.split('-').map(Number);
+                    const tDate = new Date(y, m - 1, d); // Local construct
+                    tDate.setDate(tDate.getDate() - 1); // Dün
+                    const yesterdayStr = tDate.toLocaleDateString('en-CA'); // YYYY-MM-DD
+
+                    // Not: Bu kısım hala client'ın timezone'undan etkilenebilir mi? 
+                    // Eğer today "2024-02-15" ise ve biz bunu new Date(2024, 1, 15) yaparsak, bu local 00:00 olur.
+                    // 1 gün çıkarırsak yine local 00:00 olur. Formatlayınca yine YYYY-MM-DD çıkar.
+                    // Sorun yok.
 
                     if (lastDateStr === yesterdayStr) {
-                        // Eğer dün oynadıysa streak artar
                         newStreak = (currentStats.games[gameId]?.streak || 0) + 1;
                     } else {
-                        // Dün oynamadıysa (daha eski veya hiç), streak 1'e döner
                         newStreak = 1;
                     }
                 }
@@ -151,8 +156,6 @@ export const useBoundle = () => {
             });
 
             // 5. Başarılı (UI Update)
-            // Transaction başarılı olursa buraya düşer.
-            // Local state'i güncelle (Optimistic değil, confirmed update)
             setStats(prev => {
                 const prevStreak = prev.games[gameId]?.streak || 0;
                 return {
@@ -179,7 +182,6 @@ export const useBoundle = () => {
             console.error("Skor transaction hatası:", error);
             if (error.message === "ALREADY_PLAYED") {
                 toast.error("Bu puan zaten alınmış! (Başka bir cihazda oynamış olabilirsin)");
-                // State'i tazelemek iyi olabilir, belki sayfa yenilenmeli
             } else {
                 toast.error("Skor kaydedilirken bir hata oluştu.");
             }

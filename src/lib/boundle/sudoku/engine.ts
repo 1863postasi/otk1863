@@ -2,6 +2,7 @@
  * SUDOKU ENGINE
  * Günlük seed bazlı Sudoku oluşturucu ve çözücü.
  */
+import { getTurkeyDateString } from '../../utils';
 
 // LCG (Linear Congruential Generator) based Random
 class SeededRandom {
@@ -135,9 +136,7 @@ export class SudokuEngine {
 
 // Helper: Tarih formatı (YYYY-MM-DD)
 export const getDailySeed = (): string => {
-    const now = new Date();
-    // Türkiye saati (UTC+3) için basit fix, client saati güvenilirdir genelde bu app için
-    return now.toISOString().split('T')[0];
+    return getTurkeyDateString();
 };
 
 // Helper: Check if a move is valid in the current board state

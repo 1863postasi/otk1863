@@ -1,7 +1,7 @@
 
 import { Timestamp } from 'firebase/firestore';
 
-export type PublicationType = 'Dergi' | 'Fanzin' | 'Bülten' | 'Süreli (ÖTK)';
+export type PublicationType = 'Dergi' | 'Fanzin' | 'Bülten' | 'Süreli (ÖTK)' | 'Süreli Yayın';
 
 export interface Issue {
     id: string;
