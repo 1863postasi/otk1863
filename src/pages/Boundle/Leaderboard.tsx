@@ -39,7 +39,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ compactView = false }) => {
 
                 // Compact view için limit
                 if (compactView) {
-                    setLeaders(formattedLeaders.slice(0, 5));
+                    setLeaders(formattedLeaders.slice(0, 50));
                 } else {
                     setLeaders(formattedLeaders);
                 }

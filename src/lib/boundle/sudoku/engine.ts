@@ -139,3 +139,28 @@ export const getDailySeed = (): string => {
     // Türkiye saati (UTC+3) için basit fix, client saati güvenilirdir genelde bu app için
     return now.toISOString().split('T')[0];
 };
+
+// Helper: Check if a move is valid in the current board state
+export const isValidMove = (board: Board, index: number, value: number): boolean => {
+    const row = Math.floor(index / 9);
+    const col = index % 9;
+    const boxRow = Math.floor(row / 3) * 3;
+    const boxCol = Math.floor(col / 3) * 3;
+
+    for (let i = 0; i < 9; i++) {
+        // Row check (skip self)
+        const rIdx = row * 9 + i;
+        if (rIdx !== index && board[rIdx] === value) return false;
+
+        // Col check (skip self)
+        const cIdx = i * 9 + col;
+        if (cIdx !== index && board[cIdx] === value) return false;
+
+        // Box check (skip self)
+        const bRow = boxRow + Math.floor(i / 3);
+        const bCol = boxCol + (i % 3);
+        const bIdx = bRow * 9 + bCol;
+        if (bIdx !== index && board[bIdx] === value) return false;
+    }
+    return true;
+};

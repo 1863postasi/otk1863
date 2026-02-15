@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { SudokuEngine, Board, getDailySeed } from '../../../lib/boundle/sudoku/engine';
+import { SudokuEngine, Board, getDailySeed, isValidMove } from '../../../lib/boundle/sudoku/engine';
 import { Eraser, Lightbulb, PartyPopper, ChevronLeft, CheckCircle2, Lock, Share2 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { Link } from 'react-router-dom';
@@ -137,23 +137,39 @@ const Sudoku: React.FC = () => {
         }
 
         // NORMAL GİRİŞ
-        const correctVal = gameState.solution[selectedCell];
-        const isMistake = num !== correctVal;
+        // const correctVal = gameState.solution[selectedCell]; // Artık çözüm anahtarına bakmıyoruz
+
+        // Şimdilik sadece kural ihlali var mı diye bakacağız (satır/sütun/kutu çakışması)
+        // Ancak bunu state güncellendikten SONRA veya, mevcut state üzerinde 'num' koyarsak ne olur diye bakarak yapabiliriz.
+        // isValidMove fonksiyonu 'conflict' kontrolü yapar.
+        const isMistake = !isValidMove(gameState.current, selectedCell, num);
 
         setGameState(prev => {
             if (!prev) return null;
             const newCurrent = [...prev.current];
             newCurrent[selectedCell] = num;
 
-            // Hata ise mistake sayacını artır (Opsiyonel: Hata engellenebilir, ama genelde gösterilir)
+            // Hata ise mistake sayacını artır
             const newMistakes = isMistake ? prev.mistakes + 1 : prev.mistakes;
 
             // Oyun bitti mi kontrolü
             let isComplete = false;
-            if (!isMistake) {
-                // Tahta dolu mu ve doğru mu?
-                const isFullAndCorrect = newCurrent.every((val, idx) => val === prev.solution[idx]);
-                isComplete = isFullAndCorrect;
+            // Tahta dolu mu?
+            const isFull = newCurrent.every(val => val !== null);
+
+            if (isFull) {
+                // Doluysa ve hiç hata yoksa (her hücre kurallara uygunsa) kazanmıştır.
+                // Her hücre için isValidMove kontrolü yapalım.
+                // Not: isValidMove, o hücrenin *diğerleriyle* çakışıp çakışmadığına bakar.
+                // Eğer tahta doluysa ve her hücre için isValidMove true ise, çözüm doğrudur.
+                const isAllCorrect = newCurrent.every((val, idx) => {
+                    if (val === null) return false;
+                    return isValidMove(newCurrent, idx, val);
+                });
+
+                if (isAllCorrect) {
+                    isComplete = true;
+                }
             }
 
             return {
@@ -218,7 +234,7 @@ const Sudoku: React.FC = () => {
 
         const shareData = {
             title: '1863 Postası - Sudoku',
-            text: `Günün Sudolusu tamamlandı! 🎉\nSkorum: 75 Puan\n\nSen de çöz:`,
+            text: `Günün Sudokusu tamamlandı! Sen de çöz:`,
             url: 'https://www.1863postasi.org/boundle'
         };
 
@@ -245,7 +261,9 @@ const Sudoku: React.FC = () => {
         const isSelected = index === selectedCell;
         const val = gameState.current[index];
         const isInitial = gameState.puzzle[index] !== null;
-        const isError = val !== null && val !== gameState.solution[index];
+        // const isError = val !== null && val !== gameState.solution[index]; // Eski kontrol
+        // Yeni kontrol: Kural ihlali var mı?
+        const isError = val !== null && !isInitial && !isValidMove(gameState.current, index, val);
         const isSameNumber = selectedCell !== null && gameState.current[selectedCell] === val && val !== null;
 
         // Related Cells Calculation

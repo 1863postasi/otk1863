@@ -34,7 +34,7 @@ export const BOUNDLE_GAMES: GameDefinition[] = [
     },
     {
         id: 'wordle',
-        name: 'Sözcük',
+        name: 'Wordle',
         description: 'Klasik 5 harfli kelime bulmaca. Her gün yeni bir kelime.',
         icon: Type,
         color: 'bg-amber-500',
