@@ -12,9 +12,9 @@ import { GameItem } from './budgetTypes';
  * ID'ler sadece benzersiz (unique) olmalıdır.
  * 
  * Kategoriler:
- * - 'infrastructure' : Büyük Projeler (2 Tane seçilir)
+ * - 'infrastructure' : Büyük Projeler (4 Tane seçilir)
  * - 'student'        : Öğrenci Destek (3 Tane seçilir)
- * - 'fun'            : Eğlence / Küçük (5 Tane seçilir)
+ * - 'fun'            : Eğlence / Küçük (4 Tane seçilir)
  * - 'policy'         : Gelir / Tasarruf (3 Tane seçilir)
  */
 

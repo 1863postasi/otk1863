@@ -48,16 +48,16 @@ export const getDailyBudgetGame = (dateString: string): BudgetGameDaily => {
     }));
 
     // b. Gider Seçimi (Kategorilere Göre)
-    // 2 Büyük (Infrastructure), 3 Orta (Student), 5 Küçük (Fun)
+    // 4 Büyük (Infrastructure), 3 Orta (Student), 4 Küçük (Fun)
     const expRng = createSeededRNG(dateString + 'exp');
     const infrastructureItems = EXPENSE_ITEMS.filter(i => i.category === 'infrastructure').sort(() => 0.5 - expRng());
     const studentItems = EXPENSE_ITEMS.filter(i => i.category === 'student').sort(() => 0.5 - expRng());
     const funItems = EXPENSE_ITEMS.filter(i => i.category === 'fun').sort(() => 0.5 - expRng());
 
     const selectedExpenses: GameItem[] = [
-        ...infrastructureItems.slice(0, 2),
-        ...studentItems.slice(0, 3),
-        ...funItems.slice(0, 5)
+        ...infrastructureItems.slice(0, 4), // 2 -> 4 (Daha rahat para harcansın)
+        ...studentItems.slice(0, 3),        // Sabit
+        ...funItems.slice(0, 4)             // 5 -> 4 (Gereksiz kalabalık azalsın)
     ];
 
     // Listeleri Birleştir ve Sırala
