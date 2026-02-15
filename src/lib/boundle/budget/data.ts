@@ -52,12 +52,10 @@ export const INCOME_ITEMS: GameItem[] = [
     { id: '306', name: 'Rektörlük "Temsil ve Ağırlama" Giderlerini Kıs', price: 8500000, emoji: 'lobster', category: 'policy', maxQuantity: 1 },
     { id: '307', name: 'Turnikeleri Hurdacıya Sat', price: 3500, emoji: '🔗', category: 'policy', maxQuantity: 2 },
     { id: '308', name: 'Troll Hesaplara Giden Maaşları Kes', price: 1250000, emoji: '🤖', category: 'policy', maxQuantity: 5 },
-    {
-        id: '309', name: 'TOMA'lardan Otopark Ücreti Al', price: 750000, emoji: '🚓', category: 'policy', maxQuantity: 3 },
+    { id: '309', name: 'TOMA\'lardan Otopark Ücreti Al', price: 750000, emoji: '🚓', category: 'policy', maxQuantity: 3 },
     { id: '310', name: 'Manzarayı Düğün Salonu Olarak Kirala', price: 15000000, emoji: '💍', category: 'policy', maxQuantity: 1 },
     { id: '311', name: 'Adrese Teslim Kadroları İptal Et', price: 4200000, emoji: '📝', category: 'policy', maxQuantity: 10 },
-    {
-        id: '312', name: 'Kilyos'a Rüzgar Gülleri Koyup Elektrik Sat', price: 2100000, emoji: '🌬️', category: 'policy', maxQuantity: 3 },
+    { id: '312', name: 'Kilyos\'a Rüzgar Gülleri Koyup Elektrik Sat', price: 2100000, emoji: '🌬️', category: 'policy', maxQuantity: 3 },
     { id: '313', name: 'Okul Girişine X-Ray Cihazı İhalesini İptal Et', price: 6800000, emoji: '🩻', category: 'policy', maxQuantity: 1 },
     { id: '314', name: 'Mezunlardan "Duygu Sömürüsü" ile Bağış Topla', price: 3500000, emoji: '🎓', category: 'policy', maxQuantity: 4 },
     { id: '315', name: 'Yemekhane Kartlarındaki Artık Kuruşlara Çök', price: 250000, emoji: '🪙', category: 'policy', maxQuantity: 5 },
